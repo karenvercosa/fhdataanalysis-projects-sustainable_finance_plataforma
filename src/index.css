@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================================================
+   Tokens semânticos como CSS vars (espelham o tailwind.config).
+   Permite theming/dark-mode futuro sem trocar classes utilitárias.
+=================================================================== */
+:root {
+  --sf-bg: #f5f7f8;            /* neutral/50  */
+  --sf-surface: #ffffff;       /* neutral/0   */
+  --sf-border: #e1e5e8;        /* neutral/200 */
+  --sf-text: #1f2933;          /* neutral/900 */
+  --sf-text-muted: #616e7c;    /* neutral/600 */
+  --sf-primary: #1e8e5a;       /* brand verde */
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font-family: "Lexend", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* Safe-areas para o PWA em telas com notch */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+h1, h2, h3, h4, h5 { font-family: "Miriam Libre", system-ui, sans-serif; }
+
+/* Foco visível e acessível (Heurística 9 / WCAG) */
+*:focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer utilities {
+  /* Trava de scroll quando há overlay */
+  .no-scroll { overflow: hidden; }
+}
