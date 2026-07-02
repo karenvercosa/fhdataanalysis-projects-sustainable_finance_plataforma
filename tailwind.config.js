@@ -27,6 +27,7 @@ export default {
           ink: "#0A2A1C" // botão sólido escuro do DS
         },
         secondary: {
+          50: "#FEF4E4",
           400: "#FCBD52",
           500: "#FBAB38", // accent âmbar
           600: "#DF9123",

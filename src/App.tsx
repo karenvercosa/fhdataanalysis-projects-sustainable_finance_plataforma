@@ -7,6 +7,7 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import ParticipantDashboard from "@/pages/ParticipantDashboard";
 import CredentialPage from "@/pages/CredentialPage";
+import CertificatePage from "@/pages/CertificatePage";
 import VoucherCheckout from "@/pages/VoucherCheckout";
 import CuratorDashboard from "@/pages/CuratorDashboard";
 import HomePage from "@/pages/HomePage";
@@ -14,6 +15,7 @@ import ContentHub from "@/pages/ContentHub";
 import StreamingPage from "@/pages/StreamingPage";
 import MapPage from "@/pages/MapPage";
 import Networking from "@/pages/Networking";
+import NetworkingProfile from "@/pages/NetworkingProfile";
 import OperatorPanel from "@/pages/OperatorPanel";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProgrammingPage from "@/pages/ProgrammingPage";
@@ -56,7 +58,7 @@ export default function App() {
 
       {/* Rotas internas dentro do AppShell */}
       <Route element={<ShellLayout />}>
-        <Route path="/" element={<Navigate to="/app" replace />} />
+        <Route path="/" element={<Navigate to="/inicio" replace />} />
 
         {/* Início — home de boas-vindas + preview da agenda */}
         <Route path="/inicio" element={<HomePage />} />
@@ -121,6 +123,16 @@ export default function App() {
           }
         />
 
+        {/* Certificado de participação (pós-evento) — geral, palestrante, curador */}
+        <Route
+          path="/certificado"
+          element={
+            <RoleGuard capability="view:certificate">
+              <CertificatePage />
+            </RoleGuard>
+          }
+        />
+
         {/* Conteúdos (público; trava premium é interna) */}
         <Route path="/conteudos" element={<ContentHub />} />
 
@@ -133,6 +145,14 @@ export default function App() {
           element={
             <AcquireGuard capability="view:networking">
               <Networking />
+            </AcquireGuard>
+          }
+        />
+        <Route
+          path="/networking/:id"
+          element={
+            <AcquireGuard capability="view:networking">
+              <NetworkingProfile />
             </AcquireGuard>
           }
         />
@@ -215,10 +235,7 @@ export default function App() {
           }
         />
 
-        {/* Alias ainda não implementado */}
-        <Route path="/empresa" element={<Navigate to="/networking" replace />} />
-
-        <Route path="*" element={<Navigate to="/app" replace />} />
+        <Route path="*" element={<Navigate to="/inicio" replace />} />
       </Route>
     </Routes>
   );

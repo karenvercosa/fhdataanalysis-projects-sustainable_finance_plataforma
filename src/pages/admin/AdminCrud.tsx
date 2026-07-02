@@ -5,7 +5,7 @@ import { Badge, Button, Card, CardBody, CardHeader, Input, Modal } from "@/compo
 import { PageHeader } from "@/components/layout/AppShell";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
-type Tone = "success" | "warning" | "error" | "info" | "neutral" | "primary";
+type Tone = "success" | "warning" | "error" | "info" | "neutral" | "primary" | "secondary";
 
 export interface CrudField {
   key: string;
@@ -37,7 +37,7 @@ export interface CrudConfig {
 
 const EMAIL_RE = /\S+@\S+\.\S+/;
 
-export function AdminCrud({ config }: { config: CrudConfig }) {
+export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; backTo?: string }) {
   const { fields } = config;
   const [rows, setRows] = usePersistentState<CrudRow[]>(config.storageKey, config.seed);
   const [query, setQuery] = useState("");
@@ -127,7 +127,7 @@ export function AdminCrud({ config }: { config: CrudConfig }) {
 
   return (
     <div className="space-y-4">
-      <Link to="/admin" className="inline-flex items-center gap-1 text-body-sm font-medium text-primary-600">
+      <Link to={backTo} className="inline-flex items-center gap-1 text-body-sm font-medium text-primary-600">
         <ChevronLeft className="h-4 w-4" /> Voltar ao painel
       </Link>
 

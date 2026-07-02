@@ -9,7 +9,11 @@ interface VouchersState {
   remaining: (v: Voucher) => number;
   /** Resgata 1 uso (respeita o limite definido pelo Admin). */
   redeem: (id: string) => void;
+  /** Compra em lote: gera um voucher com N convites para o curador distribuir. */
+  createBatch: (ownerId: string, quantity: number) => Voucher;
 }
+
+const block = () => crypto.randomUUID().slice(0, 4).toUpperCase();
 
 const VouchersContext = createContext<VouchersState | null>(null);
 
@@ -25,7 +29,22 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       redeem: (id) =>
         setVouchers((prev) =>
           prev.map((v) => (v.id === id && v.usedCount < v.maxUses ? { ...v, usedCount: v.usedCount + 1 } : v))
-        )
+        ),
+      createBatch: (ownerId, quantity) => {
+        const voucher: Voucher = {
+          id: crypto.randomUUID(),
+          code: `CUR-${block()}-${block()}`,
+          kind: "free",
+          value: 0,
+          maxUses: quantity,
+          usedCount: 0,
+          ownerType: "curator",
+          ownerId,
+          active: true
+        };
+        setVouchers((prev) => [...prev, voucher]);
+        return voucher;
+      }
     }),
     [vouchers, setVouchers]
   );

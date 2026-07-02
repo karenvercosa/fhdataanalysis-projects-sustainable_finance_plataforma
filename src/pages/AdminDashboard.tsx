@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import {
-  Settings, Users, Ticket, CalendarDays, Mic, Building2, ShieldCheck,
-  BarChart3, ChevronRight, Sparkles, Percent, Handshake
+  Settings, Users, Ticket, CalendarDays, Building2, ShieldCheck,
+  ChevronRight, Sparkles, Percent, Handshake
 } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, BarChart, type Segment } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
@@ -28,15 +28,11 @@ const TOP_INTERESTS: Segment[] = [
 
 // Módulos de gestão do painel central.
 const MODULES = [
-  { label: "Usuários", desc: "Gerenciar contas, perfis e tags", icon: Users, to: "/admin/usuarios" },
-  { label: "Ingressos & Lotes", desc: "Tipos e lotes", icon: Ticket, to: "/admin/ingressos" },
-  { label: "Vouchers", desc: "Free / desconto + nº de usos", icon: Percent, to: "/admin/vouchers" },
+  { label: "Gestão de Usuários", desc: "Gerenciar contas, perfis e tags", icon: Users, to: "/admin/usuarios" },
+  { label: "Gestão de Vouchers", desc: "Free / desconto + nº de usos", icon: Percent, to: "/admin/vouchers" },
   { label: "Programação", desc: "Sessões, trilhas e salas", icon: CalendarDays, to: "/admin/programacao-admin" },
-  { label: "Palestrantes", desc: "Cadastro e materiais", icon: Mic, to: "/admin/palestrantes" },
-  { label: "Empresas", desc: "Patrocinadores e curadores", icon: Building2, to: "/admin/empresas" },
   { label: "Interesses", desc: "Nuvem de temas do onboarding", icon: Sparkles, to: "/admin/interesses" },
-  { label: "Permissões", desc: "Controle de acesso por perfil", icon: ShieldCheck, to: "/admin/permissoes" },
-  { label: "Relatórios", desc: "Check-in, ingressos, cupons", icon: BarChart3, to: "/admin/relatorios" }
+  { label: "Permissões", desc: "Controle de acesso por perfil", icon: ShieldCheck, to: "/admin/permissoes" }
 ];
 
 export default function AdminDashboard() {

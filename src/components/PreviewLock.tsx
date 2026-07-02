@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import { Lock, Ticket } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * Pré-visualização limitada para o Não Pago: ele VÊ o que teria acesso,
  * mas o conteúdo fica somente-leitura, com um CTA de aquisição no topo.
  */
-export function PreviewLock({ children, message }: { children: React.ReactNode; message?: string }) {
+export function PreviewLock({ children, message, blur = false }: { children: React.ReactNode; message?: string; blur?: boolean }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-secondary-500 bg-secondary-400/15 p-4">
@@ -26,7 +27,7 @@ export function PreviewLock({ children, message }: { children: React.ReactNode; 
       </div>
 
       <div className="relative">
-        <div className="pointer-events-none select-none">{children}</div>
+        <div className={cn("pointer-events-none select-none", blur && "blur-[6px]")}>{children}</div>
         {/* Esmaecimento inferior reforçando o estado de amostra */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-neutral-50 to-transparent" />
       </div>

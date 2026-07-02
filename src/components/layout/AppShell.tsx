@@ -1,14 +1,14 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  CalendarDays, QrCode, Users, BookOpen, LayoutDashboard, TrendingUp, ScanLine,
-  Settings, LogOut, Lock, Ticket, Tv, Home, Map as MapIcon
+  CalendarDays, QrCode, Users, UserCog, BookOpen, LayoutDashboard, TrendingUp, ScanLine,
+  Settings, LogOut, Lock, Ticket, Tv, Home, Map as MapIcon, UserCircle, Award
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABEL, HOME_BY_ROLE, type Role, type Capability } from "@/lib/roles";
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-const ALL_ROLES: Role[] = ["guest", "attendee", "company", "speaker", "curator", "operator", "admin"];
+const ALL_ROLES: Role[] = ["guest", "attendee", "speaker", "curator", "operator", "admin"];
 
 // Navegação principal. `cap` = capacidade exigida; `acquirable` = item que o
 // Não Pago vê BLOQUEADO até adquirir acesso; `highlight` = CTA de aquisição.
@@ -21,15 +21,17 @@ interface NavEntry {
   highlight?: boolean;
 }
 const NAV: NavEntry[] = [
-  { to: "/app", label: "Agenda", icon: CalendarDays, cap: "manage:personal-agenda", acquirable: true },
+  // "Painel" (Admin) fica em primeiro — só o Administrador tem manage:platform.
+  { to: "/admin", label: "Painel", icon: Settings, cap: "manage:platform" },
+  // Admin: "Programação" leva à página de timeline + gestão (mesma do card do painel).
+  { to: "/admin/programacao-admin", label: "Programação", icon: CalendarDays, cap: "manage:platform" },
   { to: "/credencial", label: "Credencial", icon: QrCode, cap: "view:ticket-qr", acquirable: true },
-  { to: "/networking", label: "Conexões", icon: Users, cap: "view:networking", acquirable: true },
+  { to: "/networking", label: "Networking", icon: Users, cap: "view:networking", acquirable: true },
   { to: "/conteudos", label: "Conteúdos", icon: BookOpen, cap: "view:public-content" },
   { to: "/mapa", label: "Mapa", icon: MapIcon, cap: "view:event-map" },
   { to: "/streaming", label: "Ao Vivo", icon: Tv, cap: "view:streaming" },
   { to: "/curador", label: "Curador", icon: TrendingUp, cap: "view:curator-dashboard" },
   { to: "/operacao", label: "Operação", icon: ScanLine, cap: "operate:checkin" },
-  { to: "/admin", label: "Admin", icon: Settings, cap: "manage:platform" },
   { to: "/ingressos", label: "Ingressos", icon: Ticket, cap: "purchase:ticket", highlight: true }
 ];
 
@@ -47,9 +49,59 @@ const GUEST_ITEMS: ComputedNav[] = [
   { to: "/streaming", label: "Ao Vivo", icon: Tv, state: "normal" },
   { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
   { to: "/programacao", label: "Programação", icon: CalendarDays, state: "normal" },
-  { to: "/networking", label: "Conexões", icon: Users, state: "locked" },
+  { to: "/networking", label: "Networking", icon: Users, state: "locked" },
   { to: "/mapa", label: "Mapa", icon: MapIcon, state: "locked" },
-  { to: "/ingressos", label: "Adquirir ingresso", icon: Ticket, state: "highlight" }
+  { to: "/ingressos", label: "Ingressos", icon: Ticket, state: "normal" }
+];
+
+// Participante Geral (e Palestrante, que herda): mesma estrutura do Não Pago,
+// porém com TUDO liberado. A Credencial só entra para quem tem ingresso
+// Presencial (via voucher); o ingresso Online é digital e não gera credencial.
+const ATTENDEE_BASE: ComputedNav[] = [
+  { to: "/inicio", label: "Início", icon: Home, state: "normal" },
+  { to: "/streaming", label: "Ao Vivo", icon: Tv, state: "normal" },
+  { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
+  { to: "/programacao", label: "Programação", icon: CalendarDays, state: "normal" },
+  { to: "/networking", label: "Networking", icon: Users, state: "normal" },
+  { to: "/mapa", label: "Mapa", icon: MapIcon, state: "normal" },
+  { to: "/certificado", label: "Certificado", icon: Award, state: "normal" }
+];
+const CREDENTIAL_ITEM: ComputedNav = { to: "/credencial", label: "Credencial", icon: QrCode, state: "normal" };
+
+// Palestrante: herda o Participante Geral + "Meu Perfil Público" (bio, foto, selo).
+const SPEAKER_ITEMS: ComputedNav[] = [
+  ...ATTENDEE_BASE,
+  CREDENTIAL_ITEM,
+  { to: "/perfil", label: "Meu Perfil Público", icon: UserCircle, state: "normal" }
+];
+
+// Curador: "Início" é o painel; conteúdos em uma única aba; gestão de
+// palestrantes/empresas; compra de ingressos em lote; perfil público.
+const CURATOR_ITEMS: ComputedNav[] = [
+  { to: "/curador", label: "Painel", icon: Home, state: "normal" },
+  { to: "/programacao", label: "Programação", icon: CalendarDays, state: "normal" },
+  { to: "/networking", label: "Networking", icon: Users, state: "normal" },
+  { to: "/mapa", label: "Mapa", icon: MapIcon, state: "normal" },
+  CREDENTIAL_ITEM,
+  { to: "/certificado", label: "Certificado", icon: Award, state: "normal" },
+  { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
+  { to: "/ingressos", label: "Ingressos", icon: Ticket, state: "normal" },
+  { to: "/perfil", label: "Meu Perfil Público", icon: UserCircle, state: "normal" }
+];
+
+// Operador: foco total no credenciamento — sem "Ao Vivo" nem "Conteúdos".
+const OPERATOR_ITEMS: ComputedNav[] = [
+  { to: "/operacao", label: "Operação", icon: ScanLine, state: "normal" }
+];
+
+// Administrador: "Painel" primeiro + gestão de programação e navegação essencial.
+const ADMIN_ITEMS: ComputedNav[] = [
+  { to: "/admin", label: "Painel", icon: Settings, state: "normal" },
+  { to: "/admin/usuarios", label: "Usuários", icon: UserCog, state: "normal" },
+  { to: "/admin/programacao-admin", label: "Programação", icon: CalendarDays, state: "normal" },
+  { to: "/networking", label: "Networking", icon: Users, state: "normal" },
+  { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
+  { to: "/mapa", label: "Mapa", icon: MapIcon, state: "normal" }
 ];
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -156,10 +208,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     navigate("/login");
   };
 
-  // Não Pago tem árvore de navegação própria; demais perfis seguem o RBAC.
+  // Não Pago e Participante Geral/Palestrante têm árvores próprias; demais seguem o RBAC.
   const items: ComputedNav[] =
     user.role === "guest"
       ? GUEST_ITEMS
+      : user.role === "speaker"
+      ? SPEAKER_ITEMS
+      : user.role === "curator"
+      ? CURATOR_ITEMS
+      : user.role === "operator"
+      ? OPERATOR_ITEMS
+      : user.role === "admin"
+      ? ADMIN_ITEMS
+      : user.role === "attendee"
+      ? // Online (hasCredential === false) não tem Credencial; demais têm.
+        user.hasCredential === false
+        ? ATTENDEE_BASE
+        : [...ATTENDEE_BASE, CREDENTIAL_ITEM]
       : NAV.flatMap((n) => {
           if (can(n.cap)) {
             if (n.highlight && user.isPaid) return []; // já adquiriu → some o CTA

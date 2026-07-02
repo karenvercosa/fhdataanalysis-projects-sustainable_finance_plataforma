@@ -8,7 +8,6 @@
 export type Role =
   | "guest"        // Participante Não Pago (cadastro feito, sem ingresso)
   | "attendee"     // Participante Geral (ingresso ativo via voucher)
-  | "company"      // Empresa
   | "speaker"      // Palestrante
   | "curator"      // Curador (patrocinador que distribui vouchers)
   | "operator"     // Operador (credenciamento no dia)
@@ -17,7 +16,6 @@ export type Role =
 export const ROLE_LABEL: Record<Role, string> = {
   guest: "Participante Não Pago",
   attendee: "Participante Geral",
-  company: "Empresa",
   speaker: "Palestrante",
   curator: "Curador / Patrocinador",
   operator: "Operador",
@@ -39,11 +37,12 @@ export type Capability =
   | "operate:checkin"         // bipar QR, busca fallback, status
   | "purchase:ticket"         // adquirir acesso ao evento (compra/voucher)
   | "view:event-map"          // mapa do evento (palcos, stands, salas)
+  | "view:certificate"        // certificado de participação (pós-evento)
   | "manage:platform";        // admin total
 
 // Participante Geral (pago): base herdada pelo Palestrante.
 // `view:ticket-qr` (credencial) NÃO entra na base — é concedido só a quem
-// precisa ser credenciado: Participante Geral, Empresa, Curador e Palestrante.
+// precisa ser credenciado: Participante Geral, Curador e Palestrante.
 const ATTENDEE_CAPS: Capability[] = [
   "view:public-content",
   "view:streaming",
@@ -70,6 +69,7 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
   "operate:checkin": "Credenciamento",
   "purchase:ticket": "Adquirir ingresso",
   "view:event-map": "Mapa do evento",
+  "view:certificate": "Certificado de participação",
   "manage:platform": "Gestão da plataforma"
 };
 
@@ -79,20 +79,22 @@ export const ALL_CAPABILITIES = Object.keys(CAPABILITY_LABEL) as Capability[];
 export const DEFAULT_MATRIX: Record<Role, Capability[]> = {
   // Não Pago: streaming livre, sem download e SEM credencial; pode adquirir acesso.
   guest: ["view:public-content", "view:streaming", "view:premium-content", "purchase:ticket"],
-  attendee: [...ATTENDEE_CAPS, "view:ticket-qr"],
-  company: ["view:public-content", "view:streaming", "view:networking", "manage:company-profile", "view:ticket-qr", "purchase:ticket", "view:event-map"],
+  attendee: [...ATTENDEE_CAPS, "view:ticket-qr", "view:certificate"],
   // Palestrante HERDA as rotas do Participante Geral (+ materiais próprios).
   // O diferencial é apenas visual (selo/tag), injetável pelo Admin.
-  speaker: [...ATTENDEE_CAPS, "view:ticket-qr", "manage:speaker-content"],
+  speaker: [...ATTENDEE_CAPS, "view:ticket-qr", "manage:speaker-content", "view:certificate"],
   curator: [
     "view:public-content",
     "view:streaming",
+    "view:premium-content",
+    "download:content",
     "view:networking",
     "manage:company-profile",
     "view:curator-dashboard",
     "view:ticket-qr",
     "purchase:ticket",
-    "view:event-map"
+    "view:event-map",
+    "view:certificate"
   ],
   // Operador e Admin operam o evento — não possuem credencial própria.
   operator: ["view:public-content", "view:streaming", "operate:checkin"],
@@ -114,9 +116,8 @@ export function can(role: Role, cap: Capability): boolean {
 /** Rota inicial recomendada por papel após o login. */
 export const HOME_BY_ROLE: Record<Role, string> = {
   guest: "/inicio",
-  attendee: "/app",
-  company: "/empresa",
-  speaker: "/app",
+  attendee: "/inicio",
+  speaker: "/inicio",
   curator: "/curador",
   operator: "/operacao",
   admin: "/admin"

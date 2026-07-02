@@ -5,6 +5,8 @@ import { ATTENDEES, type Attendee } from "@/data/mock";
 interface CheckinState {
   attendees: Attendee[];
   credential: (id: string) => void;
+  /** Alterna o check de "já bipou o QR" (feito fora da plataforma). */
+  toggle: (id: string) => void;
   stats: { total: number; credentialed: number; pending: number; rate: number };
 }
 
@@ -20,6 +22,10 @@ export function CheckinProvider({ children }: { children: ReactNode }) {
       attendees,
       credential: (id) =>
         setAttendees((prev) => prev.map((a) => (a.id === id ? { ...a, status: "Credenciado" } : a))),
+      toggle: (id) =>
+        setAttendees((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, status: a.status === "Credenciado" ? "Confirmado" : "Credenciado" } : a))
+        ),
       stats: {
         total: attendees.length,
         credentialed,

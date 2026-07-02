@@ -9,6 +9,7 @@ import { InterestsProvider } from "./context/InterestsContext";
 import { VouchersProvider } from "./context/VouchersContext";
 import { SessionsProvider } from "./context/SessionsContext";
 import { CheckinProvider } from "./context/CheckinContext";
+import { ConnectionFavoritesProvider } from "./context/ConnectionFavoritesContext";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <VouchersProvider>
               <SessionsProvider>
                 <CheckinProvider>
-                  <App />
+                  <ConnectionFavoritesProvider>
+                    <App />
+                  </ConnectionFavoritesProvider>
                 </CheckinProvider>
               </SessionsProvider>
             </VouchersProvider>

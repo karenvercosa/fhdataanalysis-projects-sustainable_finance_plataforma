@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type Tone = "success" | "warning" | "error" | "info" | "neutral" | "primary";
+type Tone = "success" | "warning" | "error" | "info" | "neutral" | "primary" | "secondary";
 
 const TONES: Record<Tone, string> = {
   success: "bg-success-50 text-success-500",
@@ -8,7 +8,8 @@ const TONES: Record<Tone, string> = {
   error: "bg-error-50 text-error-500",
   info: "bg-info-50 text-info-500",
   neutral: "bg-neutral-100 text-neutral-600",
-  primary: "bg-primary-50 text-primary-600"
+  primary: "bg-primary-50 text-primary-600",
+  secondary: "bg-secondary-50 text-secondary-600"
 };
 
 export function Badge({

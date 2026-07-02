@@ -22,7 +22,7 @@ export function credentialCode(role: string, email: string, existing?: string): 
   let h = 0;
   for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) >>> 0;
   const block = (n: number) => (n % 46656).toString(36).toUpperCase().padStart(3, "0").slice(0, 3);
-  const prefix = role === "company" ? "EMP" : role === "curator" ? "CUR" : role === "speaker" ? "SPK" : "SF26";
+  const prefix = role === "curator" ? "CUR" : role === "speaker" ? "SPK" : "SF26";
   return `${prefix}-${block(h)}-${block(h >> 7)}`;
 }
 

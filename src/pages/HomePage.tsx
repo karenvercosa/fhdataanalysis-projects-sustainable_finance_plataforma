@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
-import { Tv, BookOpen, CalendarDays, Ticket, Clock, MapPin, ArrowRight, Radio } from "lucide-react";
+import { Tv, BookOpen, CalendarDays, Ticket, Clock, MapPin, ArrowRight, Radio, QrCode, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSessions } from "@/context/SessionsContext";
+import { useFavorites } from "@/context/FavoritesContext";
 import { Badge, Card, CardBody } from "@/components/ui";
+import { credentialCode } from "@/lib/utils";
 import { TRACK_TONE, toMinutes } from "@/data/mock";
 
 const QUICK = [
@@ -14,8 +16,15 @@ const QUICK = [
 export default function HomePage() {
   const { user, can } = useAuth();
   const { sessions } = useSessions();
-  const preview = [...sessions].sort((a, b) => toMinutes(a.start) - toMinutes(b.start)).slice(0, 4);
+  const { isFavorite } = useFavorites();
   const canBuy = can("purchase:ticket");
+  // Atalho da credencial: precisa da capacidade E de ingresso com credencial (Presencial).
+  const hasCredential = can("view:ticket-qr") && user.hasCredential !== false;
+  const credCode = credentialCode(user.role, user.email, user.ticketCode);
+  // Pagante com sessões favoritadas vê "Sua agenda"; senão, prévia da programação.
+  const favorites = can("manage:personal-agenda") ? sessions.filter((s) => isFavorite(s.id)) : [];
+  const showAgenda = favorites.length > 0;
+  const preview = (showAgenda ? favorites : [...sessions].sort((a, b) => toMinutes(a.start) - toMinutes(b.start))).slice(0, 4);
 
   return (
     <div className="space-y-6">
@@ -39,6 +48,26 @@ export default function HomePage() {
         </CardBody>
       </Card>
 
+      {/* Acesso rápido à credencial (Participante Geral e demais credenciados) */}
+      {hasCredential && (
+        <Link to="/credencial" aria-label="Abrir Minha credencial" className="block lg:max-w-md">
+          <Card className="border-primary-500 bg-primary-500 text-white transition hover:bg-primary-600">
+            <CardBody className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-md bg-white/15">
+                  <QrCode className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-h4">Minha credencial</p>
+                  <p className="font-mono text-body-sm text-white/80">{credCode}</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5" />
+            </CardBody>
+          </Card>
+        </Link>
+      )}
+
       {/* Acesso rápido */}
       <div className="grid gap-3 sm:grid-cols-3">
         {QUICK.map(({ to, label, desc, icon: Icon }) => (
@@ -59,7 +88,7 @@ export default function HomePage() {
       {/* Preview da agenda */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-h3 text-neutral-900">Prévia da programação</h2>
+          <h2 className="text-h3 text-neutral-900">{showAgenda ? "Sua agenda" : "Prévia da programação"}</h2>
           <Link to="/programacao" className="inline-flex items-center gap-1 text-body-sm font-medium text-primary-600">
             Ver tudo <ArrowRight className="h-4 w-4" />
           </Link>
@@ -77,7 +106,7 @@ export default function HomePage() {
                       <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {s.room}</span>
                     </div>
                   </div>
-                  {i === 0 ? (
+                  {!showAgenda && i === 0 ? (
                     <Badge tone="error"><span className="inline-flex items-center gap-1"><Radio className="h-3 w-3" /> Ao vivo</span></Badge>
                   ) : (
                     <Badge tone={TRACK_TONE[s.track]}>{s.track}</Badge>

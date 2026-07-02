@@ -11,6 +11,8 @@ export interface CurrentUser {
   ticketCode?: string; // presente quando há ingresso ativo
   curatorVoucher?: string; // empresa/curador: prefixo do voucher
   isPaid?: boolean; // adquiriu ingresso (pago ou resgate via voucher)
+  /** Só o ingresso Presencial (voucher) gera credencial; Online é digital. */
+  hasCredential?: boolean;
 }
 
 interface LoginResult {
@@ -34,8 +36,8 @@ interface AuthState {
   registerGuest: (data: Phase1Data) => void;
   /** Login/cadastro social (Google) — entra como Não Pago (simulado). */
   loginWithGoogle: () => void;
-  /** Fase 2: conclui o checkout → promove Não Pago a pago e libera download. */
-  completeCheckout: () => void;
+  /** Fase 2: conclui o checkout → libera a plataforma. `credential` (Presencial) gera a credencial. */
+  completeCheckout: (opts?: { credential?: boolean }) => void;
   logout: () => void;
   /** Troca de papel — usado no protótipo para demonstrar os 7 fluxos. */
   setRole: (role: Role) => void;
@@ -120,14 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setIsAuthenticated(true);
       },
-      completeCheckout: () => {
-        // Não Pago vira Participante Geral (ganha download:content via RBAC).
+      completeCheckout: (opts) => {
+        // Libera toda a plataforma. Presencial (voucher) também gera credencial.
+        const credential = opts?.credential ?? true;
         const block = () => crypto.randomUUID().slice(0, 4).toUpperCase();
         setUser((u) => ({
           ...u,
           role: u.role === "guest" ? "attendee" : u.role,
           isPaid: true,
-          ticketCode: u.ticketCode ?? `SF26-${block()}-${block()}`
+          hasCredential: credential,
+          ticketCode: credential ? u.ticketCode ?? `SF26-${block()}-${block()}` : undefined
         }));
       },
       logout: () => {
