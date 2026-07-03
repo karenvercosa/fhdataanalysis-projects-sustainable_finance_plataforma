@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { TrendingUp, Users, Ticket, Lock, Download, Eye, Copy, Check, QrCode, ChevronRight, Power } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, ProgressBar } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
+import { SponsorAdBanner } from "@/components/SponsorAdBanner";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/context/AuthContext";
 import { useVouchers } from "@/context/VouchersContext";
@@ -63,6 +64,9 @@ export default function CuratorDashboard() {
           </CardBody>
         </Card>
       </Link>
+
+      {/* Banner rotativo de divulgações dos patrocinadores Ouro/Prata (2:1) */}
+      <SponsorAdBanner />
 
       {/* Métricas de uso do voucher */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

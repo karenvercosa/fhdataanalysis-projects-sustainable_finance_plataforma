@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import {
   Settings, Users, Ticket, CalendarDays, Building2,
-  ChevronRight, Sparkles, Percent, Handshake
+  ChevronRight, Sparkles, Percent, Handshake, Megaphone
 } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, BarChart, type Segment } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
+import { SponsorAdBanner } from "@/components/SponsorAdBanner";
 import { useVouchers } from "@/context/VouchersContext";
 import { SESSIONS } from "@/data/mock";
 import { CURATORS } from "@/data/catalog";
@@ -41,6 +42,7 @@ const MODULES = [
   { label: "Gestão de Usuários", desc: "Gerenciar contas, perfis e tags", icon: Users, to: "/admin/usuarios" },
   { label: "Gestão de Vouchers", desc: "Free / desconto + nº de usos", icon: Percent, to: "/admin/vouchers" },
   { label: "Programação", desc: "Sessões, trilhas e salas", icon: CalendarDays, to: "/admin/programacao-admin" },
+  { label: "Divulgações", desc: "Banner rotativo (Ouro/Prata)", icon: Megaphone, to: "/admin/divulgacoes" },
   { label: "Interesses", desc: "Nuvem de temas do onboarding", icon: Sparkles, to: "/admin/interesses" }
 ];
 
@@ -59,6 +61,9 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader title="Administração" subtitle="Painel central da plataforma" icon={Settings} />
+
+      {/* Banner rotativo de divulgações dos patrocinadores Ouro/Prata (2:1) */}
+      <SponsorAdBanner />
 
       {/* KPIs gerais */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

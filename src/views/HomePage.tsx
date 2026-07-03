@@ -3,6 +3,8 @@ import { Tv, BookOpen, CalendarDays, Ticket, Clock, MapPin, ArrowRight, Radio, Q
 import { useAuth } from "@/context/AuthContext";
 import { useSessions } from "@/context/SessionsContext";
 import { SponsorLogo } from "@/components/SponsorLogo";
+import { SponsorAdBanner } from "@/components/SponsorAdBanner";
+import { BronzeMarquee } from "@/components/BronzeMarquee";
 import { useFavorites } from "@/context/FavoritesContext";
 import { Badge, Card, CardBody } from "@/components/ui";
 import { credentialCode } from "@/lib/utils";
@@ -29,25 +31,31 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero de boas-vindas */}
-      <Card className="overflow-hidden border-primary-500 bg-primary-500 text-white">
-        <CardBody className="space-y-3">
-          <Badge tone="neutral" className="bg-white/15 text-white">04 de Setembro, 2026 · Goiânia</Badge>
-          <h1 className="text-h1">Olá, {user.name.split(" ")[0]} 👋</h1>
-          <p className="max-w-xl text-body-lg text-white/85">
-            Bem-vindo(a) ao Sustainable Finance 2026. Explore a programação, assista aos painéis ao
-            vivo e acesse conteúdos — adquira seu ingresso para liberar o acesso total.
-          </p>
+      {/* Boas-vindas — compacto e discreto (menos destaque que o banner) */}
+      <Card>
+        <CardBody className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-body-sm text-neutral-500">04 de Setembro, 2026 · Goiânia</p>
+            <h1 className="text-h3 text-neutral-900">Olá, {user.name.split(" ")[0]} 👋</h1>
+            <p className="text-body-sm text-neutral-600">
+              {canBuy
+                ? "Adquira o ingresso Online e tenha acesso ilimitado à plataforma."
+                : "Bem-vindo(a) ao Sustainable Finance 2026."}
+            </p>
+          </div>
           {canBuy && (
             <Link
               to="/ingressos"
-              className="inline-flex h-11 w-fit items-center gap-2 rounded-md bg-white px-5 text-button text-primary-700 transition hover:bg-neutral-50"
+              className="inline-flex h-10 w-fit shrink-0 items-center gap-2 rounded-md bg-primary-500 px-4 text-button text-white transition hover:bg-primary-600"
             >
               <Ticket className="h-4 w-4" /> Adquirir ingresso
             </Link>
           )}
         </CardBody>
       </Card>
+
+      {/* Banner rotativo de divulgações dos patrocinadores Ouro/Prata (2:1) */}
+      <SponsorAdBanner />
 
       {/* Acesso rápido à credencial (Participante Geral e demais credenciados) */}
       {hasCredential && (
@@ -119,6 +127,11 @@ export default function HomePage() {
           ))}
         </ul>
       </section>
+
+      {/* Patrocinadores — esteira de logos menores no rodapé, mais afastada */}
+      <div className="pt-8">
+        <BronzeMarquee />
+      </div>
     </div>
   );
 }

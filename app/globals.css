@@ -41,3 +41,19 @@ h1, h2, h3, h4, h5 { font-family: "Miriam Libre", system-ui, sans-serif; }
   /* Trava de scroll quando há overlay */
   .no-scroll { overflow: hidden; }
 }
+
+/* Marquee (esteira de logos bronze rolando no rodapé do início) */
+@keyframes sf-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.sf-marquee-track {
+  display: inline-flex;
+  width: max-content;
+  animation: sf-marquee 32s linear infinite;
+}
+.sf-marquee-track:hover { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-marquee-track { animation: none; }
+}
