@@ -325,12 +325,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Drawer do menu — mobile/tablet */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col border-r border-neutral-200 bg-white px-4 py-5 shadow-pop">
-            <div className="flex items-center justify-between">
+      {/* Drawer do menu — mobile/tablet. Sempre montado para animar entrada e
+          saída (fade no overlay + deslize do painel). */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        aria-hidden={!menuOpen}
+        className={cn(
+          "fixed inset-0 z-40 overflow-hidden lg:hidden",
+          menuOpen ? "pointer-events-auto" : "pointer-events-none"
+        )}
+      >
+        <div
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out",
+            menuOpen ? "opacity-100" : "opacity-0"
+          )}
+        />
+        <aside
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col border-r border-neutral-200 bg-white px-4 py-5 shadow-pop transition-transform duration-300 ease-out will-change-transform",
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between">
               <Brand />
               <button
                 onClick={() => setMenuOpen(false)}
@@ -363,9 +383,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
-          </aside>
-        </div>
-      )}
+        </aside>
+      </div>
     </div>
   );
 }
