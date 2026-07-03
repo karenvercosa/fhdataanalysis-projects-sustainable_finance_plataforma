@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   CalendarDays, QrCode, Users, UserCog, BookOpen, LayoutDashboard, TrendingUp, ScanLine,
-  Settings, LogOut, Lock, Ticket, Tv, Home, Map as MapIcon, UserCircle, Award
+  Settings, LogOut, Lock, Ticket, Tv, Home, Map as MapIcon, UserCircle, Award, Menu, X
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABEL, HOME_BY_ROLE, type Role, type Capability } from "@/lib/roles";
@@ -122,7 +123,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function NavItems({ items, orientation }: { items: ComputedNav[]; orientation: "row" | "col" }) {
+function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; orientation: "row" | "col"; onNavigate?: () => void }) {
   const navigate = useNavigate();
   const base =
     orientation === "col"
@@ -148,7 +149,7 @@ function NavItems({ items, orientation }: { items: ComputedNav[]; orientation: "
           return (
             <button
               key={it.label}
-              onClick={() => navigate(it.to)}
+              onClick={() => { navigate(it.to); onNavigate?.(); }}
               title="Pré-visualização — adquira para liberar"
               className={cn(base, orientation === "col" && "w-full text-left", "text-neutral-400 hover:bg-neutral-100")}
             >
@@ -164,6 +165,7 @@ function NavItems({ items, orientation }: { items: ComputedNav[]; orientation: "
             <NavLink
               key={it.to}
               to={it.to}
+              onClick={onNavigate}
               className={cn(
                 base,
                 orientation === "col"
@@ -181,6 +183,7 @@ function NavItems({ items, orientation }: { items: ComputedNav[]; orientation: "
           <NavLink
             key={it.to}
             to={it.to}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
                 base,
@@ -204,8 +207,16 @@ function NavItems({ items, orientation }: { items: ComputedNav[]; orientation: "
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, setRole, can, logout } = useAuth();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false); // drawer mobile/tablet
+
+  // Trava o scroll do corpo enquanto o menu está aberto.
+  useEffect(() => {
+    document.body.classList.toggle("no-scroll", menuOpen);
+    return () => document.body.classList.remove("no-scroll");
+  }, [menuOpen]);
 
   const handleLogout = () => {
+    setMenuOpen(false);
     logout();
     navigate("/login");
   };
@@ -287,32 +298,74 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar */}
         <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-neutral-200 bg-white px-4 py-3 lg:px-8">
-          <div className="lg:hidden">
-            <Brand compact />
-          </div>
-          <div className="hidden text-body text-neutral-600 lg:block">
-            Olá, <span className="font-medium text-neutral-900">{user.name.split(" ")[0]}</span> 👋
+          <div className="flex min-w-0 items-center gap-2">
+            {/* Botão hambúrguer — mobile/tablet */}
+            <button
+              onClick={() => setMenuOpen(true)}
+              aria-label="Abrir menu"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-neutral-700 hover:bg-neutral-100 lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="lg:hidden">
+              <Brand compact />
+            </div>
+            <div className="hidden text-body text-neutral-600 lg:block">
+              Olá, <span className="font-medium text-neutral-900">{user.name.split(" ")[0]}</span> 👋
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {RoleSelect}
-            <NavLink to="/perfil" className="lg:hidden" aria-label="Meu perfil">
-              <Avatar name={user.name} src={user.avatarUrl} size="sm" />
-            </NavLink>
           </div>
         </header>
 
         {/* Conteúdo — centralizado e com largura máxima no desktop */}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-10">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-10 lg:px-8">
           {children}
         </main>
       </div>
 
-      {/* Bottom nav — mobile/tablet (adapta-se à quantidade de itens do perfil) */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white lg:hidden">
-        <div className="flex">
-          <NavItems items={items} orientation="row" />
+      {/* Drawer do menu — mobile/tablet */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col border-r border-neutral-200 bg-white px-4 py-5 shadow-pop">
+            <div className="flex items-center justify-between">
+              <Brand />
+              <button
+                onClick={() => setMenuOpen(false)}
+                aria-label="Fechar menu"
+                className="grid h-9 w-9 place-items-center rounded-md text-neutral-600 hover:bg-neutral-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="mt-6 flex flex-1 flex-col gap-1 overflow-y-auto">
+              <NavItems items={items} orientation="col" onNavigate={() => setMenuOpen(false)} />
+            </nav>
+            <div className="mt-4 flex items-center gap-3 rounded-md border border-neutral-100 p-3">
+              <NavLink
+                to="/perfil"
+                onClick={() => setMenuOpen(false)}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-md hover:opacity-80"
+              >
+                <Avatar name={user.name} src={user.avatarUrl} size="sm" />
+                <div className="min-w-0">
+                  <p className="truncate text-body font-medium text-neutral-900">{user.name}</p>
+                  <p className="truncate text-body-sm text-neutral-600">{ROLE_LABEL[user.role]}</p>
+                </div>
+              </NavLink>
+              <button
+                onClick={handleLogout}
+                aria-label="Sair"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-neutral-600 hover:bg-neutral-100 hover:text-error-500"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          </aside>
         </div>
-      </nav>
+      )}
     </div>
   );
 }
