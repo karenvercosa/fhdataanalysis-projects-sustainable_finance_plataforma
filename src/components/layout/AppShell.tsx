@@ -94,14 +94,16 @@ const OPERATOR_ITEMS: ComputedNav[] = [
   { to: "/operacao", label: "Operação", icon: ScanLine, state: "normal" }
 ];
 
-// Administrador: "Painel" primeiro + gestão de programação e navegação essencial.
+// Administrador: experiência de usuário + gestão. "Programação" leva à
+// timeline + gestão (mesma página do card do painel).
 const ADMIN_ITEMS: ComputedNav[] = [
   { to: "/admin", label: "Painel", icon: Settings, state: "normal" },
-  { to: "/admin/usuarios", label: "Usuários", icon: UserCog, state: "normal" },
+  { to: "/streaming", label: "Ao Vivo", icon: Tv, state: "normal" },
+  { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
   { to: "/admin/programacao-admin", label: "Programação", icon: CalendarDays, state: "normal" },
   { to: "/networking", label: "Networking", icon: Users, state: "normal" },
-  { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
-  { to: "/mapa", label: "Mapa", icon: MapIcon, state: "normal" }
+  { to: "/mapa", label: "Mapa", icon: MapIcon, state: "normal" },
+  { to: "/admin/usuarios", label: "Usuários", icon: UserCog, state: "normal" }
 ];
 
 function Brand({ compact = false }: { compact?: boolean }) {

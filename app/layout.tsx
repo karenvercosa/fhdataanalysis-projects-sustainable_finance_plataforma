@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import PwaCleaner from "@/components/PwaCleaner";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sustainable Finance 2026",
   description: "Hub digital do evento Sustainable Finance — Goiânia, 04/09/2026",
+  // Registro nativo do manifest (App Router serve /manifest.webmanifest via app/manifest.ts).
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/favicon.svg" }
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SF 2026"
+  },
+  icons: { icon: "/favicon.svg", apple: "/icons/icon-192.png" }
 };
 
 export const viewport: Viewport = {
@@ -26,7 +33,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* Limpeza de emergência do SW/cache legado (Vite) — roda 1x por navegador. */}
+        <PwaCleaner />
+        {children}
+      </body>
     </html>
   );
 }

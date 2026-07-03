@@ -15,8 +15,8 @@ const SessionsContext = createContext<SessionsState | null>(null);
 
 export function SessionsProvider({ children }: { children: ReactNode }) {
   // Agenda compartilhada e persistente: o que o Admin edita reflete no app.
-  // Chave versionada: o modelo ganhou sobre/mediador/materiais.
-  const [sessions, setSessions] = usePersistentState<Session[]>("sf_sessions_v4", SESSIONS);
+  // Chave versionada: o modelo ganhou empresa relacionada e link ao vivo.
+  const [sessions, setSessions] = usePersistentState<Session[]>("sf_sessions_v6", SESSIONS);
 
   const value = useMemo<SessionsState>(
     () => ({

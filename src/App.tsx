@@ -24,7 +24,6 @@ import ModuleCrud from "@/views/admin/ModuleCrud";
 import InterestsAdmin from "@/views/admin/InterestsAdmin";
 import ReportsAdmin from "@/views/admin/ReportsAdmin";
 import SessionsAdmin from "@/views/admin/SessionsAdmin";
-import PermissionsAdmin from "@/views/admin/PermissionsAdmin";
 import ProfilePage from "@/views/ProfilePage";
 
 /** Layout autenticado: protege as rotas e envolve no AppShell. */
@@ -205,14 +204,6 @@ export default function App() {
           element={
             <RoleGuard capability="manage:platform">
               <SessionsAdmin />
-            </RoleGuard>
-          }
-        />
-        <Route
-          path="/admin/permissoes"
-          element={
-            <RoleGuard capability="manage:platform">
-              <PermissionsAdmin />
             </RoleGuard>
           }
         />

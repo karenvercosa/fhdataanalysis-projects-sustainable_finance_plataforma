@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { UserCircle, CheckCircle2, Award, Camera, Trash2, Link2 } from "lucide-react";
+import { UserCircle, CheckCircle2, Award, Camera, Trash2, Link2, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useInterests } from "@/context/InterestsContext";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { Avatar, Badge, Button, Card, CardBody, CardHeader } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/roles";
 import { SEED_USERS, type AdminUser } from "@/data/users";
 import { BRAND_KEY, BRAND_SEED, type BrandContent } from "@/data/brandContent";
+import { cn } from "@/lib/utils";
 
 interface Profile {
   headline: string;
@@ -27,13 +29,21 @@ export default function ProfilePage() {
   const [toast, setToast] = useState(false);
 
   // Selo injetado pelo Admin: lê o registro do usuário (sf_users) pelo e-mail.
-  const [adminUsers] = usePersistentState<AdminUser[]>("sf_users", SEED_USERS);
+  const [adminUsers] = usePersistentState<AdminUser[]>("sf_users_v2", SEED_USERS);
   const myTag = adminUsers.find((u) => u.email.toLowerCase() === user.email.toLowerCase())?.tag;
 
   // Conteúdos publicados (exibidos no perfil público do curador).
   const isCurator = user.role === "curator";
   const [brand] = usePersistentState<BrandContent[]>(BRAND_KEY, BRAND_SEED);
   const myContent = brand.filter((c) => c.ownerId === "cur_1");
+
+  // Nuvem de interesses (mesma do cadastro) — escolhida no perfil público.
+  const { interests: interestCatalog } = useInterests();
+  const toggleInterest = (tag: string) =>
+    setForm((f) => ({
+      ...f,
+      interests: f.interests.includes(tag) ? f.interests.filter((t) => t !== tag) : [...f.interests, tag]
+    }));
 
   const onPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,6 +156,49 @@ export default function ProfilePage() {
           </div>
         </CardBody>
       </Card>
+
+      {/* Interesses (nuvem de palavras) — perfil público (curador/palestrante) */}
+      {isPublic && (
+        <Card>
+          <CardHeader className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary-600" />
+            <div>
+              <p className="text-h4 text-neutral-900">Interesses</p>
+              <p className="text-body-sm text-neutral-600">
+                Escolha os temas que aparecerão no seu perfil público e ajudam no networking.
+              </p>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {interestCatalog.map((tag) => {
+                const active = form.interests.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleInterest(tag)}
+                    aria-pressed={active}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-body-sm transition-colors",
+                      active
+                        ? "border-primary-500 bg-primary-500 text-white"
+                        : "border-neutral-200 text-neutral-700 hover:border-primary-300"
+                    )}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-body-sm text-neutral-500">
+              {form.interests.length > 0
+                ? `${form.interests.length} interesse(s) selecionado(s).`
+                : "Nenhum interesse selecionado ainda."}
+            </p>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Conteúdos publicados (perfil público do curador) */}
       {isCurator && (

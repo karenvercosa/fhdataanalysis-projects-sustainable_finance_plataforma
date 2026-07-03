@@ -34,9 +34,10 @@ export default function ContentHub() {
   const canDownload = can("download:content"); // TRAVA do "Não Pago"
   const isCurator = user.role === "curator";
   const isSpeaker = user.role === "speaker"; // palestrante insere material como o curador
-  const canCreate = isCurator || isSpeaker;
-  // Dono dos próprios materiais: curador fixo (cur_1); palestrante pelo e-mail.
-  const myOwnerId = isCurator ? "cur_1" : isSpeaker ? `spk:${user.email}` : "";
+  const isAdmin = user.role === "admin"; // admin também insere conteúdo (como o curador)
+  const canCreate = isCurator || isSpeaker || isAdmin;
+  // Dono dos próprios materiais: curador fixo (cur_1); palestrante/admin pelo e-mail.
+  const myOwnerId = isCurator ? "cur_1" : isSpeaker ? `spk:${user.email}` : isAdmin ? `adm:${user.email}` : "";
   const [filter, setFilter] = useState<Filter>("Todos");
   // Conteúdos publicados por curadores/palestrantes (aparecem na Seção de Conteúdos).
   const [brand, setBrand] = usePersistentState<BrandContent[]>(BRAND_KEY, BRAND_SEED);

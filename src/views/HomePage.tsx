@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Tv, BookOpen, CalendarDays, Ticket, Clock, MapPin, ArrowRight, Radio, QrCode, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSessions } from "@/context/SessionsContext";
+import { SponsorLogo } from "@/components/SponsorLogo";
 import { useFavorites } from "@/context/FavoritesContext";
 import { Badge, Card, CardBody } from "@/components/ui";
 import { credentialCode } from "@/lib/utils";
@@ -106,6 +107,7 @@ export default function HomePage() {
                       <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {s.room}</span>
                     </div>
                   </div>
+                  <SponsorLogo name={s.company} />
                   {!showAgenda && i === 0 ? (
                     <Badge tone="error"><span className="inline-flex items-center gap-1"><Radio className="h-3 w-3" /> Ao vivo</span></Badge>
                   ) : (

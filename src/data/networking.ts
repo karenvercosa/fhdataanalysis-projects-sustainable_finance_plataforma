@@ -81,4 +81,20 @@ export const CONNECTIONS: Connection[] = [
 
 export const getConnection = (id: string) => CONNECTIONS.find((c) => c.id === id);
 
+/**
+ * Cota de patrocínio (Ouro/Prata/Bronze) de uma conexão:
+ * - empresa: sua própria cota;
+ * - pessoa: a cota da empresa em que ela trabalha (se for patrocinadora).
+ */
+export function sponsorTier(c: Connection): SponsorTier | undefined {
+  if (c.kind === "company") return c.tier;
+  return CONNECTIONS.find((x) => x.kind === "company" && x.name === c.company)?.tier;
+}
+
+/** Cota de patrocínio de uma empresa pelo nome (usada nos cards de programação). */
+export function companyTier(name?: string): SponsorTier | undefined {
+  if (!name) return undefined;
+  return CONNECTIONS.find((x) => x.kind === "company" && x.name === name)?.tier;
+}
+
 export const TIER_TONE = { Ouro: "warning", Prata: "info", Bronze: "neutral" } as const;

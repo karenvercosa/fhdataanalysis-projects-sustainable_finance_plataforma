@@ -19,8 +19,10 @@ const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 
 export default function VoucherCheckout() {
   const { completeCheckout, user } = useAuth();
-  const { getByCode, remaining, redeem, createBatch } = useVouchers();
+  const { getByCode, remaining, redeem, createBatch, vouchers } = useVouchers();
   const isCurator = user.role === "curator";
+  // Vouchers já criados/usados pelo curador (para o menu suspenso do lote).
+  const myVoucherCodes = vouchers.filter((v) => v.ownerType === "curator" && v.ownerId === CURATOR_ID).map((v) => v.code);
 
   // Fase 2 — dados complementares.
   const [company, setCompany] = useState("");
@@ -32,14 +34,16 @@ export default function VoucherCheckout() {
   const [voucher, setVoucher] = useState<Voucher | null>(null);
   const [done, setDone] = useState(false);
 
-  // Compra em lote (curador) → gera voucher com N convites.
+  // Compra em lote/avulso (curador) → gera/soma voucher com N convites.
   const [quantity, setQuantity] = useState(10);
+  const [loteCode, setLoteCode] = useState("");
   const [batch, setBatch] = useState<Voucher | null>(null);
   const [copied, setCopied] = useState(false);
   const loteTotal = Math.max(1, quantity) * LOTE_UNIT;
+  const reusing = myVoucherCodes.some((c) => c.toLowerCase() === loteCode.trim().toLowerCase());
 
   const buyLote = () => {
-    const v = createBatch(CURATOR_ID, Math.max(1, quantity));
+    const v = createBatch(CURATOR_ID, Math.max(1, quantity), loteCode);
     setBatch(v);
   };
 
@@ -113,7 +117,39 @@ export default function VoucherCheckout() {
 
     return (
       <div className="mx-auto max-w-2xl space-y-4">
-        <PageHeader title="Adquirir ingressos em lote" subtitle="Compre convites por valor e distribua via voucher" icon={Layers} />
+        <PageHeader title="Adquirir ingressos" subtitle="Compre convites em lote ou avulso e distribua via voucher" icon={Layers} />
+
+        {/* Voucher: escolher um já usado (menu suspenso) ou escrever um novo */}
+        <Card>
+          <CardHeader>
+            <p className="text-h4 text-neutral-900">Voucher</p>
+            <p className="text-body-sm text-neutral-600">
+              Escolha um voucher já utilizado ou escreva um novo nome. Reutilizar um código soma os convites a ele.
+            </p>
+          </CardHeader>
+          <CardBody className="space-y-1.5">
+            <label htmlFor="lote-code" className="block text-h5 text-neutral-900">Nome do voucher</label>
+            <input
+              id="lote-code"
+              list="curator-voucher-codes"
+              value={loteCode}
+              onChange={(e) => setLoteCode(e.target.value)}
+              placeholder="Ex.: VERDE2026 — ou escolha um existente"
+              className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <datalist id="curator-voucher-codes">
+              {myVoucherCodes.map((c) => <option key={c} value={c} />)}
+            </datalist>
+            {loteCode.trim() && (
+              <p className="text-body-sm text-neutral-600">
+                {reusing
+                  ? "↻ Reutilizando um voucher existente — os convites serão somados a ele."
+                  : "＋ Novo voucher será criado com este nome."}
+              </p>
+            )}
+          </CardBody>
+        </Card>
+
         <Card>
           <CardHeader>
             <p className="text-h4 text-neutral-900">Quantidade de convites</p>

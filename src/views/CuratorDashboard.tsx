@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { TrendingUp, Users, Ticket, Lock, Download, Eye, Copy, Check, QrCode, ChevronRight } from "lucide-react";
+import { TrendingUp, Users, Ticket, Lock, Download, Eye, Copy, Check, QrCode, ChevronRight, Power } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, ProgressBar } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
+import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/context/AuthContext";
 import { useVouchers } from "@/context/VouchersContext";
-import { credentialCode } from "@/lib/utils";
-import { CURATOR_LEADS } from "@/data/mock";
+import { credentialCode, cn } from "@/lib/utils";
+import { CURATOR_LEADS, type Lead } from "@/data/mock";
 import { type Voucher } from "@/data/schema";
 
 const CURATOR_ID = "cur_1"; // curador da sessão (protótipo): João Patrocínio
 const TOTAL = 100;
 const USED = 63;
+
+// Cada resgate do voucher do curador pode ser ativado/desativado por ele.
+type Redemption = Lead & { active: boolean };
 
 const kindLabel = (v: Voucher) =>
   v.kind === "free" ? "Acesso gratuito" : v.kind === "percent" ? `${v.value}% de desconto` : `R$ ${v.value} de desconto`;
@@ -19,10 +23,18 @@ const kindLabel = (v: Voucher) =>
 export default function CuratorDashboard() {
   const { user } = useAuth();
   const credCode = credentialCode(user.role, user.email, user.ticketCode);
-  const consented = CURATOR_LEADS.filter((l) => l.consent);
   const { vouchers } = useVouchers();
   const myVouchers = vouchers.filter((v) => v.ownerType === "curator" && v.ownerId === CURATOR_ID);
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Resgates do voucher do curador (persistidos), com estado ativo/inativo.
+  const [redemptions, setRedemptions] = usePersistentState<Redemption[]>(
+    "sf_curator_redemptions",
+    CURATOR_LEADS.map((l) => ({ ...l, active: true }))
+  );
+  const consented = redemptions.filter((l) => l.consent);
+  const toggleRedemption = (id: string) =>
+    setRedemptions((prev) => prev.map((l) => (l.id === id ? { ...l, active: !l.active } : l)));
 
   const copy = (code: string) => {
     navigator.clipboard?.writeText(code);
@@ -143,13 +155,19 @@ export default function CuratorDashboard() {
           </Button>
         </CardHeader>
         <CardBody className="grid gap-2 lg:grid-cols-2">
-          {CURATOR_LEADS.map((lead) => (
+          {redemptions.map((lead) => (
             <div
               key={lead.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-neutral-100 p-3"
+              className={cn(
+                "flex items-center justify-between gap-3 rounded-md border p-3",
+                lead.active ? "border-neutral-100" : "border-neutral-200 bg-neutral-50 opacity-80"
+              )}
             >
               <div className="min-w-0">
-                <p className="truncate text-body font-medium text-neutral-900">{lead.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-body font-medium text-neutral-900">{lead.name}</p>
+                  <Badge tone={lead.active ? "success" : "neutral"}>{lead.active ? "Ativo" : "Inativo"}</Badge>
+                </div>
                 <p className="truncate text-body-sm text-neutral-600">Resgatou em {lead.redeemedAt}</p>
                 {/* Modelo de privacidade: contato só com consentimento LGPD */}
                 {lead.consent ? (
@@ -160,9 +178,14 @@ export default function CuratorDashboard() {
                   </p>
                 )}
               </div>
-              <Badge tone={lead.consent ? "success" : "neutral"}>
-                {lead.consent ? "Consentido" : "Anônimo"}
-              </Badge>
+              <Button
+                variant={lead.active ? "outline" : "primary"}
+                size="sm"
+                leftIcon={<Power className="h-4 w-4" />}
+                onClick={() => toggleRedemption(lead.id)}
+              >
+                {lead.active ? "Desativar" : "Ativar"}
+              </Button>
             </div>
           ))}
           <p className="pt-1 text-body-sm text-neutral-400 lg:col-span-2">

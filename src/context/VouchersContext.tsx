@@ -9,8 +9,14 @@ interface VouchersState {
   remaining: (v: Voucher) => number;
   /** Resgata 1 uso (respeita o limite definido pelo Admin). */
   redeem: (id: string) => void;
-  /** Compra em lote: gera um voucher com N convites para o curador distribuir. */
-  createBatch: (ownerId: string, quantity: number) => Voucher;
+  /**
+   * Compra em lote/avulso: o curador informa o código do voucher. Se já existir
+   * um voucher dele com esse código, soma os convites; senão cria um novo.
+   * Código em branco gera um automático.
+   */
+  createBatch: (ownerId: string, quantity: number, code?: string) => Voucher;
+  /** Ativa/desativa um voucher (dono pode revogar/restaurar o acesso). */
+  toggleActive: (id: string) => void;
 }
 
 const block = () => crypto.randomUUID().slice(0, 4).toUpperCase();
@@ -30,10 +36,22 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         setVouchers((prev) =>
           prev.map((v) => (v.id === id && v.usedCount < v.maxUses ? { ...v, usedCount: v.usedCount + 1 } : v))
         ),
-      createBatch: (ownerId, quantity) => {
+      createBatch: (ownerId, quantity, code) => {
+        const trimmed = (code ?? "").trim();
+        // Reaproveita um voucher do curador com o mesmo código (soma convites).
+        const existing = trimmed
+          ? vouchers.find(
+              (v) => v.ownerType === "curator" && v.ownerId === ownerId && v.code.toLowerCase() === trimmed.toLowerCase()
+            )
+          : undefined;
+        if (existing) {
+          const updated: Voucher = { ...existing, maxUses: existing.maxUses + quantity, active: true };
+          setVouchers((prev) => prev.map((v) => (v.id === existing.id ? updated : v)));
+          return updated;
+        }
         const voucher: Voucher = {
           id: crypto.randomUUID(),
-          code: `CUR-${block()}-${block()}`,
+          code: trimmed || `CUR-${block()}-${block()}`,
           kind: "free",
           value: 0,
           maxUses: quantity,
@@ -44,7 +62,9 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         };
         setVouchers((prev) => [...prev, voucher]);
         return voucher;
-      }
+      },
+      toggleActive: (id) =>
+        setVouchers((prev) => prev.map((v) => (v.id === id ? { ...v, active: !v.active } : v)))
     }),
     [vouchers, setVouchers]
   );

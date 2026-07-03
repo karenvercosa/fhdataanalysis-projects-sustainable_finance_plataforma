@@ -11,8 +11,8 @@
 // =====================================================================
 import { type Role } from "@/lib/roles";
 
-/** Selo/tag visual injetável pelo Admin (não altera rotas; só destaque). */
-export type UserTag = "Palestrante" | "VIP" | "Imprensa" | "Staff" | "—";
+/** Selo/cota de patrocínio injetável pelo Admin (curador/palestrante). */
+export type UserTag = "Ouro" | "Prata" | "Bronze" | "—";
 
 // ---------------------------------------------------------------------
 //  USER — onboarding segmentado em 2 fases (frictionless)

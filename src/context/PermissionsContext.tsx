@@ -17,7 +17,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   // Matriz RBAC editável e persistente (controlada pelo Admin em /admin/permissoes).
   // A chave é versionada: ao adicionar novas capacidades ao DEFAULT_MATRIX,
   // incremente o sufixo para invalidar matrizes antigas salvas no navegador.
-  const [matrix, setMatrix] = usePersistentState<Matrix>("sf_permissions_v4", DEFAULT_MATRIX);
+  const [matrix, setMatrix] = usePersistentState<Matrix>("sf_permissions_v5", DEFAULT_MATRIX);
 
   const value = useMemo<PermissionsState>(
     () => ({

@@ -6,12 +6,13 @@ import { PageHeader } from "@/components/layout/AppShell";
 import { useSessions, type SessionInput } from "@/context/SessionsContext";
 import { TRACK_TONE, toMinutes, type Session } from "@/data/mock";
 import { SPEAKERS } from "@/data/catalog";
+import { BRAND_COMPANIES } from "@/data/brandContent";
 import { cn } from "@/lib/utils";
 
 type TrackFilter = "Todas" | Session["track"];
 const TRACK_FILTERS: TrackFilter[] = ["Todas", "ESG", "Investimentos", "Inovação"];
 const TRACKS: Session["track"][] = ["ESG", "Investimentos", "Inovação"];
-const EMPTY: SessionInput = { title: "", track: "ESG", room: "", start: "09:00", end: "09:45", speaker: "", capacity: 100 };
+const EMPTY: SessionInput = { title: "", track: "ESG", room: "", start: "09:00", end: "09:45", speaker: "", capacity: 100, company: "", description: "", liveUrl: "" };
 
 export default function SessionsAdmin() {
   const { sessions, add, update, remove } = useSessions();
@@ -51,7 +52,10 @@ export default function SessionsAdmin() {
   };
   const openEdit = (s: Session) => {
     setEditing(s);
-    setForm({ title: s.title, track: s.track, room: s.room, start: s.start, end: s.end, speaker: s.speaker, capacity: s.capacity });
+    setForm({
+      title: s.title, track: s.track, room: s.room, start: s.start, end: s.end, speaker: s.speaker, capacity: s.capacity,
+      company: s.company ?? "", description: s.description ?? "", liveUrl: s.liveUrl ?? ""
+    });
     setShowForm(true);
   };
 
@@ -205,16 +209,37 @@ export default function SessionsAdmin() {
             <Input label="Vagas totais" type="number" min={0} placeholder="100" value={String(form.capacity)}
               onChange={(e) => setForm((f) => ({ ...f, capacity: Math.max(0, Number(e.target.value) || 0) }))} />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Palestrante</label>
-            <input list="speakers-list" value={form.speaker}
-              onChange={(e) => setForm((f) => ({ ...f, speaker: e.target.value }))}
-              placeholder="Vincule um palestrante"
-              className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
-            <datalist id="speakers-list">
-              {SPEAKERS.map((sp) => <option key={sp.id} value={sp.name} />)}
-            </datalist>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="block text-h5 text-neutral-900">Palestrante</label>
+              <input list="speakers-list" value={form.speaker}
+                onChange={(e) => setForm((f) => ({ ...f, speaker: e.target.value }))}
+                placeholder="Vincule um palestrante"
+                className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
+              <datalist id="speakers-list">
+                {SPEAKERS.map((sp) => <option key={sp.id} value={sp.name} />)}
+              </datalist>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-h5 text-neutral-900">Empresa relacionada</label>
+              <input list="companies-list" value={form.company ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                placeholder="Vincule uma empresa"
+                className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
+              <datalist id="companies-list">
+                {BRAND_COMPANIES.map((c) => <option key={c} value={c} />)}
+              </datalist>
+            </div>
           </div>
+          <div className="space-y-1.5">
+            <label className="block text-h5 text-neutral-900">Sobre</label>
+            <textarea value={form.description ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              rows={3} placeholder="Descreva sobre o que é a sessão…"
+              className="w-full rounded-md border border-neutral-200 bg-white px-4 py-2.5 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
+          </div>
+          <Input label="Link da transmissão ao vivo (opcional)" placeholder="https://…" value={form.liveUrl ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, liveUrl: e.target.value }))} />
         </div>
       </Modal>
 

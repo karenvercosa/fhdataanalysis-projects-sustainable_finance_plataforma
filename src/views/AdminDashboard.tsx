@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import {
-  Settings, Users, Ticket, CalendarDays, Building2, ShieldCheck,
+  Settings, Users, Ticket, CalendarDays, Building2,
   ChevronRight, Sparkles, Percent, Handshake
 } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, BarChart, type Segment } from "@/components/ui";
@@ -26,13 +26,22 @@ const TOP_INTERESTS: Segment[] = [
   { label: "Net zero", value: 98, tone: "neutral" }
 ];
 
+// Mascara o documento (CPF/CNPJ) — dado sensível: revela só o início e o fim.
+function maskDocument(doc: string) {
+  const digits = doc.replace(/\D/g, "").length;
+  let i = 0;
+  return doc.replace(/\d/g, (d) => {
+    i += 1;
+    return i <= 3 || i > digits - 2 ? d : "•";
+  });
+}
+
 // Módulos de gestão do painel central.
 const MODULES = [
   { label: "Gestão de Usuários", desc: "Gerenciar contas, perfis e tags", icon: Users, to: "/admin/usuarios" },
   { label: "Gestão de Vouchers", desc: "Free / desconto + nº de usos", icon: Percent, to: "/admin/vouchers" },
   { label: "Programação", desc: "Sessões, trilhas e salas", icon: CalendarDays, to: "/admin/programacao-admin" },
-  { label: "Interesses", desc: "Nuvem de temas do onboarding", icon: Sparkles, to: "/admin/interesses" },
-  { label: "Permissões", desc: "Controle de acesso por perfil", icon: ShieldCheck, to: "/admin/permissoes" }
+  { label: "Interesses", desc: "Nuvem de temas do onboarding", icon: Sparkles, to: "/admin/interesses" }
 ];
 
 export default function AdminDashboard() {
@@ -126,7 +135,7 @@ export default function AdminDashboard() {
                   <td className="px-4 py-3">
                     <Badge tone={c.personType === "CNPJ" ? "info" : "neutral"}>{c.personType}</Badge>
                   </td>
-                  <td className="px-4 py-3 font-mono text-body-sm text-neutral-600">{c.document}</td>
+                  <td className="px-4 py-3 font-mono text-body-sm text-neutral-600" title="Documento parcialmente oculto (dado sensível)">{maskDocument(c.document)}</td>
                   <td className="px-4 py-3 text-neutral-600">{c.vouchers}</td>
                   <td className="px-4 py-3 text-neutral-600">{c.leads}</td>
                   <td className="px-4 py-3">

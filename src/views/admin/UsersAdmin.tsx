@@ -11,9 +11,19 @@ import { usePersistentState } from "@/hooks/usePersistentState";
 const ROLES = Object.keys(ROLE_LABEL) as Role[];
 const EMPTY_FORM = { name: "", email: "", role: "attendee" as Role, tag: "—" as UserTag, status: "Ativo" as UserStatus };
 
+// Selo/cota só se aplica a Curador/Patrocinador e Palestrante.
+const canHaveSeal = (role: Role) => role === "curator" || role === "speaker";
+const TAG_TONE: Record<UserTag, "warning" | "info" | "neutral"> = {
+  Ouro: "warning",
+  Prata: "info",
+  Bronze: "neutral",
+  "—": "neutral"
+};
+
 export default function UsersAdmin() {
   // Persiste as alterações do CRUD entre sessões/refresh.
-  const [users, setUsers] = usePersistentState<AdminUser[]>("sf_users", SEED_USERS);
+  // Chave versionada: o selo passou a ser cota (Ouro/Prata/Bronze).
+  const [users, setUsers] = usePersistentState<AdminUser[]>("sf_users_v2", SEED_USERS);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
   const [toast, setToast] = useState<string | null>(null);
@@ -152,8 +162,8 @@ export default function UsersAdmin() {
                   <td className="px-4 py-3 text-neutral-600">{u.email}</td>
                   <td className="px-4 py-3 text-neutral-600">{ROLE_LABEL[u.role]}</td>
                   <td className="px-4 py-3">
-                    {u.tag && u.tag !== "—" ? (
-                      <Badge tone="primary">{u.tag}</Badge>
+                    {canHaveSeal(u.role) && u.tag !== "—" ? (
+                      <Badge tone={TAG_TONE[u.tag]}>{u.tag}</Badge>
                     ) : (
                       <span className="text-neutral-400">—</span>
                     )}
@@ -255,9 +265,10 @@ export default function UsersAdmin() {
               </select>
             </div>
           </div>
-          {/* Selo/Tag injetável pelo Admin (diferencial visual, ex.: Palestrante) */}
+          {/* Selo/cota (Ouro/Prata/Bronze) — escolhido no cadastro. Na lista, só
+              é exibido para Curador/Patrocinador e Palestrante. */}
           <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Selo / Tag</label>
+            <label className="block text-h5 text-neutral-900">Selo / Cota</label>
             <select
               value={form.tag}
               onChange={(e) => setForm((f) => ({ ...f, tag: e.target.value as UserTag }))}
@@ -269,6 +280,11 @@ export default function UsersAdmin() {
                 </option>
               ))}
             </select>
+            {!canHaveSeal(form.role) && form.tag !== "—" && (
+              <p className="text-body-sm text-neutral-500">
+                O selo só aparece na lista para perfis Curador/Patrocinador ou Palestrante.
+              </p>
+            )}
           </div>
         </div>
       </Modal>

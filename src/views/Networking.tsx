@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, Search, Building2, Star, ChevronDown } from "lucide-react";
+import { Users, Search, Building2, Star, ChevronDown, Award } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useConnectionFavorites } from "@/context/ConnectionFavoritesContext";
 import { Avatar, Badge, Button, Card, CardBody, Input } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { PreviewLock } from "@/components/PreviewLock";
-import { CONNECTIONS, type ConnectionKind } from "@/data/networking";
+import { CONNECTIONS, sponsorTier, type ConnectionKind, type SponsorTier } from "@/data/networking";
 import { cn } from "@/lib/utils";
+
+// Pílula compacta da cota de patrocínio (canto superior direito do card).
+const TIER_PILL: Record<SponsorTier, string> = {
+  Ouro: "bg-warning-50 text-warning-500",
+  Prata: "bg-info-50 text-info-500",
+  Bronze: "bg-neutral-100 text-neutral-600"
+};
 
 type Filter = "Todos" | "Pessoas" | "Empresas" | "Favoritos";
 const FILTERS: { label: Filter; kind?: ConnectionKind }[] = [
@@ -18,9 +25,11 @@ const FILTERS: { label: Filter; kind?: ConnectionKind }[] = [
 ];
 
 export default function Networking() {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const { isFavorite, toggle, count } = useConnectionFavorites();
   const locked = !can("view:networking");
+  // Cota de patrocínio (Ouro/Prata/Bronze) visível só para Admin e Curador.
+  const showTier = user.role === "admin" || user.role === "curator";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("Todos");
   const [showAll, setShowAll] = useState(false);
@@ -66,7 +75,13 @@ export default function Networking() {
         {(showAll ? list : list.slice(0, LIMIT)).map((c) => (
           <li key={c.id}>
             <Link to={`/networking/${c.id}`} className="block">
-              <Card className="h-[128px] transition-shadow hover:shadow-pop">
+              <Card className="relative h-[128px] transition-shadow hover:shadow-pop">
+                {/* Cota de patrocínio — pílula pequena no canto superior direito (só Admin e Curador) */}
+                {showTier && sponsorTier(c) && (
+                  <span className={cn("absolute right-2 top-2 z-10 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold", TIER_PILL[sponsorTier(c)!])}>
+                    <Award className="h-2.5 w-2.5" /> {sponsorTier(c)}
+                  </span>
+                )}
                 <CardBody className="flex h-full items-center gap-3">
                   {c.kind === "company" ? (
                     <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-secondary-400/20 text-secondary-600">

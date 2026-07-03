@@ -98,8 +98,12 @@ export const DEFAULT_MATRIX: Record<Role, Capability[]> = {
   ],
   // Operador e Admin operam o evento — não possuem credencial própria.
   operator: ["view:public-content", "view:streaming", "operate:checkin"],
+  // Admin vê tudo igual aos outros usuários (inclui credencial e certificado)
+  // + todas as funcionalidades de gestão.
   admin: [
     ...ATTENDEE_CAPS,
+    "view:ticket-qr",
+    "view:certificate",
     "manage:company-profile",
     "view:curator-dashboard",
     "manage:speaker-content",

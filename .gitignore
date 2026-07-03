@@ -12,6 +12,14 @@ dist-ssr/
 next-env.d.ts
 *.tsbuildinfo
 
+# PWA (next-pwa) — artefatos gerados no build
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+/public/fallback-*.js
+/public/swe-worker-*.js
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, Clock, MapPin, Mic, Star, AlertTriangle, Users, UserCheck, Download, FileText, BadgeCheck } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Mic, Star, AlertTriangle, Users, UserCheck, Download, FileText, BadgeCheck, Radio } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useSessions } from "@/context/SessionsContext";
 import { Avatar, Badge, Button, Card, CardBody, Modal } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
+import { SponsorLogo } from "@/components/SponsorLogo";
 import { TRACK_TONE, toMinutes, sessionsOverlap, type Session } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
@@ -150,18 +151,21 @@ export default function ProgrammingPage() {
                             </Badge>
                           )}
                         </div>
-                        {canFavorite && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggle(s.id); }}
-                            aria-label={fav ? "Remover dos favoritos" : "Adicionar à agenda"}
-                            className={cn(
-                              "transition-colors",
-                              fav ? "text-secondary-500 hover:text-secondary-600" : "text-neutral-400 hover:text-secondary-500"
-                            )}
-                          >
-                            <Star className={cn("h-5 w-5", fav && "fill-current")} />
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <SponsorLogo name={s.company} />
+                          {canFavorite && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggle(s.id); }}
+                              aria-label={fav ? "Remover dos favoritos" : "Adicionar à agenda"}
+                              className={cn(
+                                "transition-colors",
+                                fav ? "text-secondary-500 hover:text-secondary-600" : "text-neutral-400 hover:text-secondary-500"
+                              )}
+                            >
+                              <Star className={cn("h-5 w-5", fav && "fill-current")} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <h3 className="text-h4 text-neutral-900">{s.title}</h3>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-neutral-600">
@@ -235,6 +239,18 @@ export default function ProgrammingPage() {
                 <MapPin className="h-4 w-4 text-neutral-400" /> {detail.room}
               </p>
             </div>
+
+            {/* Transmissão ao vivo (se houver link) */}
+            {detail.liveUrl && (
+              <a
+                href={detail.liveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-md bg-error-50 px-3 py-2 text-body-sm font-medium text-error-500 hover:bg-error-100"
+              >
+                <Radio className="h-4 w-4" /> Assistir ao vivo
+              </a>
+            )}
 
             {/* Sobre */}
             {detail.description && (
