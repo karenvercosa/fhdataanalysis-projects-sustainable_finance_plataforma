@@ -8,7 +8,7 @@
 //  Grid de 8pt: a escala de spacing/radius é múltipla de 8 (+ 2/4/12).
 // =====================================================================
 export default {
-  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  content: ["./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {

@@ -10,16 +10,18 @@ Web App **desktop-first e responsivo** + **PWA**, fiel ao Design System do Figma
 ---
 
 ## Stack
-- **Vite + React 18 + TypeScript**
+- **Next.js 14 (App Router) + React 18 + TypeScript**
 - **Tailwind CSS** (design tokens do Figma em `tailwind.config.js`)
-- **react-router-dom** (guards de autenticação + capacidade)
-- **vite-plugin-pwa** · **lucide-react** · gráficos próprios em SVG/CSS
+- **react-router-dom** (SPA client-side + guards de autenticação/capacidade),
+  hospedada por um catch-all do App Router (`app/[[...slug]]`)
+- **PWA** via `app/manifest.ts` · **lucide-react** · gráficos próprios em SVG/CSS
 
 ## Como rodar
 ```bash
 npm install
-npm run dev      # http://localhost:5188
+npm run dev      # http://localhost:3000 (ou -p 5188)
 npm run build
+npm start
 ```
 
 ### Contas de teste (senha: `123456`)
