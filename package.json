@@ -8,7 +8,9 @@
     "dev": "node scripts/dev-next.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "infra:up": "docker-compose up -d --build",
+    "infra:down": "docker-compose down"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
