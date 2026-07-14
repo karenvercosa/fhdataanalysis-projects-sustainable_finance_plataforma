@@ -1,0 +1,411 @@
+// ============================================================
+// SCHEMA: Plataforma Sustainable Finance (Web App / PWA)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+enum TipoPessoa {
+  PF
+  PJ
+  @@map("tipo_pessoa")
+}
+
+enum PerfilUsuario {
+  admin
+  operador_credenciamento
+  curador
+  startup
+  investidor
+  patrocinador
+  palestrante
+  participante
+  @@map("perfil_usuario")
+}
+
+enum StatusIngresso {
+  reservado
+  pago
+  cancelado
+  estornado
+  @@map("status_ingresso")
+}
+
+enum MetodoCheckin {
+  qr_code
+  busca_manual
+  @@map("metodo_checkin")
+}
+
+enum TipoCota {
+  ouro
+  prata
+  bronze
+  @@map("tipo_cota")
+}
+
+enum StatusReuniao {
+  solicitada
+  aceita
+  recusada
+  reagendada
+  realizada
+  @@map("status_reuniao")
+}
+
+// -----------------------------------------------------------------------------
+// MODELS
+// -----------------------------------------------------------------------------
+
+model Usuario {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoPessoa     TipoPessoa @map("tipo_pessoa")
+  nomeCompleto   String?    @map("nome_completo") @db.VarChar(180)
+  cpf            String?    @unique @db.VarChar(14)
+  razaoSocial    String?    @map("razao_social") @db.VarChar(180)
+  nomeFantasia   String?    @map("nome_fantasia") @db.VarChar(180)
+  cnpj           String?    @unique @db.VarChar(18)
+  email          String     @unique @db.VarChar(180)
+  senhaHash      String     @map("senha_hash")
+  telefone       String?    @db.VarChar(20)
+  cargo          String?    @db.VarChar(120)
+  empresaNome    String?    @map("empresa_nome") @db.VarChar(180)
+  avatarUrl      String?    @map("avatar_url")
+  bio            String?
+  ativo          Boolean    @default(true)
+  criadoEm       DateTime   @default(now()) @db.Timestamptz @map("criado_em")
+  atualizadoEm   DateTime   @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
+
+  // Relações
+  perfis                  UsuarioPerfil[]
+  palestras               PalestraPalestrante[]
+  agendaPessoal           AgendaPessoal[]
+  ingressos               Ingresso[]
+  credenciaisOperadas     Credencial[]            @relation("OperadorCredencial")
+  patrocinadores          Patrocinador[]
+  interacoesPatrocinador  PatrocinadorInteracao[]
+  perfilStartup           PerfilStartup?
+  perfilInvestidor        PerfilInvestidor?
+  solicitacoesEnviadas    SolicitacaoReuniao[]    @relation("SolicitanteReuniao")
+  solicitacoesRecebidas   SolicitacaoReuniao[]    @relation("DestinatarioReuniao")
+  certificados            Certificado[]
+  notificacoes            Notificacao[]
+
+  @@map("usuario")
+}
+
+model UsuarioPerfil {
+  usuarioId String        @map("usuario_id") @db.Uuid
+  perfil    PerfilUsuario
+  usuario   Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, perfil])
+  @@map("usuario_perfil")
+}
+
+model Evento {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome       String   @db.VarChar(180)
+  cidade     String   @db.VarChar(120)
+  estado     String   @db.Char(2)
+  dataInicio DateTime @map("data_inicio") @db.Date
+  dataFim    DateTime @map("data_fim") @db.Date
+  descricao  String?
+  criadoEm   DateTime @default(now()) @db.Timestamptz @map("criado_em")
+
+  // Relações
+  tags                 Tag[]
+  trilhas              Trilha[]
+  palestras            Palestra[]
+  tiposIngresso        TipoIngresso[]
+  cotas                Cota[]
+  patrocinadores       Patrocinador[]
+  perfisStartups       PerfilStartup[]
+  perfisInvestidores   PerfilInvestidor[]
+  solicitacoesReuniao  SolicitacaoReuniao[]
+  certificados         Certificado[]
+
+  @@map("evento")
+}
+
+model Tag {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId String   @map("evento_id") @db.Uuid
+  nome     String   @db.VarChar(60)
+  evento   Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  palestras PalestraTag[]
+
+  @@unique([eventoId, nome])
+  @@map("tag")
+}
+
+model Trilha {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId String   @map("evento_id") @db.Uuid
+  nome     String   @db.VarChar(120)
+  evento   Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  palestras Palestra[]
+
+  @@map("trilha")
+}
+
+model Palestra {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId     String   @map("evento_id") @db.Uuid
+  trilhaId     String?  @map("trilha_id") @db.Uuid
+  titulo       String   @db.VarChar(200)
+  descricao    String?
+  dia          DateTime @db.Date
+  horaInicio   DateTime @map("hora_inicio") @db.Time
+  horaFim      DateTime @map("hora_fim") @db.Time
+  palcoSala    String?  @map("palco_sala") @db.VarChar(80)
+  youtubeUrl   String?  @map("youtube_url")
+  limiteVagas  Int?     @map("limite_vagas")
+  criadoEm     DateTime @default(now()) @db.Timestamptz @map("criado_em")
+
+  evento       Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  trilha       Trilha?  @relation(fields: [trilhaId], references: [id])
+
+  tags          PalestraTag[]
+  palestrantes  PalestraPalestrante[]
+  agendaPessoal AgendaPessoal[]
+
+  @@index([eventoId, dia])
+  @@map("palestra")
+}
+
+model PalestraTag {
+  palestraId String   @map("palestra_id") @db.Uuid
+  tagId      String   @map("tag_id") @db.Uuid
+  palestra   Palestra @relation(fields: [palestraId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([palestraId, tagId])
+  @@map("palestra_tag")
+}
+
+model PalestraPalestrante {
+  palestraId String   @map("palestra_id") @db.Uuid
+  usuarioId  String   @map("usuario_id") @db.Uuid
+  palestra   Palestra @relation(fields: [palestraId], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([palestraId, usuarioId])
+  @@map("palestra_palestrante")
+}
+
+model AgendaPessoal {
+  usuarioId  String   @map("usuario_id") @db.Uuid
+  palestraId String   @map("palestra_id") @db.Uuid
+  criadoEm   DateTime @default(now()) @db.Timestamptz @map("criado_em")
+
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  palestra   Palestra @relation(fields: [palestraId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, palestraId])
+  @@map("agenda_pessoal")
+}
+
+model TipoIngresso {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId           String   @map("evento_id") @db.Uuid
+  nome               String   @db.VarChar(120)
+  preco              Decimal  @db.Decimal(10, 2)
+  quantidadeTotal    Int      @map("quantidade_total")
+  quantidadeVendida  Int      @default(0) @map("quantidade_vendida")
+  dataInicioVenda    DateTime @map("data_inicio_venda") @db.Timestamptz
+  dataFimVenda       DateTime @map("data_fim_venda") @db.Timestamptz
+  ativo              Boolean  @default(true)
+
+  evento    Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  ingressos Ingresso[]
+
+  @@map("tipo_ingresso")
+}
+
+model Ingresso {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoIngressoId   String         @map("tipo_ingresso_id") @db.Uuid
+  usuarioId        String         @map("usuario_id") @db.Uuid
+  qrCode           String         @unique @map("qr_code") @db.VarChar(64)
+  statusIngresso   StatusIngresso @default(reservado) @map("status_ingresso")
+  valorPago        Decimal?       @map("valor_pago") @db.Decimal(10, 2)
+  asaasPaymentId   String?        @map("asaas_payment_id") @db.VarChar(80)
+  dataCompra       DateTime       @default(now()) @db.Timestamptz @map("data_compra")
+  dataPagamento    DateTime?      @db.Timestamptz @map("data_pagamento")
+
+  tipoIngresso TipoIngresso @relation(fields: [tipoIngressoId], references: [id])
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id])
+  credencial   Credencial?
+
+  @@index([usuarioId])
+  @@index([statusIngresso])
+  @@map("ingresso")
+}
+
+model Credencial {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ingressoId      String        @unique @map("ingresso_id") @db.Uuid
+  operadorId      String?       @map("operador_id") @db.Uuid
+  metodo          MetodoCheckin
+  dataHoraCheckin DateTime      @default(now()) @db.Timestamptz @map("data_hora_checkin")
+
+  ingresso Ingresso @relation(fields: [ingressoId], references: [id])
+  operador Usuario? @relation("OperadorCredencial", fields: [operadorId], references: [id])
+
+  @@map("credencial")
+}
+
+model Cota {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId   String   @map("evento_id") @db.Uuid
+  tipoCota   TipoCota @map("tipo_cota")
+  valor      Decimal? @db.Decimal(10, 2)
+  beneficios String?
+
+  evento         Evento         @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  patrocinadores Patrocinador[]
+
+  @@unique([eventoId, tipoCota])
+  @@map("cota")
+}
+
+model Patrocinador {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId       String   @map("usuario_id") @db.Uuid
+  eventoId        String   @map("evento_id") @db.Uuid
+  cotaId          String   @map("cota_id") @db.Uuid
+  logoUrl         String?  @map("logo_url")
+  descricao       String?
+  contatoEmail    String?  @map("contato_email") @db.VarChar(180)
+  contatoTelefone String?  @map("contato_telefone") @db.VarChar(20)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  evento  Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  cota    Cota          @relation(fields: [cotaId], references: [id])
+
+  materiais  PatrocinadorMaterial[]
+  interacoes PatrocinadorInteracao[]
+
+  @@unique([usuarioId, eventoId])
+  @@map("patrocinador")
+}
+
+model PatrocinadorMaterial {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patrocinadorId String   @map("patrocinador_id") @db.Uuid
+  nomeArquivo    String   @map("nome_arquivo") @db.VarChar(200)
+  tipoMime       String   @map("tipo_mime") @db.VarChar(100)
+  arquivo        Bytes
+  criadoEm       DateTime @default(now()) @db.Timestamptz @map("criado_em")
+
+  patrocinador Patrocinador @relation(fields: [patrocinadorId], references: [id], onDelete: Cascade)
+
+  @@map("patrocinador_material")
+}
+
+model PatrocinadorInteracao {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patrocinadorId String   @map("patrocinador_id") @db.Uuid
+  usuarioId      String   @map("usuario_id") @db.Uuid
+  tipo           String   @db.VarChar(40)
+  criadoEm       DateTime @default(now()) @db.Timestamptz @map("criado_em")
+
+  patrocinador Patrocinador @relation(fields: [patrocinadorId], references: [id], onDelete: Cascade)
+  usuario      Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@map("patrocinador_interacao")
+}
+
+model PerfilStartup {
+  usuarioId       String  @id @map("usuario_id") @db.Uuid
+  eventoId        String  @map("evento_id") @db.Uuid
+  setor           String? @db.VarChar(120)
+  estagio         String? @db.VarChar(40)
+  modeloNegocio   String? @map("modelo_negocio")
+  metricas        Json?
+  objetivoEvento  String? @map("objetivo_evento")
+  pitchDeck       Bytes?  @map("pitch_deck")
+  pitchDeckNome   String? @map("pitch_deck_nome") @db.VarChar(200)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("perfil_startup")
+}
+
+model PerfilInvestidor {
+  usuarioId          String  @id @map("usuario_id") @db.Uuid
+  eventoId           String  @map("evento_id") @db.Uuid
+  teseInvestimento   String? @map("tese_investimento")
+  setoresInteresse   Json?   @map("setores_interesse")
+  estagiosInteresse  Json?   @map("estagios_interesse")
+  ticketMedio        Decimal? @map("ticket_medio") @db.Decimal(12, 2)
+  portfolio          Json?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("perfil_investidor")
+}
+
+model SolicitacaoReuniao {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId           String        @map("evento_id") @db.Uuid
+  solicitanteId      String        @map("solicitante_id") @db.Uuid
+  destinatarioId     String        @map("destinatario_id") @db.Uuid
+  status             StatusReuniao @default(solicitada)
+  dataHoraSugerida   DateTime?     @db.Timestamptz @map("data_hora_sugerida")
+  local              String?       @db.VarChar(80)
+  criadoEm           DateTime      @default(now()) @db.Timestamptz @map("criado_em")
+  atualizadoEm       DateTime      @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
+
+  evento       Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  solicitante  Usuario @relation("SolicitanteReuniao", fields: [solicitanteId], references: [id])
+  destinatario Usuario @relation("DestinatarioReuniao", fields: [destinatarioId], references: [id])
+
+  @@index([status])
+  @@map("solicitacao_reuniao")
+}
+
+model Certificado {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId       String   @map("usuario_id") @db.Uuid
+  eventoId        String   @map("evento_id") @db.Uuid
+  tipo            String   @db.VarChar(40)
+  cargaHoraria    Decimal? @map("carga_horaria") @db.Decimal(5, 2)
+  codigoValidacao String   @unique @map("codigo_validacao") @db.VarChar(40)
+  dataEmissao     DateTime @default(now()) @db.Timestamptz @map("data_emissao")
+  arquivo         Bytes?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("certificado")
+}
+
+model Notificacao {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId String   @map("usuario_id") @db.Uuid
+  tipo      String   @db.VarChar(40)
+  titulo    String   @db.VarChar(150)
+  mensagem  String?
+  lida      Boolean  @default(false)
+  criadoEm  DateTime @default(now()) @db.Timestamptz @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, lida])
+  @@map("notificacao")
+}

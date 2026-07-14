@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+
+# testing
+/coverage
+
 # Build
 dist/
 dist-ssr/

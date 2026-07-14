@@ -1,57 +1,185 @@
 # Sustainable Finance 2026 — Hub Digital (PWA)
 
-Plataforma do evento **Sustainable Finance** · Goiânia · **04/09/2026**.
+Plataforma do evento **Sustainable Finance** · Goiânia · **04/09/2026**.  
 Web App **desktop-first e responsivo** + **PWA**, fiel ao Design System do Figma.
-
-> Protótipo funcional de alta fidelidade: front-end completo, dados mock e
-> **persistência local** (`localStorage`). Todos os fluxos conectados e reativos
-> entre si. Pronto para plugar API/Asaas sem refazer a UI.
 
 ---
 
 ## Stack
+
 - **Next.js 14 (App Router) + React 18 + TypeScript**
 - **Tailwind CSS** (design tokens do Figma em `tailwind.config.js`)
-- **react-router-dom** (SPA client-side + guards de autenticação/capacidade),
+- **react-router-dom** (SPA client-side + guards de autenticação/capacidade),  
   hospedada por um catch-all do App Router (`app/[[...slug]]`)
 - **PWA** via `app/manifest.ts` · **lucide-react** · gráficos próprios em SVG/CSS
-
-## Como rodar
-```bash
-npm install
-npm run dev      # http://localhost:3000 (ou -p 5188)
-npm run build
-npm start
-```
-
-### Contas de teste (senha: `123456`)
-`participante@sf.com` · `curador@sf.com` · `operador@sf.com` · `admin@sf.com`
-> O seletor **"Perfil"** no topo alterna entre os 7 papéis para demonstração.
-> Novos usuários entram como **Não Pago** via **/cadastro** (onboarding Fase 1).
+- **PostgreSQL 15** + **Redis 7** via Docker
+- **Prisma ORM**
+- **Vitest** para testes com cobertura
+- **SonarQube Community** para análise de qualidade
 
 ---
 
-## Regras de negócio implementadas
+## Como rodar o projeto
 
-- **Onboarding em 2 fases:** Fase 1 (nome, sobrenome, e-mail, celular) libera o
-  **streaming**; Fase 2 (empresa, cargo, ingresso) acontece no **checkout**.
-- **Checkout híbrido:** pagar com **Cartão/Pix (Asaas, simulado)** *ou* aplicar
-  **voucher** — `free` (100%), `percent` ou `fixed`. O resgate **consome 1 uso**
-  do voucher (respeitando o limite definido pelo Admin) e promove o Não Pago a
-  Participante Geral, liberando o acesso.
-- **Vouchers flexíveis:** criados/controlados pelo Admin; donos podem ser
-  **Empresa** ou **Curador** (PF ou CNPJ).
-- **Monetização do conhecimento:** Não Pago tem streaming livre, mas **download
-  bloqueado** (`download:content`). Pagantes baixam relatórios/vídeos/PDFs.
-- **Palestrante** herda as rotas do Participante Geral; diferencial é o **selo**
-  (tag injetável pelo Admin).
-- **Credencial (QR)** apenas para Participante Geral, Empresa, Curador e
-  Palestrante — com **código por perfil** (`SF26/EMP/CUR/SPK-…`).
-- **Conteúdo coeso:** cada material cruza **Sessão × Palestrante × Curador** (N:N).
-- **Privacidade (LGPD):** o curador só vê leads que consentiram.
-- **Matchmaking:** o Admin vê os maiores interesses dos participantes.
-- **RBAC editável em tempo real:** o Admin altera a matriz de permissões e isso
-  reflete imediatamente em rotas, menus e ações.
+### Pré-requisitos
+
+- **Node.js** 18+ e **Yarn**
+- **Docker** e **Docker Compose**
+
+---
+
+### 1. Clonar e instalar dependências
+
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd fhdataanalysis-projects-sustainable_finance_plataforma
+yarn install
+```
+
+---
+
+### 2. Configurar variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto com base nas variáveis abaixo:
+
+```env
+DATABASE_URL=postgresql://<USUARIO>:<SENHA>@localhost:5432/<BANCO>
+REDIS_URL=redis_url
+POSTGRES_USER=<USUARIO>
+POSTGRES_PASSWORD=<SENHA>
+POSTGRES_DB=<BANCO>
+```
+
+> As credenciais reais são compartilhadas pela equipe fora do repositório.
+
+---
+
+### 3. Subir a infraestrutura (PostgreSQL + Redis)
+
+```bash
+yarn db:up
+```
+
+Isso sobe os containers de **PostgreSQL** e **Redis** via Docker Compose.
+
+---
+
+### 4. Rodar as migrations do banco
+
+```bash
+npx prisma migrate dev
+```
+
+---
+
+### 5. Iniciar o servidor de desenvolvimento
+
+```bash
+yarn dev
+```
+
+Acesse em: **http://localhost:3000**
+
+---
+
+### 6. Outros comandos úteis
+
+| Comando | Descrição |
+|---------|-----------|
+| `yarn build` | Gera o build de produção |
+| `yarn start` | Inicia o servidor em modo produção |
+| `yarn lint` | Executa o linter |
+| `yarn infra:up` | Sobe toda a stack (app + infra) via Docker |
+| `yarn infra:down` | Derruba todos os containers |
+
+---
+
+## Como rodar a análise com SonarQube
+
+O projeto possui integração com **SonarQube Community Edition** rodando localmente via Docker. Todo o fluxo — subir o Sonar, configurar o Quality Gate, gerar cobertura e enviar a análise — é executado com **um único comando**.
+
+### Pré-requisitos
+
+- **Docker** instalado e rodando
+- **Python 3** instalado (usado nos scripts de configuração)
+- O projeto deve estar rodando na porta `3000`
+
+---
+
+### 1. Configurar a senha do admin (opcional)
+
+Por padrão, o script utiliza uma senha definida internamente pela equipe. Para sobrescrever sem alterar o código, exporte a variável de ambiente antes de rodar:
+
+```bash
+export SONAR_ADMIN_PASS=SuaSenhaAqui
+yarn sonar
+```
+
+> Se a variável não for definida, o script usará o valor padrão da equipe.
+
+---
+
+### 2. Executar a análise completa
+
+Na raiz do projeto:
+
+```bash
+yarn sonar
+```
+
+O script `sonar/start.sh` executa automaticamente as seguintes etapas:
+
+| Etapa | O que acontece |
+|-------|----------------|
+| **1** | Sobe o container do SonarQube (`sonar/docker-compose.yml`) |
+| **2** | Aguarda o SonarQube ficar disponível em `http://localhost:9000` |
+| **3** | Detecta instalação nova e configura o Quality Gate automaticamente |
+| **4** | Gera um token efêmero para o scan |
+| **5** | Verifica se o app está online; se não estiver, sobe via Docker |
+| **6** | Roda os testes com cobertura: `yarn vitest run --coverage` |
+| **7** | Envia a análise ao SonarQube via `sonar-scanner-cli` |
+
+---
+
+### 3. Acessar o dashboard
+
+Após a análise concluir, acesse:
+
+```
+http://localhost:9000/dashboard?id=sustainable_finance_plataforma
+```
+
+**Credenciais de acesso:**
+- **Usuário:** `admin`
+- **Senha:** definida pela equipe via `SONAR_ADMIN_PASS`
+
+---
+
+### 4. Derrubar o SonarQube
+
+```bash
+yarn sonar:down
+```
+
+> ⚠️ Este comando destrói os containers **e os volumes** do SonarQube. Todo o histórico de análises será perdido. Na próxima execução de `yarn sonar`, o Quality Gate será reconfigurado automaticamente.
+
+---
+
+### Quality Gate — "Sustainable Finance Plataforma Gate"
+
+Configurado automaticamente pelo script de setup:
+
+| Métrica | Condição |
+|---------|----------|
+| Cobertura geral | ≥ 70% |
+| Cobertura de código novo | ≥ 70% |
+| Security Rating | A |
+| New Security Rating | A |
+| Reliability Rating | ≤ B |
+| New Reliability Rating | ≤ B |
+| Maintainability Rating | A |
+| Blocker Violations | 0 |
+| Critical Violations | 0 |
 
 ---
 
@@ -64,48 +192,33 @@ src/
 │  ├─ roles.ts                        # 7 perfis, capacidades, DEFAULT_MATRIX, can()
 │  └─ utils.ts                        # cn(), CPF, credentialCode()
 ├─ data/
-│  ├─ schema.ts                       # ARQUITETURA DE DADOS (User 2 fases, Voucher,
-│  │                                  #   Curator PF/CNPJ, Content N:N, …)
-│  ├─ catalog.ts                      # tickets, vouchers, curadores, palestrantes,
-│  │                                  #   conteúdos + resolvers (applyVoucher, …)
-│  ├─ mock.ts (sessions, attendees)   └─ users.ts (CRUD + tags)
-├─ context/                           # stores reativos e persistentes
-│  ├─ PermissionsContext  (sf_permissions)   # matriz RBAC editável → alimenta can()
-│  ├─ AuthContext         (sf_session_email) # sessão, login/registro/checkout
-│  ├─ FavoritesContext    (sf_favorites)     # agenda favoritada (compartilhada)
-│  ├─ InterestsContext    (sf_interests)     # catálogo da nuvem de interesses
-│  ├─ VouchersContext     (sf_vouchers_live) # vouchers + resgate (usedCount)
-│  ├─ SessionsContext     (sf_sessions)      # agenda (admin edita → reflete no app)
-│  └─ CheckinContext      (sf_checkin)       # credenciamento (alimenta Relatórios)
+│  ├─ schema.ts                       # Arquitetura de dados (User, Voucher, Curator N:N…)
+│  ├─ catalog.ts                      # tickets, vouchers, curadores, palestrantes
+│  ├─ mock.ts                         # sessions, attendees
+│  └─ users.ts                        # CRUD + tags
+├─ context/                           # Stores reativos e persistentes
+│  ├─ PermissionsContext              # matriz RBAC editável
+│  ├─ AuthContext                     # sessão, login/registro/checkout
+│  ├─ FavoritesContext                # agenda favoritada
+│  ├─ InterestsContext                # catálogo da nuvem de interesses
+│  ├─ VouchersContext                 # vouchers + resgate
+│  ├─ SessionsContext                 # agenda
+│  └─ CheckinContext                  # credenciamento
 ├─ components/
 │  ├─ RoleGuard.tsx                   # protege rotas por capacidade
 │  ├─ layout/AppShell                 # sidebar (desktop) + bottom-nav (mobile)
-│  └─ ui/  Button Input Badge Avatar Card Modal Loader ProgressBar QRCode
-│          Charts(Donut, BarChart)
+│  └─ ui/  Button Input Badge Avatar Card Modal Loader ProgressBar QRCode Charts
 └─ pages/
-   ├─ LoginPage · RegisterPage(Fase 1)
-   ├─ ParticipantDashboard · CredentialPage · VoucherCheckout(híbrido)
-   ├─ ProgrammingPage · Networking · ContentHub(associações+trava) · ProfilePage
+   ├─ LoginPage · RegisterPage
+   ├─ ParticipantDashboard · CredentialPage · VoucherCheckout
+   ├─ ProgrammingPage · Networking · ContentHub · ProfilePage
    ├─ CuratorDashboard · OperatorPanel
-   └─ admin/  AdminDashboard(KPIs+Matchmaking+Curadores)
-              UsersAdmin(+tags) · AdminCrud+crudConfigs(Ingressos/Vouchers/
-              Palestrantes/Empresas) · SessionsAdmin · InterestsAdmin ·
-              ReportsAdmin(vivo) · PermissionsAdmin(editor RBAC)
+   └─ admin/  Dashboard · Users · Crud · Sessions · Interests · Reports · Permissions
 ```
-
-### Camadas de acesso
-1. **Autenticação** — `ShellLayout` exige sessão (senão → `/login`).
-2. **Capacidade** — `RoleGuard` consulta `can(role, cap)` (matriz **editável**).
-3. **Navegação** — o menu mostra só o que o perfil pode acessar.
-
-### Design Tokens (Figma `node 8-2`)
-Verde de marca `primary-500 #1E8E5A` · âmbar accent `secondary-500 #FBAB38` ·
-neutros + feedback documentados · **Miriam Libre** (headings) / **Lexend** (body)
-· grid **8pt**. (Tela de Login replicada do template `node 4023:664`.)
 
 ---
 
-## RBAC — 7 perfis × capacidades (padrão; editável em /admin/permissoes)
+## RBAC — 7 perfis × capacidades
 
 | Capacidade \ Perfil | Não Pago | Geral | Empresa | Palestr. | Curador | Operador | Admin |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
@@ -120,16 +233,5 @@ neutros + feedback documentados · **Miriam Libre** (headings) / **Lexend** (bod
 | Materiais do palestrante | – | – | – | ✅ | – | – | ✅ |
 | Credenciamento (operação) | – | – | – | – | – | ✅ | ✅ |
 | Gestão da plataforma | – | – | – | – | – | – | ✅ |
-
-## Heurísticas de Nielsen
-Status (loaders/toasts/validações) · Mundo real (voucher/credencial/trilhas) ·
-Controle (favoritar, cancelar em modais) · Consistência (Button/Modal/CRUD único)
-· Prevenção de erros (CPF, voucher, e-mail único) · Reconhecimento (QR a 1 clique)
-· Flexibilidade (filtros/busca) · Minimalismo · Recuperação de erros (mensagens claras).
-
-## Status
-Todos os módulos do MVP e da evolução estão concluídos (nenhum placeholder).
-Próximas frentes saem do protótipo: **backend real** (API + JWT + Asaas + dados
-por usuário) e **deploy/PWA** (ícones, instalação e offline).
 
 Veja [DEMO.md](DEMO.md) para o roteiro de demonstração.
