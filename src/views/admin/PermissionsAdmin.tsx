@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronLeft, ShieldCheck, RotateCcw } from "lucide-react";
-import { Button, Card, CardBody } from "@/components/ui";
+import { Button, Card, CardBody, Checkbox } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { usePermissions } from "@/context/PermissionsContext";
 import { ROLE_LABEL, CAPABILITY_LABEL, ALL_CAPABILITIES, type Role } from "@/lib/roles";
@@ -52,13 +52,12 @@ export default function PermissionsAdmin() {
                     const locked = role === "admin" && cap === "manage:platform";
                     return (
                       <td key={role} className="px-3 py-3 text-center">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={checked}
                           disabled={locked}
                           onChange={() => toggle(role, cap)}
-                          aria-label={`${ROLE_LABEL[role]} — ${CAPABILITY_LABEL[cap]}`}
-                          className="h-4 w-4 accent-primary-500 disabled:opacity-40"
+                          label={<span className="sr-only">{`${ROLE_LABEL[role]} — ${CAPABILITY_LABEL[cap]}`}</span>}
+                          className="justify-center"
                         />
                       </td>
                     );

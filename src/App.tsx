@@ -23,6 +23,7 @@ import UsersAdmin from "@/views/admin/UsersAdmin";
 import ModuleCrud from "@/views/admin/ModuleCrud";
 import InterestsAdmin from "@/views/admin/InterestsAdmin";
 import ReportsAdmin from "@/views/admin/ReportsAdmin";
+import TierMatrixAdmin from "@/views/admin/TierMatrixAdmin";
 import SessionsAdmin from "@/views/admin/SessionsAdmin";
 import ProfilePage from "@/views/ProfilePage";
 
@@ -188,6 +189,14 @@ export default function App() {
           element={
             <RoleGuard capability="manage:platform">
               <InterestsAdmin />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/admin/cotas"
+          element={
+            <RoleGuard capability="manage:platform">
+              <TierMatrixAdmin />
             </RoleGuard>
           }
         />

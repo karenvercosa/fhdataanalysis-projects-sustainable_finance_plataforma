@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, BookOpen, Video, Mic, FileText, FileBarChart, Download, Crown, Mic2, Building2, CalendarDays, Plus, Upload, CheckCircle2, Pencil } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useParticipation } from "@/context/ParticipationContext";
+import { SponsorShareNotice } from "@/components/legal/SponsorShareNotice";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { Button, Card, CardBody, Input, Modal } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
@@ -32,6 +34,11 @@ export default function ContentHub() {
   const { can, user } = useAuth();
   const navigate = useNavigate();
   const canDownload = can("download:content"); // TRAVA do "Não Pago"
+  const { markDownload } = useParticipation();
+  // Material de patrocinador: avisa o compartilhamento antes de baixar.
+  const [avisoDownload, setAvisoDownload] = useState<
+    { id: string; titulo: string; patrocinador: string } | null
+  >(null);
   const isCurator = user.role === "curator";
   const isSpeaker = user.role === "speaker"; // palestrante insere material como o curador
   const isAdmin = user.role === "admin"; // admin também insere conteúdo (como o curador)
@@ -197,7 +204,13 @@ export default function ContentHub() {
                         Bloqueado — Adquirir ingresso
                       </Button>
                     ) : (
-                      <Button variant="secondary" size="sm" fullWidth leftIcon={<Download className="h-4 w-4" />}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth
+                        leftIcon={<Download className="h-4 w-4" />}
+                        onClick={() => markDownload(c.id)}
+                      >
                         Baixar
                       </Button>
                     )}
@@ -248,7 +261,17 @@ export default function ContentHub() {
                         Bloqueado — Adquirir ingresso
                       </Button>
                     ) : (
-                      <Button variant="secondary" size="sm" fullWidth leftIcon={<Download className="h-4 w-4" />}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth
+                        leftIcon={<Download className="h-4 w-4" />}
+                        onClick={() =>
+                          c.company
+                            ? setAvisoDownload({ id: c.id, titulo: c.title, patrocinador: c.company })
+                            : markDownload(c.id)
+                        }
+                      >
                         Baixar
                       </Button>
                     )}
@@ -359,6 +382,17 @@ export default function ContentHub() {
           )}
         </div>
       </Modal>
+
+      <SponsorShareNotice
+        open={!!avisoDownload}
+        onClose={() => setAvisoDownload(null)}
+        patrocinador={avisoDownload?.patrocinador ?? ""}
+        material={avisoDownload?.titulo}
+        onConfirm={() => {
+          if (avisoDownload) markDownload(avisoDownload.id);
+          setAvisoDownload(null);
+        }}
+      />
     </div>
   );
 }

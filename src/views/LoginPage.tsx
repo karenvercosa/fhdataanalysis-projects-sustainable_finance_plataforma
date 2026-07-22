@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { AlertCircle, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { Checkbox } from "@/components/ui";
 import { HOME_BY_ROLE } from "@/lib/roles";
 
 /**
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [lembrar, setLembrar] = useState(false);
 
   // Já autenticado? Não faz sentido ver a tela de login.
   if (isAuthenticated) return <Navigate to="/app" replace />;
@@ -131,13 +133,12 @@ export default function LoginPage() {
 
           {/* Auxiliar */}
           <div className="flex w-full items-center justify-between p-2.5 text-white">
-            <label className="flex cursor-pointer items-center gap-2 text-body">
-              <input
-                type="checkbox"
-                className="h-5 w-5 rounded-sm border-[1.5px] border-neutral-200 accent-primary-500"
-              />
-              Lembrar de mim
-            </label>
+            <Checkbox
+              checked={lembrar}
+              onChange={setLembrar}
+              label="Lembrar de mim"
+              labelClassName="text-body text-white"
+            />
             <button type="button" className="text-body underline hover:text-primary-200">
               Esqueceu a senha?
             </button>

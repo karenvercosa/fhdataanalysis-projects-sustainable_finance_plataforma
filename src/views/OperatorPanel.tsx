@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { Search, Download, CheckCircle2, UserCheck, IdCard } from "lucide-react";
-import { Badge, Button, Card, CardBody, CardHeader, Input } from "@/components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, Checkbox, Input } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useCheckin } from "@/context/CheckinContext";
 import { type Attendee } from "@/data/mock";
-import { cn } from "@/lib/utils";
 
 const EVENT = "Sustainable Finance 2026";
 const EVENT_INFO = "04 de setembro de 2026 · Goiânia — GO";
@@ -119,55 +118,64 @@ export default function OperatorPanel() {
             Relatório CSV
           </Button>
         </CardHeader>
-        <CardBody className="space-y-2">
+        <CardBody className="p-0">
           {filtered.length === 0 ? (
             <p className="py-6 text-center text-body text-neutral-600">
               Nenhum participante encontrado para “{query}”.
             </p>
           ) : (
-            filtered.map((a) => {
-              const checked = a.status === "Credenciado";
-              return (
-                <div
-                  key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-100 p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-body font-medium text-neutral-900">{a.name}</p>
-                    <p className="text-body-sm text-neutral-600">{a.company} · {a.code}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge tone={checked ? "success" : "warning"}>{checked ? "Bipou" : "Pendente"}</Badge>
-
-                    {/* Check de bipagem (feita fora da plataforma) — só ícone */}
-                    <button
-                      onClick={() => onToggle(a)}
-                      aria-pressed={checked}
-                      aria-label={checked ? "Bipou — clique para desmarcar" : "Marcar como bipado"}
-                      title={checked ? "Bipou — clique para desmarcar" : "Marcar como bipado"}
-                      className={cn(
-                        "grid h-9 w-9 shrink-0 place-items-center rounded-md border transition-colors",
-                        checked
-                          ? "border-success-500 bg-success-50 text-success-500"
-                          : "border-neutral-200 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-600"
-                      )}
-                    >
-                      <CheckCircle2 className={cn("h-5 w-5", checked && "fill-current text-success-500")} />
-                    </button>
-
-                    {/* Download da credencial do participante — só ícone */}
-                    <button
-                      onClick={() => downloadCredential(a)}
-                      aria-label={`Baixar credencial de ${a.name}`}
-                      title="Baixar credencial"
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary-50 text-primary-600 transition-colors hover:bg-primary-100"
-                    >
-                      <IdCard className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
+            /* Tabela: cada coluna nomeia a sua função, sem rótulo repetido por linha */
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-left">
+                <thead>
+                  <tr className="border-b border-neutral-200 text-body-sm text-neutral-600">
+                    <th className="px-4 py-3 font-medium">Participante</th>
+                    <th className="px-3 py-3 font-medium">Empresa · Código</th>
+                    <th className="px-3 py-3 text-center font-medium">Status</th>
+                    <th className="px-3 py-3 text-center font-medium">Bipou</th>
+                    <th className="px-3 py-3 text-center font-medium">Credencial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((a) => {
+                    const checked = a.status === "Credenciado";
+                    return (
+                      <tr key={a.id} className="border-b border-neutral-100 last:border-0">
+                        <td className="px-4 py-3 text-body font-medium text-neutral-900">{a.name}</td>
+                        <td className="px-3 py-3 text-body-sm text-neutral-600">
+                          {a.company} · {a.code}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <Badge tone={checked ? "success" : "warning"}>{checked ? "Bipou" : "Pendente"}</Badge>
+                        </td>
+                        <td className="px-3 py-3">
+                          {/* Confirmação da bipagem (feita fora da plataforma) */}
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={checked}
+                              onChange={() => onToggle(a)}
+                              label={<span className="sr-only">{`Confirmar bipagem de ${a.name}`}</span>}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => downloadCredential(a)}
+                              aria-label={`Baixar credencial de ${a.name}`}
+                              title="Baixar credencial"
+                              className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary-50 text-primary-600 transition-colors hover:bg-primary-100"
+                            >
+                              <IdCard className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardBody>
       </Card>

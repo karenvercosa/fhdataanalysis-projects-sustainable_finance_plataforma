@@ -13,11 +13,27 @@ interface PermissionsState {
 
 const PermissionsContext = createContext<PermissionsState | null>(null);
 
+/**
+ * Assinatura curta do DEFAULT_MATRIX. A chave de storage deriva dela, então
+ * qualquer mudança nos padrões invalida sozinha a matriz salva no navegador —
+ * antes era preciso lembrar de incrementar a versão à mão, e esquecer disso
+ * deixava usuários com permissões antigas em cache.
+ */
+function assinatura(m: Matrix): string {
+  const texto = (Object.keys(m) as Role[])
+    .sort()
+    .map((r) => `${r}:${[...m[r]].sort().join(",")}`)
+    .join("|");
+  let h = 0;
+  for (let i = 0; i < texto.length; i++) h = (Math.imul(31, h) + texto.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+const PERMISSIONS_KEY = `sf_permissions_${assinatura(DEFAULT_MATRIX)}`;
+
 export function PermissionsProvider({ children }: { children: ReactNode }) {
-  // Matriz RBAC editável e persistente (controlada pelo Admin em /admin/permissoes).
-  // A chave é versionada: ao adicionar novas capacidades ao DEFAULT_MATRIX,
-  // incremente o sufixo para invalidar matrizes antigas salvas no navegador.
-  const [matrix, setMatrix] = usePersistentState<Matrix>("sf_permissions_v5", DEFAULT_MATRIX);
+  // Matriz RBAC editável e persistente (controlada pelo Admin).
+  const [matrix, setMatrix] = usePersistentState<Matrix>(PERMISSIONS_KEY, DEFAULT_MATRIX);
 
   const value = useMemo<PermissionsState>(
     () => ({

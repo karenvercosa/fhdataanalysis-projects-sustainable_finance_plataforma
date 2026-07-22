@@ -1,7 +1,3 @@
-// ============================================================
-// SCHEMA: Plataforma Sustainable Finance (Web App / PWA)
-// ============================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -63,42 +59,169 @@ enum StatusReuniao {
 }
 
 // -----------------------------------------------------------------------------
-// MODELS
+// MODELS - SITE / LANDING PAGE
+// -----------------------------------------------------------------------------
+
+model SponsorContact {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  nome      String
+  email     String
+  empresa   String
+  cargo     String
+  telefone  String?
+  status    String   @default("unread") 
+
+  @@map("sponsor_contacts")
+}
+
+model SiteContent {
+  id Int @id @default(1)
+
+  heroTexto           String @map("hero_texto")
+  heroBotaoLabel      String @map("hero_botao_label")
+  heroBotaoHref       String @map("hero_botao_href")
+  dia                 String
+  data                String
+  cidade              String
+  endereco            String
+
+  subtituloIngressos  String @map("subtitulo_ingressos")
+  eventoTextoEsquerda String @map("evento_texto_esquerda")
+  eventoTextoDireita  String @map("evento_texto_direita")
+  subtituloTrilhas    String @map("subtitulo_trilhas")
+  subtituloApoiadores String @map("subtitulo_apoiadores")
+  subtituloPatrocinar String @map("subtitulo_patrocinar")
+  rodapeTexto         String @map("rodape_texto")
+
+  @@map("site_content")
+}
+
+model LandingPageContent {
+  id        Int      @id @default(autoincrement())
+  lang      String   @unique @db.VarChar(5) // 'PT', 'EN'
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("landing_page_content")
+}
+
+model Speaker {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  cargo       String
+  fotoUrl     String?  @map("foto_url")
+  bio         String?
+  linkedinUrl String?  @map("linkedin_url")
+  orderIndex  Int      @default(0) @map("order_index")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  @@map("speakers")
+}
+
+model Box {
+  id         Int      @id @default(autoincrement())
+  linhas     String[]
+  orderIndex Int      @default(0) @map("order_index")
+
+  @@map("boxes")
+}
+
+model Stat {
+  id         Int      @id @default(autoincrement())
+  titulo     String
+  linhas     String[]
+  orderIndex Int      @default(0) @map("order_index")
+
+  @@map("stats")
+}
+
+// RENOMEADO DE "Trilha" para "SiteTrilha" para evitar conflito com a plataforma de eventos.
+model SiteTrilha {
+  id         Int      @id @default(autoincrement())
+  titulo     String
+  imageUrl   String   @map("image_url")
+  itens      String[]
+  orderIndex Int      @default(0) @map("order_index")
+
+  @@map("site_trilhas")
+}
+
+model Motivo {
+  id         Int      @id @default(autoincrement())
+  titulo     String
+  linhas     String[]
+  imageUrl   String   @map("image_url")
+  orderIndex Int      @default(0) @map("order_index")
+
+  @@map("motivos")
+}
+
+model Apoiador {
+  id         Int      @id @default(autoincrement())
+  grupo      String   @default("INSTITUCIONAL")
+  kind       String   @default("image")
+  nome       String
+  logoUrl    String?  @map("logo_url")
+  websiteUrl String?  @map("website_url")
+  strong     String?
+  texto      String?
+  width      Int?
+  orderIndex Int      @default(0) @map("order_index")
+  isActive   Boolean  @default(true) @map("is_active")
+
+  @@map("apoiadores")
+}
+
+model CommitteeMember {
+  id         Int     @id @default(autoincrement())
+  grupo      String
+  nome       String
+  empresa    String?
+  orderIndex Int     @default(0) @map("order_index")
+
+  @@map("committee_members")
+}
+
+// -----------------------------------------------------------------------------
+// MODELS - PLATAFORMA SUSTAINABLE FINANCE
 // -----------------------------------------------------------------------------
 
 model Usuario {
-  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tipoPessoa     TipoPessoa @map("tipo_pessoa")
-  nomeCompleto   String?    @map("nome_completo") @db.VarChar(180)
-  cpf            String?    @unique @db.VarChar(14)
-  razaoSocial    String?    @map("razao_social") @db.VarChar(180)
-  nomeFantasia   String?    @map("nome_fantasia") @db.VarChar(180)
-  cnpj           String?    @unique @db.VarChar(18)
-  email          String     @unique @db.VarChar(180)
-  senhaHash      String     @map("senha_hash")
-  telefone       String?    @db.VarChar(20)
-  cargo          String?    @db.VarChar(120)
-  empresaNome    String?    @map("empresa_nome") @db.VarChar(180)
-  avatarUrl      String?    @map("avatar_url")
-  bio            String?
-  ativo          Boolean    @default(true)
-  criadoEm       DateTime   @default(now()) @db.Timestamptz @map("criado_em")
-  atualizadoEm   DateTime   @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoPessoa          TipoPessoa @map("tipo_pessoa")
+  nomeCompleto        String?    @map("nome_completo") @db.VarChar(180)
+  cpf                 String?    @unique @db.VarChar(14)
+  razaoSocial         String?    @map("razao_social") @db.VarChar(180)
+  nomeFantasia        String?    @map("nome_fantasia") @db.VarChar(180)
+  cnpj                String?    @unique @db.VarChar(18)
+  email               String     @unique @db.VarChar(180)
+  senhaHash           String     @map("senha_hash")
+  telefone            String?    @db.VarChar(20)
+  cargo               String?    @db.VarChar(120)
+  empresaNome         String?    @map("empresa_nome") @db.VarChar(180)
+  avatarUrl           String?    @map("avatar_url")
+  bio                 String?
+  ativo               Boolean    @default(true)
+  criadoEm            DateTime   @default(now()) @db.Timestamptz @map("criado_em")
+  atualizadoEm        DateTime   @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
 
-  // Relações
-  perfis                  UsuarioPerfil[]
-  palestras               PalestraPalestrante[]
-  agendaPessoal           AgendaPessoal[]
-  ingressos               Ingresso[]
-  credenciaisOperadas     Credencial[]            @relation("OperadorCredencial")
-  patrocinadores          Patrocinador[]
-  interacoesPatrocinador  PatrocinadorInteracao[]
-  perfilStartup           PerfilStartup?
-  perfilInvestidor        PerfilInvestidor?
-  solicitacoesEnviadas    SolicitacaoReuniao[]    @relation("SolicitanteReuniao")
-  solicitacoesRecebidas   SolicitacaoReuniao[]    @relation("DestinatarioReuniao")
-  certificados            Certificado[]
-  notificacoes            Notificacao[]
+  perfis                 UsuarioPerfil[]
+  palestras              PalestraPalestrante[]
+  agendaPessoal          AgendaPessoal[]
+  ingressos              Ingresso[]
+  credenciaisOperadas    Credencial[]            @relation("OperadorCredencial")
+  patrocinadores         Patrocinador[]
+  interacoesPatrocinador PatrocinadorInteracao[]
+  perfilStartup          PerfilStartup?
+  perfilInvestidor       PerfilInvestidor?
+  solicitacoesEnviadas   SolicitacaoReuniao[]    @relation("SolicitanteReuniao")
+  solicitacoesRecebidas  SolicitacaoReuniao[]    @relation("DestinatarioReuniao")
+  certificados           Certificado[]
+  notificacoes           Notificacao[]
 
   @@map("usuario")
 }
@@ -122,17 +245,16 @@ model Evento {
   descricao  String?
   criadoEm   DateTime @default(now()) @db.Timestamptz @map("criado_em")
 
-  // Relações
-  tags                 Tag[]
-  trilhas              Trilha[]
-  palestras            Palestra[]
-  tiposIngresso        TipoIngresso[]
-  cotas                Cota[]
-  patrocinadores       Patrocinador[]
-  perfisStartups       PerfilStartup[]
-  perfisInvestidores   PerfilInvestidor[]
-  solicitacoesReuniao  SolicitacaoReuniao[]
-  certificados         Certificado[]
+  tags                Tag[]
+  trilhas             Trilha[]
+  palestras           Palestra[]
+  tiposIngresso       TipoIngresso[]
+  cotas               Cota[]
+  patrocinadores      Patrocinador[]
+  perfisStartups      PerfilStartup[]
+  perfisInvestidores  PerfilInvestidor[]
+  solicitacoesReuniao SolicitacaoReuniao[]
+  certificados        Certificado[]
 
   @@map("evento")
 }
@@ -161,24 +283,23 @@ model Trilha {
 }
 
 model Palestra {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventoId     String   @map("evento_id") @db.Uuid
-  trilhaId     String?  @map("trilha_id") @db.Uuid
-  titulo       String   @db.VarChar(200)
-  descricao    String?
-  dia          DateTime @db.Date
-  horaInicio   DateTime @map("hora_inicio") @db.Time
-  horaFim      DateTime @map("hora_fim") @db.Time
-  palcoSala    String?  @map("palco_sala") @db.VarChar(80)
-  youtubeUrl   String?  @map("youtube_url")
-  limiteVagas  Int?     @map("limite_vagas")
-  criadoEm     DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId    String   @map("evento_id") @db.Uuid
+  trilhaId    String?  @map("trilha_id") @db.Uuid
+  titulo      String   @db.VarChar(200)
+  descricao   String?
+  dia         DateTime @db.Date
+  horaInicio  DateTime @map("hora_inicio") @db.Time
+  horaFim     DateTime @map("hora_fim") @db.Time
+  palcoSala   String?  @map("palco_sala") @db.VarChar(80)
+  youtubeUrl  String?  @map("youtube_url")
+  limiteVagas Int?     @map("limite_vagas")
+  criadoEm    DateTime @default(now()) @db.Timestamptz @map("criado_em")
 
-  evento       Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  trilha       Trilha?  @relation(fields: [trilhaId], references: [id])
-
-  tags          PalestraTag[]
-  palestrantes  PalestraPalestrante[]
+  evento       Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  trilha       Trilha?               @relation(fields: [trilhaId], references: [id])
+  tags         PalestraTag[]
+  palestrantes PalestraPalestrante[]
   agendaPessoal AgendaPessoal[]
 
   @@index([eventoId, dia])
@@ -210,23 +331,23 @@ model AgendaPessoal {
   palestraId String   @map("palestra_id") @db.Uuid
   criadoEm   DateTime @default(now()) @db.Timestamptz @map("criado_em")
 
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  palestra   Palestra @relation(fields: [palestraId], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  palestra Palestra @relation(fields: [palestraId], references: [id], onDelete: Cascade)
 
   @@id([usuarioId, palestraId])
   @@map("agenda_pessoal")
 }
 
 model TipoIngresso {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventoId           String   @map("evento_id") @db.Uuid
-  nome               String   @db.VarChar(120)
-  preco              Decimal  @db.Decimal(10, 2)
-  quantidadeTotal    Int      @map("quantidade_total")
-  quantidadeVendida  Int      @default(0) @map("quantidade_vendida")
-  dataInicioVenda    DateTime @map("data_inicio_venda") @db.Timestamptz
-  dataFimVenda       DateTime @map("data_fim_venda") @db.Timestamptz
-  ativo              Boolean  @default(true)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId          String   @map("evento_id") @db.Uuid
+  nome              String   @db.VarChar(120)
+  preco             Decimal  @db.Decimal(10, 2)
+  quantidadeTotal   Int      @map("quantidade_total")
+  quantidadeVendida Int      @default(0) @map("quantidade_vendida")
+  dataInicioVenda   DateTime @map("data_inicio_venda") @db.Timestamptz
+  dataFimVenda      DateTime @map("data_fim_venda") @db.Timestamptz
+  ativo             Boolean  @default(true)
 
   evento    Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   ingressos Ingresso[]
@@ -235,15 +356,15 @@ model TipoIngresso {
 }
 
 model Ingresso {
-  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tipoIngressoId   String         @map("tipo_ingresso_id") @db.Uuid
-  usuarioId        String         @map("usuario_id") @db.Uuid
-  qrCode           String         @unique @map("qr_code") @db.VarChar(64)
-  statusIngresso   StatusIngresso @default(reservado) @map("status_ingresso")
-  valorPago        Decimal?       @map("valor_pago") @db.Decimal(10, 2)
-  asaasPaymentId   String?        @map("asaas_payment_id") @db.VarChar(80)
-  dataCompra       DateTime       @default(now()) @db.Timestamptz @map("data_compra")
-  dataPagamento    DateTime?      @db.Timestamptz @map("data_pagamento")
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoIngressoId String         @map("tipo_ingresso_id") @db.Uuid
+  usuarioId      String         @map("usuario_id") @db.Uuid
+  qrCode         String         @unique @map("qr_code") @db.VarChar(64)
+  statusIngresso StatusIngresso @default(reservado) @map("status_ingresso")
+  valorPago      Decimal?       @map("valor_pago") @db.Decimal(10, 2)
+  asaasPaymentId String?        @map("asaas_payment_id") @db.VarChar(80)
+  dataCompra     DateTime       @default(now()) @db.Timestamptz @map("data_compra")
+  dataPagamento  DateTime?      @db.Timestamptz @map("data_pagamento")
 
   tipoIngresso TipoIngresso @relation(fields: [tipoIngressoId], references: [id])
   usuario      Usuario      @relation(fields: [usuarioId], references: [id])
@@ -292,8 +413,8 @@ model Patrocinador {
   contatoTelefone String?  @map("contato_telefone") @db.VarChar(20)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
-  evento  Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  cota    Cota          @relation(fields: [cotaId], references: [id])
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  cota    Cota    @relation(fields: [cotaId], references: [id])
 
   materiais  PatrocinadorMaterial[]
   interacoes PatrocinadorInteracao[]
@@ -329,15 +450,15 @@ model PatrocinadorInteracao {
 }
 
 model PerfilStartup {
-  usuarioId       String  @id @map("usuario_id") @db.Uuid
-  eventoId        String  @map("evento_id") @db.Uuid
-  setor           String? @db.VarChar(120)
-  estagio         String? @db.VarChar(40)
-  modeloNegocio   String? @map("modelo_negocio")
-  metricas        Json?
-  objetivoEvento  String? @map("objetivo_evento")
-  pitchDeck       Bytes?  @map("pitch_deck")
-  pitchDeckNome   String? @map("pitch_deck_nome") @db.VarChar(200)
+  usuarioId      String  @id @map("usuario_id") @db.Uuid
+  eventoId       String  @map("evento_id") @db.Uuid
+  setor          String? @db.VarChar(120)
+  estagio        String? @db.VarChar(40)
+  modeloNegocio  String? @map("modelo_negocio")
+  metricas       Json?
+  objetivoEvento String? @map("objetivo_evento")
+  pitchDeck      Bytes?  @map("pitch_deck")
+  pitchDeckNome  String? @map("pitch_deck_nome") @db.VarChar(200)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -346,13 +467,13 @@ model PerfilStartup {
 }
 
 model PerfilInvestidor {
-  usuarioId          String  @id @map("usuario_id") @db.Uuid
-  eventoId           String  @map("evento_id") @db.Uuid
-  teseInvestimento   String? @map("tese_investimento")
-  setoresInteresse   Json?   @map("setores_interesse")
-  estagiosInteresse  Json?   @map("estagios_interesse")
-  ticketMedio        Decimal? @map("ticket_medio") @db.Decimal(12, 2)
-  portfolio          Json?
+  usuarioId         String   @id @map("usuario_id") @db.Uuid
+  eventoId          String   @map("evento_id") @db.Uuid
+  teseInvestimento  String?  @map("tese_investimento")
+  setoresInteresse  Json?    @map("setores_interesse")
+  estagiosInteresse Json?    @map("estagios_interesse")
+  ticketMedio       Decimal? @map("ticket_medio") @db.Decimal(12, 2)
+  portfolio         Json?
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -361,15 +482,15 @@ model PerfilInvestidor {
 }
 
 model SolicitacaoReuniao {
-  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventoId           String        @map("evento_id") @db.Uuid
-  solicitanteId      String        @map("solicitante_id") @db.Uuid
-  destinatarioId     String        @map("destinatario_id") @db.Uuid
-  status             StatusReuniao @default(solicitada)
-  dataHoraSugerida   DateTime?     @db.Timestamptz @map("data_hora_sugerida")
-  local              String?       @db.VarChar(80)
-  criadoEm           DateTime      @default(now()) @db.Timestamptz @map("criado_em")
-  atualizadoEm       DateTime      @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId         String        @map("evento_id") @db.Uuid
+  solicitanteId    String        @map("solicitante_id") @db.Uuid
+  destinatarioId   String        @map("destinatario_id") @db.Uuid
+  status           StatusReuniao @default(solicitada)
+  dataHoraSugerida DateTime?     @db.Timestamptz @map("data_hora_sugerida")
+  local            String?       @db.VarChar(80)
+  criadoEm         DateTime      @default(now()) @db.Timestamptz @map("criado_em")
+  atualizadoEm     DateTime      @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
 
   evento       Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   solicitante  Usuario @relation("SolicitanteReuniao", fields: [solicitanteId], references: [id])

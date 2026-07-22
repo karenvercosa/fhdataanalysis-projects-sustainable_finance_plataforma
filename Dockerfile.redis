@@ -1,0 +1,23 @@
+# ==============================================================================
+# Dockerfile - Redis (Sustainable Finance)
+# Imagem baseada na oficial redis:7-alpine com senha obrigatória
+# ==============================================================================
+FROM redis:7-alpine
+
+LABEL maintainer="FHData Analytics <contato@fhdata.com.br>"
+LABEL description="Redis para Sustainable Finance (cache e sessões)"
+
+# Usuário não-root já criado pela imagem base (redis, uid 999)
+USER redis
+
+EXPOSE 6379
+
+# Configura autenticação por senha obrigatória e logging
+# A senha REDIS_PASSWORD é injetada pelo K8s Secret / env_file — NÃO tem fallback.
+# Se REDIS_PASSWORD não estiver definida, o servidor não inicializa (fail-secure).
+CMD ["sh", "-c", \
+  "if [ -z \"$REDIS_PASSWORD\" ]; then echo '[ERROR] REDIS_PASSWORD não definida. Abortando.'; exit 1; fi && \
+  redis-server --requirepass \"$REDIS_PASSWORD\" --loglevel notice --save 60 1 --save 300 10"]
+
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+  CMD redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping | grep PONG || exit 1

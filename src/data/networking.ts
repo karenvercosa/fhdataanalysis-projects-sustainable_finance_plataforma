@@ -1,4 +1,7 @@
 // Diretório de networking: pessoas e empresas participantes do evento.
+import { CURATORS } from "@/data/catalog";
+import { SESSIONS } from "@/data/mock";
+import { sponsorKindOf, type SealKind } from "@/lib/seals";
 
 export type ConnectionKind = "person" | "company";
 export type SponsorTier = "Ouro" | "Prata" | "Bronze";
@@ -52,6 +55,13 @@ export const CONNECTIONS: Connection[] = [
     linkedin: "linkedin.com/in/marina-costa", phone: "+55 62 99999-0004", email: "marina@fintechverde.com.br"
   },
 
+  {
+    id: "p_5", kind: "person", name: "João Patrocínio", role: "Curador", company: "Independente",
+    subtitle: "Curador · Independente", tags: ["Finanças sustentáveis", "Impacto"],
+    bio: "Curador do Sustainable Finance 2026, conecta investidores e negócios de impacto na região Centro-Oeste.",
+    linkedin: "linkedin.com/in/joao-patrocinio", phone: "+55 62 99999-1001", email: "joao@verde.com"
+  },
+
   // Empresas
   {
     id: "cmp_1", kind: "company", name: "AgroVerde", segment: "Agronegócio", tier: "Ouro",
@@ -98,3 +108,26 @@ export function companyTier(name?: string): SponsorTier | undefined {
 }
 
 export const TIER_TONE = { Ouro: "warning", Prata: "info", Bronze: "neutral" } as const;
+
+/**
+ * Selo de identidade de uma conexão, visível a todos os participantes:
+ * - empresa patrocinadora  → Patrocinador
+ * - curador pessoa física  → Curador
+ * - quem palestra em alguma sessão → Palestrante
+ * Demais participantes circulam sem selo.
+ */
+export function sealForConnection(c: Connection): SealKind | undefined {
+  if (c.kind === "company") return "Patrocinador";
+  const curator = CURATORS.find((x) => x.name === c.name);
+  if (curator) return sponsorKindOf(curator.personType);
+  if (SESSIONS.some((s) => s.speaker === c.name)) return "Palestrante";
+  return undefined;
+}
+
+/** Empresa em que uma pessoa atua (para creditar os envolvidos numa sessão). */
+export function personCompany(name?: string): string | undefined {
+  if (!name) return undefined;
+  const c = CONNECTIONS.find((x) => x.kind === "person" && x.name === name)?.company;
+  // "Independente" não é uma empresa a ser creditada.
+  return c && c !== "Independente" ? c : undefined;
+}

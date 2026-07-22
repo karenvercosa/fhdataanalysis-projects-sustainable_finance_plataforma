@@ -70,10 +70,18 @@ export function SponsorAdBanner() {
 
       {/* Área central de altura flexível — mantém o banner sempre do mesmo tamanho */}
       <div className="flex flex-1 items-center gap-4">
-        {/* "Logo" (monograma) da empresa */}
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-white/15 font-heading text-h3 font-bold ring-1 ring-white/30">
-          {monogram(ad.company)}
-        </div>
+        {/* Arquivo enviado no Admin; sem ele, cai no monograma da empresa */}
+        {ad.image ? (
+          <img
+            src={ad.image}
+            alt={ad.company}
+            className="h-14 w-14 shrink-0 rounded-md object-cover ring-1 ring-white/30"
+          />
+        ) : (
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-white/15 font-heading text-h3 font-bold ring-1 ring-white/30">
+            {monogram(ad.company)}
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-body-sm font-medium text-white/80">{ad.company}</p>

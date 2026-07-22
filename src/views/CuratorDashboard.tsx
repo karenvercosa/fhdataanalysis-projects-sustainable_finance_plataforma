@@ -4,6 +4,7 @@ import { TrendingUp, Users, Ticket, Lock, Download, Eye, Copy, Check, QrCode, Ch
 import { Badge, Button, Card, CardBody, CardHeader, ProgressBar } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { SponsorAdBanner } from "@/components/SponsorAdBanner";
+import { TierUpgradeCard } from "@/components/TierUpgradeCard";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/context/AuthContext";
 import { useVouchers } from "@/context/VouchersContext";
@@ -110,6 +111,9 @@ export default function CuratorDashboard() {
           <p className="text-body-sm text-neutral-600">{TOTAL - USED} convites restantes</p>
         </CardBody>
       </Card>
+
+      {/* Sugestão de upgrade de cota — conduzido pelo responsável comercial */}
+      <TierUpgradeCard />
 
       {/* Meus vouchers — códigos criados pelo Admin para o curador distribuir */}
       <Card>

@@ -6,16 +6,16 @@
 // =====================================================================
 
 export type Role =
-  | "guest"        // Participante Não Pago (cadastro feito, sem ingresso)
-  | "attendee"     // Participante Geral (ingresso ativo via voucher)
+  | "guest"        // Plano Gratuito (cadastro feito, sem ingresso)
+  | "attendee"     // Participante Premium (ingresso ativo via voucher)
   | "speaker"      // Palestrante
   | "curator"      // Curador (patrocinador que distribui vouchers)
   | "operator"     // Operador (credenciamento no dia)
   | "admin";       // Administrador
 
 export const ROLE_LABEL: Record<Role, string> = {
-  guest: "Participante Não Pago",
-  attendee: "Participante Geral",
+  guest: "Plano Gratuito",
+  attendee: "Participante Premium",
   speaker: "Palestrante",
   curator: "Curador / Patrocinador",
   operator: "Operador",
@@ -77,7 +77,8 @@ export const ALL_CAPABILITIES = Object.keys(CAPABILITY_LABEL) as Capability[];
 
 // Matriz PADRÃO de capacidades por papel (semente do editor de Permissões).
 export const DEFAULT_MATRIX: Record<Role, Capability[]> = {
-  // Não Pago: streaming livre, sem download e SEM credencial; pode adquirir acesso.
+  // Plano Gratuito: streaming livre, sem download e SEM credencial; pode adquirir
+  // acesso. Agenda pessoal é recurso de membro — favoritar exige upgrade.
   guest: ["view:public-content", "view:streaming", "view:premium-content", "purchase:ticket"],
   attendee: [...ATTENDEE_CAPS, "view:ticket-qr", "view:certificate"],
   // Palestrante HERDA as rotas do Participante Geral (+ materiais próprios).
@@ -89,6 +90,7 @@ export const DEFAULT_MATRIX: Record<Role, Capability[]> = {
     "view:premium-content",
     "download:content",
     "view:networking",
+    "manage:personal-agenda",
     "manage:company-profile",
     "view:curator-dashboard",
     "view:ticket-qr",
@@ -97,7 +99,7 @@ export const DEFAULT_MATRIX: Record<Role, Capability[]> = {
     "view:certificate"
   ],
   // Operador e Admin operam o evento — não possuem credencial própria.
-  operator: ["view:public-content", "view:streaming", "operate:checkin"],
+  operator: ["view:public-content", "view:streaming", "manage:personal-agenda", "operate:checkin"],
   // Admin vê tudo igual aos outros usuários (inclui credencial e certificado)
   // + todas as funcionalidades de gestão.
   admin: [
