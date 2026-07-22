@@ -1,0 +1,5 @@
+FROM postgres:16-alpine
+
+# Copia o script de inicialização do banco gerado pelo Prisma
+# para que o schema seja criado automaticamente ao iniciar o container
+COPY prisma/init.sql /docker-entrypoint-initdb.d/01-schema.sql
