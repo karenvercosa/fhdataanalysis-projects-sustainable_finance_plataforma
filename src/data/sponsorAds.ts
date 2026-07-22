@@ -8,6 +8,8 @@ export interface SponsorAd {
   tier: AdTier;
   headline: string;
   subtext: string;
+  /** Arquivo (data URL) enviado no Admin; substitui o monograma no banner. */
+  image?: string;
 }
 
 export const SPONSOR_ADS_KEY = "sf_sponsor_ads";

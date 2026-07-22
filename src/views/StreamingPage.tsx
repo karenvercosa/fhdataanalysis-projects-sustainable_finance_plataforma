@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { Radio, Play, Clock, MapPin, Mic2, Tv } from "lucide-react";
+import { Radio, Play, Clock, MapPin, Mic2, Tv, Check } from "lucide-react";
 import { Badge, Card, CardBody } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useSessions } from "@/context/SessionsContext";
+import { useParticipation } from "@/context/ParticipationContext";
 import { TRACK_TONE, toMinutes, type Session } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 export default function StreamingPage() {
   const { sessions } = useSessions();
+  const { markWatched, hasWatched } = useParticipation();
 
   // "Ao vivo agora": faixa de horário com mais sessões simultâneas (evidencia
   // as trilhas paralelas). Empate → horário mais cedo.
@@ -48,9 +50,19 @@ export default function StreamingPage() {
           <Card className="overflow-hidden">
             <div className="relative flex aspect-video items-center justify-center bg-primary-ink text-white">
               <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_30%_30%,#1E8E5A,transparent_60%)]" />
-              <button className="z-10 grid h-16 w-16 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25">
+              {/* Dar play registra a palestra como assistida na participação. */}
+              <button
+                onClick={() => markWatched(selected.id)}
+                aria-label={hasWatched(selected.id) ? "Assistindo" : "Assistir palestra"}
+                className="z-10 grid h-16 w-16 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25"
+              >
                 <Play className="h-7 w-7" />
               </button>
+              {hasWatched(selected.id) && (
+                <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-body-sm backdrop-blur">
+                  <Check className="h-4 w-4" /> Assistida
+                </span>
+              )}
               <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-error-500 px-3 py-1 text-body-sm font-medium">
                 <Radio className="h-4 w-4" /> AO VIVO
               </div>

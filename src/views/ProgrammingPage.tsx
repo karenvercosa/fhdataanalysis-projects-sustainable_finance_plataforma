@@ -1,12 +1,19 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, Clock, MapPin, Mic, Star, AlertTriangle, Users, UserCheck, Download, FileText, BadgeCheck, Radio } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { CalendarDays, Clock, MapPin, Mic, Star, AlertTriangle, Users, UserCheck, Download, FileText, BadgeCheck, Radio, BellRing, Check, CalendarCheck, Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useSessions } from "@/context/SessionsContext";
-import { Avatar, Badge, Button, Card, CardBody, Modal } from "@/components/ui";
+import { useParticipation } from "@/context/ParticipationContext";
+import { useNowMinutes, statusOf } from "@/hooks/useEventNow";
+import { Badge, Button, Card, CardBody, Modal, Tooltip } from "@/components/ui";
+import { SealAvatar } from "@/components/Seal";
 import { PageHeader } from "@/components/layout/AppShell";
-import { SponsorLogo } from "@/components/SponsorLogo";
+import { SponsorLogo, CompanyMark } from "@/components/SponsorLogo";
+import { ShareButton } from "@/components/ShareButton";
+import { SponsorShareNotice } from "@/components/legal/SponsorShareNotice";
 import { TRACK_TONE, toMinutes, sessionsOverlap, type Session } from "@/data/mock";
+import { personCompany } from "@/data/networking";
 import { cn } from "@/lib/utils";
 
 type TrackFilter = "Todas" | Session["track"];
@@ -14,13 +21,31 @@ const TRACKS: TrackFilter[] = ["Todas", "ESG", "Investimentos", "Inovação"];
 
 export default function ProgrammingPage() {
   const { can, user } = useAuth();
+  const navigate = useNavigate();
   const canFavorite = can("manage:personal-agenda");
+  const canDownload = can("download:content");
   // Favoritos compartilhados e persistentes (sincroniza com o Dashboard).
   const { isFavorite, toggle } = useFavorites();
   const { sessions } = useSessions();
+  const { markDownload } = useParticipation();
+  // Material aguardando o aviso de compartilhamento com o patrocinador.
+  const [avisoDownload, setAvisoDownload] = useState<
+    { id: string; titulo: string; patrocinador: string } | null
+  >(null);
   const [track, setTrack] = useState<TrackFilter>("Todas");
   const [onlyMine, setOnlyMine] = useState(false); // filtro do palestrante
-  const [detailId, setDetailId] = useState<string | null>(null); // sessão aberta no popup
+  // Sessão aberta no popup. Um link compartilhado (`?pauta=`) já abre a pauta.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [detailId, setDetailId] = useState<string | null>(searchParams.get("pauta"));
+
+  // Fechar o popup limpa o parâmetro, para o link não "grudar" na navegação.
+  const closeDetail = () => {
+    setDetailId(null);
+    if (searchParams.has("pauta")) {
+      searchParams.delete("pauta");
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   // Palestrante: identifica as pautas em que ele palestra (pelo nome).
   const isSpeaker = user.role === "speaker";
@@ -39,6 +64,26 @@ export default function ProgrammingPage() {
 
   // Sessão atual do popup, sempre derivada do store (reflete novos materiais).
   const detail = detailId ? sessions.find((s) => s.id === detailId) ?? null : null;
+  // Antes / durante / depois — define a ação principal do popup.
+  const nowMinutes = useNowMinutes();
+  const detailStatus = detail ? statusOf(detail, nowMinutes) : null;
+
+  // Empresas creditadas na pauta: a que apresenta + as de quem sobe ao palco.
+  // Uma empresa que aparece em mais de um papel é creditada uma vez só.
+  const involved = useMemo(() => {
+    if (!detail) return [];
+    const entries: { name: string; credit: string }[] = [];
+    const add = (name: string | undefined, credit: string) => {
+      if (!name) return;
+      const found = entries.find((e) => e.name === name);
+      if (found) found.credit += ` · ${credit}`;
+      else entries.push({ name, credit });
+    };
+    add(detail.company, "Apresentação");
+    add(personCompany(detail.speaker), `Palestrante · ${detail.speaker}`);
+    add(personCompany(detail.moderator), `Mediação · ${detail.moderator}`);
+    return entries;
+  }, [detail]);
 
   // Conflitos: pares de sessões favoritadas que se sobrepõem no horário.
   const conflictIds = useMemo(() => {
@@ -153,17 +198,20 @@ export default function ProgrammingPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <SponsorLogo name={s.company} />
+                          <ShareButton sessionId={s.id} variant="icon" />
                           {canFavorite && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggle(s.id); }}
-                              aria-label={fav ? "Remover dos favoritos" : "Adicionar à agenda"}
-                              className={cn(
-                                "transition-colors",
-                                fav ? "text-secondary-500 hover:text-secondary-600" : "text-neutral-400 hover:text-secondary-500"
-                              )}
-                            >
-                              <Star className={cn("h-5 w-5", fav && "fill-current")} />
-                            </button>
+                            <Tooltip label={fav ? "Remover da agenda" : "Adicionar à agenda"}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggle(s.id); }}
+                                aria-label={fav ? "Remover dos favoritos" : "Adicionar à agenda"}
+                                className={cn(
+                                  "transition-colors",
+                                  fav ? "text-secondary-500 hover:text-secondary-600" : "text-neutral-400 hover:text-secondary-500"
+                                )}
+                              >
+                                <Star className={cn("h-5 w-5", fav && "fill-current")} />
+                              </button>
+                            </Tooltip>
                           )}
                         </div>
                       </div>
@@ -213,7 +261,18 @@ export default function ProgrammingPage() {
       )}
 
       {/* Popup com os detalhes da pauta */}
-      <Modal open={!!detail} onClose={() => setDetailId(null)} title={detail?.title ?? ""}>
+      <SponsorShareNotice
+        open={!!avisoDownload}
+        onClose={() => setAvisoDownload(null)}
+        patrocinador={avisoDownload?.patrocinador ?? ""}
+        material={avisoDownload?.titulo}
+        onConfirm={() => {
+          if (avisoDownload) markDownload(avisoDownload.id);
+          setAvisoDownload(null);
+        }}
+      />
+
+      <Modal open={!!detail} onClose={closeDetail} title={detail?.title ?? ""}>
         {detail && (
           <div className="space-y-4">
             {/* Tag + metadados */}
@@ -240,17 +299,67 @@ export default function ProgrammingPage() {
               </p>
             </div>
 
-            {/* Transmissão ao vivo (se houver link) */}
-            {detail.liveUrl && (
-              <a
-                href={detail.liveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-md bg-error-50 px-3 py-2 text-body-sm font-medium text-error-500 hover:bg-error-100"
-              >
-                <Radio className="h-4 w-4" /> Assistir ao vivo
-              </a>
+            {/* Logos de todas as empresas envolvidas na pauta */}
+            {involved.length > 0 && (
+              <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                <p className="text-body-sm font-medium uppercase tracking-wide text-neutral-500">
+                  {involved.length === 1 ? "Empresa envolvida" : "Empresas envolvidas"}
+                </p>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  {involved.map((co) => (
+                    <div key={co.name} className="flex min-w-0 items-center gap-3">
+                      <CompanyMark name={co.name} />
+                      <div className="min-w-0">
+                        <p className="truncate text-h4 text-neutral-900">{co.name}</p>
+                        <p className="truncate text-body-sm text-neutral-600">{co.credit}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
+
+            {/* Ação principal muda conforme o horário da pauta */}
+            <div className="flex flex-wrap items-center gap-2">
+              {detailStatus === "live" ? (
+                // No ar: destaque vermelho levando à transmissão.
+                detail.liveUrl ? (
+                  <a
+                    href={detail.liveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md bg-error-500 px-3 text-button font-semibold text-white transition hover:brightness-95"
+                  >
+                    <Radio className="h-4 w-4" /> Assistir ao vivo
+                  </a>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    leftIcon={<Radio className="h-4 w-4" />}
+                    onClick={() => navigate("/streaming")}
+                  >
+                    Assistir ao vivo
+                  </Button>
+                )
+              ) : detailStatus === "before" && canFavorite ? (
+                // Ainda vai acontecer: ação neutra, ligada à Minha Agenda.
+                <Button
+                  size="sm"
+                  variant={isFavorite(detail.id) ? "secondary" : "outline"}
+                  leftIcon={isFavorite(detail.id) ? <Check className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
+                  onClick={() => toggle(detail.id)}
+                >
+                  {isFavorite(detail.id) ? "Na sua agenda" : "Adicionar à agenda"}
+                </Button>
+              ) : detailStatus === "after" ? (
+                // Já encerrada: sem ação — os materiais ficam logo abaixo.
+                <span className="inline-flex h-8 items-center gap-1.5 rounded-md bg-neutral-100 px-3 text-button font-semibold text-neutral-600">
+                  <CalendarCheck className="h-4 w-4" /> Sessão encerrada
+                </span>
+              ) : null}
+              <ShareButton sessionId={detail.id} />
+            </div>
 
             {/* Sobre */}
             {detail.description && (
@@ -279,7 +388,22 @@ export default function ProgrammingPage() {
                         <FileText className="h-4 w-4 text-neutral-400" /> {m.title}
                         <Badge tone="neutral">{m.format}</Badge>
                       </span>
-                      <Button variant="secondary" size="sm" leftIcon={<Download className="h-4 w-4" />}>
+                      {/* Sem permissão de download o botão fica visível porém
+                          desativado — deixa claro o limite do plano. */}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={!canDownload}
+                        title={canDownload ? undefined : "Disponível para Membros Premium"}
+                        leftIcon={canDownload ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                        onClick={() =>
+                          // Material de patrocinador exige aviso antes; sem
+                          // empresa creditada, o download segue direto.
+                          detail.company
+                            ? setAvisoDownload({ id: `${detail.id}:${m.title}`, titulo: m.title, patrocinador: detail.company })
+                            : markDownload(`${detail.id}:${m.title}`)
+                        }
+                      >
                         Baixar
                       </Button>
                     </li>
@@ -305,9 +429,11 @@ export default function ProgrammingPage() {
 }
 
 function PersonRow({ role, name, icon }: { role: string; name: string; icon: React.ReactNode }) {
+  // Quem sobe ao palco leva o selo de Palestrante; mediador segue sem selo.
+  const seal = role === "Palestrante" ? ("Palestrante" as const) : undefined;
   return (
     <div className="flex items-center gap-3 rounded-md border border-neutral-100 p-3">
-      <Avatar name={name} className="h-11 w-11" />
+      <SealAvatar name={name} seal={seal} className="h-11 w-11" />
       <div className="min-w-0">
         <p className="inline-flex items-center gap-1 text-body-sm text-neutral-500">{icon} {role}</p>
         <p className="truncate text-body font-medium text-neutral-900">{name}</p>

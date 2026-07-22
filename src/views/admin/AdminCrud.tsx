@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, Plus, Search, Pencil, Trash2, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Plus, Search, Pencil, Trash2, CheckCircle2, Upload, Image as ImageIcon } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, Input, Modal } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -10,7 +10,7 @@ type Tone = "success" | "warning" | "error" | "info" | "neutral" | "primary" | "
 export interface CrudField {
   key: string;
   label: string;
-  type?: "text" | "email" | "select";
+  type?: "text" | "email" | "select" | "image";
   options?: { value: string; label: string }[];
   placeholder?: string;
   required?: boolean;
@@ -19,6 +19,8 @@ export interface CrudField {
   tones?: Record<string, Tone>; // renderiza como Badge na tabela
   filterable?: boolean;
   colSpan?: 1 | 2;
+  /** Dica exibida abaixo do campo (ex.: formatos/limites do arquivo). */
+  hint?: string;
 }
 
 export type CrudRow = { id: string } & Record<string, string>;
@@ -192,7 +194,13 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
                 <tr key={row.id} className="border-b border-neutral-50 text-body">
                   {tableFields.map((f, idx) => (
                     <td key={f.key} className={idx === 0 ? "px-4 py-3 font-medium text-neutral-900" : "px-4 py-3 text-neutral-600"}>
-                      {f.tones ? (
+                      {f.type === "image" ? (
+                        row[f.key] ? (
+                          <img src={row[f.key]} alt="" className="h-10 w-16 rounded object-cover" />
+                        ) : (
+                          <span className="text-body-sm text-neutral-400">—</span>
+                        )
+                      ) : f.tones ? (
                         <Badge tone={f.tones[row[f.key]] ?? "neutral"}>{labelFor(f, row[f.key])}</Badge>
                       ) : (
                         labelFor(f, row[f.key])
@@ -263,6 +271,17 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
                     ))}
                   </select>
                 </div>
+              ) : f.type === "image" ? (
+                <ImageField
+                  field={f}
+                  value={form[f.key] ?? ""}
+                  error={errors[f.key]}
+                  onChange={(v) => {
+                    setForm((s) => ({ ...s, [f.key]: v }));
+                    setErrors((er) => ({ ...er, [f.key]: "" }));
+                  }}
+                  onError={(msg) => setErrors((er) => ({ ...er, [f.key]: msg }))}
+                />
               ) : (
                 <Input
                   label={f.label}
@@ -274,6 +293,7 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
                     setErrors((er) => ({ ...er, [f.key]: "" }));
                   }}
                   error={errors[f.key] || undefined}
+                  hint={f.hint}
                 />
               )}
             </div>
@@ -302,6 +322,84 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
           <strong className="text-neutral-900">{toDelete?.[fields[0].key]}</strong>? Esta ação não pode ser desfeita.
         </p>
       </Modal>
+    </div>
+  );
+}
+
+/** Limite do arquivo — data URLs vão para o localStorage, que é pequeno. */
+const MAX_IMAGE_BYTES = 1_000_000; // ~1 MB
+
+/**
+ * Campo de upload de imagem. O arquivo é lido como data URL e guardado no
+ * próprio registro (protótipo em localStorage) — mostra prévia e permite trocar
+ * ou remover.
+ */
+function ImageField({
+  field,
+  value,
+  error,
+  onChange,
+  onError
+}: {
+  field: CrudField;
+  value: string;
+  error?: string;
+  onChange: (v: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permite reenviar o mesmo arquivo
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      onError("Selecione um arquivo de imagem.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      onError("Imagem muito grande (máx. 1 MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => onChange(String(reader.result));
+    reader.onerror = () => onError("Não foi possível ler o arquivo.");
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-h5 text-neutral-900">{field.label}</label>
+
+      {value ? (
+        <div className="flex items-center gap-3 rounded-md border border-neutral-200 p-2">
+          <img src={value} alt="Prévia" className="h-14 w-24 shrink-0 rounded object-cover" />
+          <div className="flex flex-1 flex-wrap gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-neutral-200 px-3 py-1.5 text-body-sm text-neutral-700 hover:bg-neutral-50">
+              <ImageIcon className="h-4 w-4" /> Trocar
+              <input type="file" accept="image/*" className="hidden" onChange={onPick} />
+            </label>
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-body-sm text-neutral-600 hover:bg-neutral-100 hover:text-error-500"
+            >
+              <Trash2 className="h-4 w-4" /> Remover
+            </button>
+          </div>
+        </div>
+      ) : (
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-neutral-300 px-4 py-6 text-center hover:border-primary-500 hover:bg-primary-50">
+          <Upload className="h-5 w-5 text-neutral-400" />
+          <span className="text-body-sm font-medium text-neutral-700">Enviar imagem</span>
+          <span className="text-body-sm text-neutral-500">PNG ou JPG · até 1 MB</span>
+          <input type="file" accept="image/*" className="hidden" onChange={onPick} />
+        </label>
+      )}
+
+      {error ? (
+        <p className="text-body-sm text-error-500">{error}</p>
+      ) : field.hint ? (
+        <p className="text-body-sm text-neutral-600">{field.hint}</p>
+      ) : null}
     </div>
   );
 }

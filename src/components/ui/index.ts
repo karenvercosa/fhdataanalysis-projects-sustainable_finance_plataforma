@@ -7,4 +7,8 @@ export { Loader } from "./Loader";
 export { ProgressBar } from "./ProgressBar";
 export { QRCode } from "./QRCode";
 export { Modal } from "./Modal";
+export { Switch } from "./Switch";
+export { Checkbox } from "./Checkbox";
+export { Radio } from "./Radio";
+export { Tooltip } from "./Tooltip";
 export { Donut, BarChart, type Segment, type ChartTone } from "./Charts";

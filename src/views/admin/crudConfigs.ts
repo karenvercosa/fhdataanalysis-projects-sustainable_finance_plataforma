@@ -62,7 +62,14 @@ export const CRUD_CONFIGS: Record<string, CrudConfig> = {
         ]
       },
       { key: "headline", label: "Título", required: true, inTable: true, placeholder: "Chamada principal da divulgação" },
-      { key: "subtext", label: "Subtexto", placeholder: "Descrição curta" }
+      { key: "subtext", label: "Subtexto", placeholder: "Descrição curta" },
+      {
+        key: "image",
+        label: "Arquivo da divulgação",
+        type: "image",
+        inTable: true,
+        hint: "Imagem exibida no banner. Ideal na proporção do banner (horizontal)."
+      }
     ],
     // Reusa a mesma semente do banner (mesma chave de storage).
     seed: SPONSOR_ADS as unknown as CrudRow[]

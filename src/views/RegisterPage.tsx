@@ -4,6 +4,9 @@ import { ShieldCheck, ArrowRight, Sparkles } from "lucide-react";
 import { useAuth, type Phase1Data } from "@/context/AuthContext";
 import { useInterests } from "@/context/InterestsContext";
 import { HOME_BY_ROLE } from "@/lib/roles";
+import { Checkbox } from "@/components/ui";
+import { LegalModal } from "@/components/legal/LegalModal";
+import { CONSENTIMENTO_KEY, type LegalDocId } from "@/data/legal";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,6 +19,10 @@ export default function RegisterPage() {
   const { interests } = useInterests();
   const [form, setForm] = useState<Phase1Data>({ firstName: "", lastName: "", email: "", phone: "" });
   const [chosen, setChosen] = useState<string[]>([]);
+  // Consentimentos LGPD, ambos desmarcados por padrão.
+  const [aceiteTermos, setAceiteTermos] = useState(false);
+  const [aceiteMarketing, setAceiteMarketing] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<LegalDocId | null>(null);
 
   if (isAuthenticated) return <Navigate to="/app" replace />;
 
@@ -25,8 +32,13 @@ export default function RegisterPage() {
   const toggleInterest = (tag: string) =>
     setChosen((c) => (c.includes(tag) ? c.filter((t) => t !== tag) : [...c, tag]));
 
+  // Sem o aceite dos Termos não há cadastro — o de marketing é facultativo.
   const valid =
-    form.firstName.trim() && form.lastName.trim() && /\S+@\S+\.\S+/.test(form.email) && form.phone.trim().length >= 8;
+    form.firstName.trim() &&
+    form.lastName.trim() &&
+    /\S+@\S+\.\S+/.test(form.email) &&
+    form.phone.trim().length >= 8 &&
+    aceiteTermos;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +46,16 @@ export default function RegisterPage() {
     // Interesses definidos no cadastro — grava direto (o navigate desmonta a página).
     try {
       localStorage.setItem("sf_profile", JSON.stringify({ headline: "", company: "", bio: "", interests: chosen }));
+      // Prova de consentimento: o que foi aceito, por quem e quando.
+      localStorage.setItem(
+        CONSENTIMENTO_KEY,
+        JSON.stringify({
+          email: form.email.trim().toLowerCase(),
+          termos: true,
+          marketing: aceiteMarketing,
+          aceitoEm: new Date().toISOString()
+        })
+      );
     } catch {
       /* storage indisponível */
     }
@@ -112,6 +134,40 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* Consentimentos LGPD — o de marketing é opcional e independente */}
+        <div className="space-y-3">
+          <Checkbox
+            checked={aceiteTermos}
+            onChange={setAceiteTermos}
+            labelClassName="text-white/85"
+            label={
+              <>
+                Li e concordo com os{" "}
+                <button type="button" onClick={() => setLegalDoc("termos")} className="font-medium underline hover:text-white">
+                  Termos de Uso
+                </button>{" "}
+                e a{" "}
+                <button type="button" onClick={() => setLegalDoc("privacidade")} className="font-medium underline hover:text-white">
+                  Política de Privacidade
+                </button>
+                .
+              </>
+            }
+          />
+
+          <Checkbox
+            checked={aceiteMarketing}
+            onChange={setAceiteMarketing}
+            labelClassName="text-white/70"
+            label={
+              <>
+                Aceito receber comunicações sobre o evento e concordo com o compartilhamento do meu
+                perfil corporativo com os patrocinadores oficiais. <em>(opcional)</em>
+              </>
+            }
+          />
+        </div>
+
         <button
           type="submit"
           disabled={!valid}
@@ -119,6 +175,11 @@ export default function RegisterPage() {
         >
           Criar conta e acessar <ArrowRight className="h-4 w-4" />
         </button>
+        {!aceiteTermos && (
+          <p className="text-center text-body-sm text-white/70">
+            Aceite os Termos de Uso e a Política de Privacidade para continuar.
+          </p>
+        )}
 
         {/* Divisor + cadastro social */}
         <div className="flex items-center gap-3 text-body-sm text-white/60">
@@ -148,6 +209,8 @@ export default function RegisterPage() {
           </Link>
         </p>
       </form>
+
+      <LegalModal open={!!legalDoc} onClose={() => setLegalDoc(null)} docInicial={legalDoc ?? "termos"} />
     </div>
   );
 }

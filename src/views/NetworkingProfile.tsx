@@ -6,9 +6,11 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useConnectionFavorites } from "@/context/ConnectionFavoritesContext";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { Avatar, Badge, Button, Card, CardBody, CardHeader } from "@/components/ui";
+import { Badge, Button, Card, CardBody, CardHeader } from "@/components/ui";
 import { PreviewLock } from "@/components/PreviewLock";
-import { getConnection, type Connection } from "@/data/networking";
+import { SealAvatar, SealBadge } from "@/components/Seal";
+import { SEAL } from "@/lib/seals";
+import { getConnection, sealForConnection, type Connection } from "@/data/networking";
 import { BRAND_KEY, BRAND_SEED, type BrandContent, type BrandFormat } from "@/data/brandContent";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +42,7 @@ export default function NetworkingProfile() {
   }
 
   const isCompany = c.kind === "company";
+  const seal = sealForConnection(c);
 
   const profileInfo = (
     <div className="space-y-4">
@@ -50,16 +53,19 @@ export default function NetworkingProfile() {
       <Card>
         <CardBody className="flex flex-wrap items-center gap-4">
           {isCompany ? (
-            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-secondary-400/20 text-secondary-600">
+            <div className={cn(
+              "grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-[#F1ECFB] text-[#5B3FBF]",
+              SEAL.Patrocinador.ring
+            )}>
               <Building2 className="h-9 w-9" />
             </div>
           ) : (
-            <Avatar name={c.name} size="lg" className="h-20 w-20 text-h2" />
+            <SealAvatar name={c.name} seal={seal} size="lg" className="h-20 w-20 text-h2" />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-h2 text-neutral-900">{c.name}</h1>
-              <Badge tone="neutral">{isCompany ? "Empresa" : "Participante"}</Badge>
+              {seal ? <SealBadge seal={seal} /> : <Badge tone="neutral">Participante</Badge>}
             </div>
             <p className="text-body text-neutral-600">{c.subtitle}</p>
           </div>

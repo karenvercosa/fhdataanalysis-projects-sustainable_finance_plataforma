@@ -37,25 +37,30 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      {/* Altura limitada à tela: cabeçalho e rodapé ficam fixos e só o corpo
+          rola, para o modal nunca ultrapassar a janela. */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={cn("relative z-10 w-full max-w-md rounded-lg bg-white shadow-pop", className)}
+        className={cn(
+          "relative z-10 flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col rounded-lg bg-white shadow-pop",
+          className
+        )}
       >
-        <div className="flex items-center justify-between border-b border-neutral-100 p-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-neutral-100 p-4">
           <h2 className="text-h3 text-neutral-900">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="grid h-8 w-8 place-items-center rounded-md text-neutral-600 hover:bg-neutral-100"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-neutral-600 hover:bg-neutral-100"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-neutral-100 p-4">{footer}</div>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-neutral-100 p-4">{footer}</div>
         )}
       </div>
     </div>

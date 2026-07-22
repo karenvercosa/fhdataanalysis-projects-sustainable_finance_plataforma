@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import { Users, Search, Building2, Star, ChevronDown, Award } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useConnectionFavorites } from "@/context/ConnectionFavoritesContext";
-import { Avatar, Badge, Button, Card, CardBody, Input } from "@/components/ui";
+import { Badge, Button, Card, CardBody, Input } from "@/components/ui";
+import { SealAvatar, SealBadge, SealLegend } from "@/components/Seal";
+import { ALL_SEALS, SEAL } from "@/lib/seals";
 import { PageHeader } from "@/components/layout/AppShell";
 import { PreviewLock } from "@/components/PreviewLock";
-import { CONNECTIONS, sponsorTier, type ConnectionKind, type SponsorTier } from "@/data/networking";
+import { CONNECTIONS, sealForConnection, sponsorTier, type ConnectionKind, type SponsorTier } from "@/data/networking";
 import { cn } from "@/lib/utils";
 
 // Pílula compacta da cota de patrocínio (canto superior direito do card).
@@ -55,6 +57,9 @@ export default function Networking() {
 
       <Input placeholder="Buscar por nome, cargo ou setor…" rightSlot={<Search className="h-4 w-4" />} className="lg:max-w-md" value={query} onChange={(e) => setQuery(e.target.value)} />
 
+      {/* Legenda dos selos de identidade */}
+      <SealLegend seals={ALL_SEALS} />
+
       {/* Filtro por tipo */}
       <div className="flex gap-2">
         {FILTERS.map((f) => (
@@ -84,17 +89,21 @@ export default function Networking() {
                 )}
                 <CardBody className="flex h-full items-center gap-3">
                   {c.kind === "company" ? (
-                    <div className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-secondary-400/20 text-secondary-600">
+                    <div className={cn(
+                      "grid h-14 w-14 shrink-0 place-items-center rounded-md bg-[#F1ECFB] text-[#5B3FBF]",
+                      SEAL.Patrocinador.ring
+                    )}>
                       <Building2 className="h-6 w-6" />
                     </div>
                   ) : (
-                    <Avatar name={c.name} size="lg" className="h-14 w-14 shrink-0" />
+                    <SealAvatar name={c.name} seal={sealForConnection(c)} size="lg" className="h-14 w-14 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-h4 text-neutral-900">{c.name}</p>
                     <p className="truncate text-body-sm text-neutral-600">{c.subtitle}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {c.tags.slice(0, 2).map((t) => (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <SealBadge seal={sealForConnection(c)} />
+                      {c.tags.slice(0, 1).map((t) => (
                         <Badge key={t} tone="primary">{t}</Badge>
                       ))}
                     </div>
@@ -138,7 +147,7 @@ export default function Networking() {
   );
 
   return locked ? (
-    <PreviewLock message="Veja uma amostra dos participantes e empresas. Adquira seu ingresso para conectar e ver perfis completos.">
+    <PreviewLock message="Veja uma amostra dos participantes e empresas. Torne-se membro para conectar e ver perfis completos.">
       {body}
     </PreviewLock>
   ) : (

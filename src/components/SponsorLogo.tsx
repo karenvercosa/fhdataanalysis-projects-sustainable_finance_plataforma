@@ -35,3 +35,26 @@ export function SponsorLogo({ name, size = "sm" }: { name?: string; size?: "sm" 
     </span>
   );
 }
+
+/**
+ * Marca da empresa "dona" da pauta, em destaque no popup de detalhamento.
+ * Diferente da `SponsorLogo`, aparece para QUALQUER empresa — a cota apenas
+ * tinge a marca quando existe (Ouro/Prata).
+ */
+export function CompanyMark({ name, className }: { name: string; className?: string }) {
+  const tier = companyTier(name);
+  const style =
+    tier === "Ouro" || tier === "Prata" ? TIER_STYLE[tier] : "bg-neutral-600 text-white ring-neutral-900";
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid h-12 w-12 shrink-0 place-items-center rounded-md font-heading text-h4 font-bold ring-1",
+        style,
+        className
+      )}
+    >
+      {monogram(name)}
+    </span>
+  );
+}
