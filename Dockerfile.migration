@@ -21,4 +21,4 @@ RUN npx prisma generate
 COPY src ./src
 
 # Comando padrão que será executado quando o container do Job iniciar
-CMD ["sh", "-c", "npx prisma db push"]
+CMD ["sh", "-c", "npx prisma db push && yarn db:seed"]

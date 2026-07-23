@@ -1,0 +1,66 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    container_name: db_sustainable_finance_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    build:
+      context: .
+      dockerfile: Dockerfile.redis
+    container_name: cache_sustainable_finance_prod
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata_prod:/data
+
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
+    container_name: migrator_sustainable_finance_prod
+    env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app_sustainable_finance_prod
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata_prod:
+  redisdata_prod:

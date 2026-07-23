@@ -17,7 +17,7 @@
     "infra:up": "docker-compose up -d --build --force-recreate postgres redis",
     "infra:down": "docker-compose down",
     "sonar": "bash ./sonar/start.sh",
-    "sonar:down": "docker compose -f sonar/docker-compose.yml down -v && docker volume rm -f sonar_sonar_db sonar_sonarqube_data sonar_sonarqube_extensions sonar_sonarqube_logs 2>/dev/null; true"
+    "sonar:down": "docker compose -f sonar/docker-compose.prod.yml down -v && docker volume rm -f sonar_sonar_db sonar_sonarqube_data sonar_sonarqube_extensions sonar_sonarqube_logs 2>/dev/null; true"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",

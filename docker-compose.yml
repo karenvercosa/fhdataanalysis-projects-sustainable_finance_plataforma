@@ -32,6 +32,7 @@ services:
     volumes:
       - redisdata_dev:/data
 
+
 volumes:
   pgdata_dev:
   redisdata_dev:

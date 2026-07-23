@@ -17,7 +17,7 @@ TOKEN_NAME="local-scanner-$(whoami)"
 
 # ── 1. Sobe SonarQube ────────────────────────────────────────────────────────
 echo "🐳 Subindo SonarQube..."
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
+docker compose -f "$SCRIPT_DIR/docker-compose.prod.yml" up -d
 
 echo "⏳ Aguardando SonarQube iniciar (pode levar até 2min)..."
 until curl -sf "$SONAR_URL/api/system/status" 2>/dev/null | grep -q '"status":"UP"'; do
