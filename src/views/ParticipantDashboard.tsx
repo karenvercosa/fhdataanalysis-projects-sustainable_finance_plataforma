@@ -6,7 +6,7 @@ import { useSessions } from "@/context/SessionsContext";
 import { Badge, Button, Card, CardBody } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { PreviewLock } from "@/components/PreviewLock";
-import { TRACK_TONE } from "@/data/mock";
+import { TRACK_TONE, toMinutes } from "@/data/mock";
 
 export default function ParticipantDashboard() {
   const { user, can } = useAuth();
@@ -14,20 +14,25 @@ export default function ParticipantDashboard() {
   // Favoritos compartilhados e persistentes (sincroniza com a Programação).
   const { isFavorite, toggle } = useFavorites();
   const { sessions } = useSessions();
-  // Não Pago: vê a PROGRAMAÇÃO COMPLETA (sem credencial). Pago: sua agenda favoritada.
-  const locked = !can("manage:personal-agenda");
-  const favorites = locked ? sessions : sessions.filter((s) => isFavorite(s.id));
+  // Amostra limitada é sinal de "sem ingresso" — favoritar já vale para todos.
+  const locked = !can("download:content");
+  // Credencial só existe para quem tem ingresso Presencial.
+  const hasCredential = can("view:ticket-qr") && user.hasCredential !== false;
+  // "Minha agenda": as pautas favoritadas, em ordem de horário.
+  const favorites = sessions
+    .filter((s) => isFavorite(s.id))
+    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
 
   const body = (
     <div className="space-y-4">
       <PageHeader
         title={`Olá, ${user.name.split(" ")[0]}`}
-        subtitle={locked ? "Programação completa do dia 04/09" : "Sua agenda do dia 04/09"}
+        subtitle="Sua agenda do dia 04/09"
         icon={Star}
       />
 
-      {/* Atalho da credencial — só para quem tem ingresso (oculto p/ Não Pago) */}
-      {!locked && (
+      {/* Atalho da credencial — só para quem tem ingresso Presencial */}
+      {hasCredential && (
         <Link to="/credencial" aria-label="Abrir QR Code de credenciamento" className="block lg:max-w-md">
           <Card className="bg-primary-500 border-primary-500 text-white">
             <CardBody className="flex items-center justify-between">
@@ -46,20 +51,21 @@ export default function ParticipantDashboard() {
         </Link>
       )}
 
-      {/* Agenda (favoritada) ou Programação completa (Não Pago) */}
+      {/* Minha Agenda — apenas as pautas favoritadas */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-h3 text-neutral-900">{locked ? "Programação completa" : "Minha agenda"}</h2>
+          <h2 className="text-h3 text-neutral-900">Minha Agenda</h2>
           <Badge tone="primary">{favorites.length} sessões</Badge>
         </div>
 
         {favorites.length === 0 ? (
           <Card>
             <CardBody className="text-center text-body text-neutral-600">
-              Você ainda não favoritou sessões.{" "}
+              Sua agenda está vazia. Favorite as pautas na{" "}
               <Link to="/programacao" className="font-medium text-primary-600">
-                Explorar programação
-              </Link>
+                Programação
+              </Link>{" "}
+              e elas aparecem aqui.
             </CardBody>
           </Card>
         ) : (
@@ -102,7 +108,7 @@ export default function ParticipantDashboard() {
   );
 
   return locked ? (
-    <PreviewLock message="Você tem acesso livre à plataforma. Adquira seu ingresso para liberar o acesso total (favoritar sessões, credencial e mais).">
+    <PreviewLock message="Você tem acesso livre à plataforma. Torne-se membro para liberar o acesso total (credencial, download de conteúdos e networking).">
       {body}
     </PreviewLock>
   ) : (

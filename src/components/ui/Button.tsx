@@ -13,21 +13,31 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-// Variantes espelhando o DS (verde de marca + escuro + outline).
+// shadow/sm do DS — aplicada aos botões com preenchimento e ao secundário.
+const SHADOW_SM = "shadow-[0_2px_4px_0_rgba(30,30,30,0.12)]";
+
+// Variantes do DS. Primário e secundário seguem os tokens especificados;
+// os demais acompanham o mesmo raio e sombra para não destoar.
+//
+// A cor do texto usa a sintaxe de propriedade arbitrária `[color:...]` de
+// propósito: `text-*` de cor entra em conflito com o `text-button` (tamanho)
+// aplicado em SIZES, e o tailwind-merge descarta um dos dois. Assim as duas
+// coisas coexistem.
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700",
-  secondary: "bg-primary-100 text-primary-700 hover:bg-primary-200",
-  outline: "border border-primary-500 text-primary-600 bg-white hover:bg-primary-50",
-  ghost: "text-primary-600 hover:bg-primary-50",
-  dark: "bg-primary-ink text-white hover:bg-primary-900",
-  danger: "bg-error-500 text-white hover:brightness-95"
+  primary: `bg-[#027D5B] [color:#FFFFFF] hover:bg-[#19302B] active:bg-[#19302B] ${SHADOW_SM}`,
+  // Contorno e texto no mesmo verde do botão primário.
+  secondary: `border border-[#027D5B] bg-white [color:#027D5B] hover:bg-primary-50 ${SHADOW_SM}`,
+  outline: "border border-primary-500 [color:#15784B] bg-white hover:bg-primary-50",
+  ghost: "[color:#15784B] hover:bg-primary-50",
+  dark: `bg-primary-ink [color:#FFFFFF] hover:bg-primary-900 ${SHADOW_SM}`,
+  danger: `bg-error-500 [color:#FFFFFF] hover:brightness-95 ${SHADOW_SM}`
 };
 
-// Alturas múltiplas de 8 (grid 8pt): 32 / 40 / 48px.
+// `md` é o tamanho do DS: padding 12px/24px. sm e lg variam em torno dele.
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-button gap-1.5",
-  md: "h-10 px-4 text-button gap-2",
-  lg: "h-12 px-6 text-button gap-2"
+  sm: "px-4 py-2 text-button gap-1.5",
+  md: "px-6 py-3 text-button gap-2",
+  lg: "px-8 py-4 text-button gap-2"
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -36,7 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center rounded-md font-body font-semibold",
+        "inline-flex items-center justify-center rounded-[4px] font-body font-semibold",
         "transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed",
         VARIANTS[variant],
         SIZES[size],

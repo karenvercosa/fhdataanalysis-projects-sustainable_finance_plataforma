@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { type Role, type Capability } from "@/lib/roles";
 import { usePermissions } from "@/context/PermissionsContext";
+import { type SponsorTier } from "@/data/sponsorTiers";
+import { type SponsorKind } from "@/lib/seals";
 
 export interface CurrentUser {
   id: string;
@@ -10,6 +12,10 @@ export interface CurrentUser {
   avatarUrl?: string;
   ticketCode?: string; // presente quando há ingresso ativo
   curatorVoucher?: string; // empresa/curador: prefixo do voucher
+  /** Curador/patrocinador: cota contratada (base para o upgrade). */
+  tier?: SponsorTier;
+  /** Distingue curador (pessoa) de patrocinador (empresa) no selo. */
+  sponsorKind?: SponsorKind;
   isPaid?: boolean; // adquiriu ingresso (pago ou resgate via voucher)
   /** Só o ingresso Presencial (voucher) gera credencial; Online é digital. */
   hasCredential?: boolean;
@@ -39,6 +45,8 @@ interface AuthState {
   /** Fase 2: conclui o checkout → libera a plataforma. `credential` (Presencial) gera a credencial. */
   completeCheckout: (opts?: { credential?: boolean }) => void;
   logout: () => void;
+  /** Exclui a conta do usuário: apaga os dados pessoais e encerra a sessão. */
+  deleteAccount: () => void;
   /** Troca de papel — usado no protótipo para demonstrar os 7 fluxos. */
   setRole: (role: Role) => void;
   can: (cap: Capability) => boolean;
@@ -52,7 +60,7 @@ export const DEMO_ACCOUNTS: Record<string, CurrentUser> = {
   },
   "curador@sf.com": {
     id: "u_002", name: "João Patrocínio", email: "curador@sf.com",
-    role: "curator", curatorVoucher: "VERDE2026"
+    role: "curator", curatorVoucher: "VERDE2026", tier: "Bronze", sponsorKind: "Curador"
   },
   "operador@sf.com": {
     id: "u_003", name: "Equipe Credenciamento", email: "operador@sf.com", role: "operator"
@@ -65,10 +73,42 @@ export const DEMO_ACCOUNTS: Record<string, CurrentUser> = {
 const STORAGE_KEY = "sf_session_email";
 const FALLBACK_USER = DEMO_ACCOUNTS["participante@sf.com"];
 
+/** Contas excluídas pelo próprio usuário — não podem mais entrar. */
+const DELETED_KEY = "sf_deleted_accounts";
+
+/**
+ * Dados pessoais apagados junto com a conta. Não inclui catálogos do evento
+ * (sessões, vouchers, permissões), que pertencem à organização.
+ */
+const PERSONAL_KEYS = [
+  "sf_profile",
+  "sf_favorites",
+  "sf_participation",
+  "sf_connection_favorites",
+  "sf_preinscricoes",
+  "sf_leads_parceria",
+  "sf_tier_upgrade_request",
+  "sf_tier_panel_expanded"
+];
+
+function readDeleted(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(DELETED_KEY) ?? "[]") as string[];
+  } catch {
+    return [];
+  }
+}
+
+function isDeleted(email: string) {
+  return readDeleted().includes(email.trim().toLowerCase());
+}
+
 function readStored(): CurrentUser | null {
   try {
     const email = localStorage.getItem(STORAGE_KEY);
-    return email ? DEMO_ACCOUNTS[email] ?? null : null;
+    // Conta excluída não volta, nem por sessão salva no navegador.
+    if (!email || isDeleted(email)) return null;
+    return DEMO_ACCOUNTS[email] ?? null;
   } catch {
     return null;
   }
@@ -90,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const key = email.trim().toLowerCase();
         const account = DEMO_ACCOUNTS[key];
         // Prevenção de erros (Heurística 5): valida credenciais antes de entrar.
+        if (isDeleted(key)) return { ok: false, error: "Esta conta foi excluída." };
         if (!account) return { ok: false, error: "Conta não encontrada. Use uma conta de teste." };
         if (password.trim().length < 4) return { ok: false, error: "Senha deve ter ao menos 4 caracteres." };
         try {
@@ -139,6 +180,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(STORAGE_KEY);
         } catch {
           /* noop */
+        }
+        setIsAuthenticated(false);
+        setUser(FALLBACK_USER);
+      },
+      deleteAccount: () => {
+        const email = user.email.trim().toLowerCase();
+        try {
+          // Marca a conta como excluída e apaga os dados pessoais do usuário.
+          localStorage.setItem(DELETED_KEY, JSON.stringify([...new Set([...readDeleted(), email])]));
+          PERSONAL_KEYS.forEach((k) => localStorage.removeItem(k));
+          // Some também do CRUD de usuários do Admin.
+          const raw = localStorage.getItem("sf_users_v2");
+          if (raw) {
+            const lista = (JSON.parse(raw) as { email: string }[]).filter(
+              (u) => u.email.trim().toLowerCase() !== email
+            );
+            localStorage.setItem("sf_users_v2", JSON.stringify(lista));
+          }
+          localStorage.removeItem(STORAGE_KEY);
+        } catch {
+          /* storage indisponível — segue para o logout mesmo assim */
         }
         setIsAuthenticated(false);
         setUser(FALLBACK_USER);

@@ -1,54 +1,63 @@
-# ==========================================
-# Etapa 1: Instalação de Dependências
-# ==========================================
-FROM node:20-alpine AS deps
-# A biblioteca libc6-compat é necessária para alguns pacotes nativos no Alpine
-RUN apk add --no-cache libc6-compat
+# Use Node.js LTS (22) base image
+FROM node:22-alpine AS base
+
+# 1. Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Copia os arquivos de dependência
-COPY package.json yarn.lock* ./
-# Instala as dependências congelando o lockfile
+# Install dependencies based on the preferred package manager
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+
+# Use yarn to install dependencies as indicated by the lockfile
 RUN yarn install --frozen-lockfile
 
-# ==========================================
-# Etapa 2: Build da Aplicação
-# ==========================================
-FROM node:20-alpine AS builder
+# 2. Rebuild the source code only when needed
+FROM base AS builder
 WORKDIR /app
-
-# Copia as dependências instaladas na etapa anterior
 COPY --from=deps /app/node_modules ./node_modules
-# Copia o restante do código fonte
 COPY . .
 
-# Executa o build do Next.js
+# Generate Prisma client before building
+RUN npx prisma generate
+
+# Next.js telemetry is disabled
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the Next.js application
 RUN yarn build
 
-# ==========================================
-# Etapa 3: Imagem de Produção (Runner)
-# ==========================================
-FROM node:20-alpine AS runner
+# 3. Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+RUN apk add --no-cache openssl
 
-# Cria um usuário não-root por questões de segurança
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copia os diretórios necessários do builder
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Set mode to standalone in next.config.mjs to use these folders
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# Inicia a aplicação
-CMD ["yarn", "start"]
+# server.js is created by next build from the standalone output
+CMD ["node", "server.js"]

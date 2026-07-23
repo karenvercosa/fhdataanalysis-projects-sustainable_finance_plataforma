@@ -1,0 +1,24 @@
+FROM node:22-alpine
+
+# Instala dependências do sistema necessárias para o Prisma
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+# Copia os arquivos de configuração do projeto
+COPY package.json yarn.lock* tsconfig.json ./
+
+# Copia a pasta do Prisma (contém o schema e o seed.ts)
+COPY prisma ./prisma
+
+# Instala todas as dependências (necessário para o ts-node e typescript rodarem o seed)
+RUN yarn install --frozen-lockfile
+
+# Gera o cliente do Prisma
+RUN npx prisma generate
+
+# Copia o código fonte necessário para o seed (o seed.ts importa dados de src/lib/data)
+COPY src ./src
+
+# Comando padrão que será executado quando o container do Job iniciar
+CMD ["sh", "-c", "npx prisma db push && yarn db:seed"]

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   Settings, Users, Ticket, CalendarDays, Building2,
-  ChevronRight, Sparkles, Percent, Handshake, Megaphone
+  ChevronRight, Sparkles, Percent, Handshake, Megaphone, Layers
 } from "lucide-react";
 import { Badge, Card, CardBody, CardHeader, BarChart, type Segment } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
@@ -43,6 +43,7 @@ const MODULES = [
   { label: "Gestão de Vouchers", desc: "Free / desconto + nº de usos", icon: Percent, to: "/admin/vouchers" },
   { label: "Programação", desc: "Sessões, trilhas e salas", icon: CalendarDays, to: "/admin/programacao-admin" },
   { label: "Divulgações", desc: "Banner rotativo (Ouro/Prata)", icon: Megaphone, to: "/admin/divulgacoes" },
+  { label: "Cotas de patrocínio", desc: "O que cada cota libera no perfil público", icon: Layers, to: "/admin/cotas" },
   { label: "Interesses", desc: "Nuvem de temas do onboarding", icon: Sparkles, to: "/admin/interesses" }
 ];
 

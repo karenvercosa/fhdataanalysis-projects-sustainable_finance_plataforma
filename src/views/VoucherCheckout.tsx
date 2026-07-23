@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Ticket, Tag, CheckCircle2, QrCode, Gift, Monitor, MapPin, CreditCard, Infinity as InfinityIcon, Copy, Check, Layers } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, Input } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
+import { PreInscricaoPresencial } from "@/components/PreInscricaoPresencial";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useVouchers } from "@/context/VouchersContext";
@@ -21,6 +22,7 @@ export default function VoucherCheckout() {
   const { completeCheckout, user } = useAuth();
   const { getByCode, remaining, redeem, createBatch, vouchers } = useVouchers();
   const isCurator = user.role === "curator";
+  const isGuest = user.role === "guest"; // Plano Gratuito: pode se pré-inscrever
   // Vouchers já criados/usados pelo curador (para o menu suspenso do lote).
   const myVoucherCodes = vouchers.filter((v) => v.ownerType === "curator" && v.ownerId === CURATOR_ID).map((v) => v.code);
 
@@ -349,6 +351,16 @@ export default function VoucherCheckout() {
                 <Button variant="outline" onClick={checkVoucher} loading={vState === "checking"} disabled={code.trim().length < 3}>
                   Aplicar voucher
                 </Button>
+              )}
+
+              {/* Sem voucher, o Presencial fica travado — abre a pré-inscrição. */}
+              {isGuest && vState !== "valid" && (
+                <PreInscricaoPresencial
+                  nome={user.name}
+                  email={user.email}
+                  empresaInicial={company}
+                  cargoInicial={jobTitle}
+                />
               )}
             </div>
           )}

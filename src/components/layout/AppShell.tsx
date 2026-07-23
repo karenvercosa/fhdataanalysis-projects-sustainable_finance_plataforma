@@ -1,12 +1,16 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   CalendarDays, QrCode, Users, UserCog, BookOpen, LayoutDashboard, TrendingUp, ScanLine,
-  Settings, LogOut, Lock, Ticket, Tv, Home, Map as MapIcon, UserCircle, Award, Menu, X
+  Settings, LogOut, Lock, Ticket, Tv, Home, Map as MapIcon, UserCircle, Award, Menu, X, ShieldCheck,
+  Percent, Megaphone, Layers, Sparkles
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ROLE_LABEL, HOME_BY_ROLE, type Role, type Capability } from "@/lib/roles";
-import { Avatar } from "@/components/ui";
+import { SealAvatar } from "@/components/Seal";
+import { sealForRole } from "@/lib/seals";
+import { LegalModal } from "@/components/legal/LegalModal";
+import { LEGAL_DOCS, LEGAL_ORDER, type LegalDocId } from "@/data/legal";
 import { cn } from "@/lib/utils";
 
 const ALL_ROLES: Role[] = ["guest", "attendee", "speaker", "curator", "operator", "admin"];
@@ -42,6 +46,8 @@ interface ComputedNav {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   state: NavState;
+  /** Cabeçalho de seção exibido acima deste item (só na barra vertical). */
+  group?: string;
 }
 
 // Árvore de navegação dedicada do Participante Não Pago.
@@ -95,16 +101,22 @@ const OPERATOR_ITEMS: ComputedNav[] = [
   { to: "/operacao", label: "Operação", icon: ScanLine, state: "normal" }
 ];
 
-// Administrador: experiência de usuário + gestão. "Programação" leva à
-// timeline + gestão (mesma página do card do painel).
+// Administrador: usa a plataforma E a gerencia. A barra separa as duas coisas
+// em seções, para a gestão não ficar só no painel central.
 const ADMIN_ITEMS: ComputedNav[] = [
-  { to: "/admin", label: "Painel", icon: Settings, state: "normal" },
+  // — Plataforma (experiência de usuário) —
+  { to: "/admin", label: "Painel", icon: LayoutDashboard, state: "normal", group: "Plataforma" },
   { to: "/streaming", label: "Ao Vivo", icon: Tv, state: "normal" },
   { to: "/conteudos", label: "Conteúdos", icon: BookOpen, state: "normal" },
-  { to: "/admin/programacao-admin", label: "Programação", icon: CalendarDays, state: "normal" },
   { to: "/networking", label: "Networking", icon: Users, state: "normal" },
   { to: "/mapa", label: "Mapa", icon: MapIcon, state: "normal" },
-  { to: "/admin/usuarios", label: "Usuários", icon: UserCog, state: "normal" }
+  // — Gestão do evento —
+  { to: "/admin/programacao-admin", label: "Programação", icon: CalendarDays, state: "normal", group: "Gestão" },
+  { to: "/admin/usuarios", label: "Usuários", icon: UserCog, state: "normal" },
+  { to: "/admin/vouchers", label: "Vouchers", icon: Percent, state: "normal" },
+  { to: "/admin/divulgacoes", label: "Divulgações", icon: Megaphone, state: "normal" },
+  { to: "/admin/cotas", label: "Cotas", icon: Layers, state: "normal" },
+  { to: "/admin/interesses", label: "Interesses", icon: Sparkles, state: "normal" }
 ];
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -134,6 +146,16 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
     <>
       {items.map((it) => {
         const Icon = it.icon;
+        // Cabeçalho de seção — só na barra vertical (a inferior é horizontal).
+        const header =
+          it.group && orientation === "col" ? (
+            <p
+              key={`${it.group}-header`}
+              className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-neutral-400 first:pt-0"
+            >
+              {it.group}
+            </p>
+          ) : null;
         const iconEl =
           it.state === "locked" ? (
             <span className="relative">
@@ -145,10 +167,10 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
           );
 
         // Item bloqueado (Não Pago): abre a página em PREVIEW limitado.
+        let node: React.ReactNode;
         if (it.state === "locked") {
-          return (
+          node = (
             <button
-              key={it.label}
               onClick={() => { navigate(it.to); onNavigate?.(); }}
               title="Pré-visualização — adquira para liberar"
               className={cn(base, orientation === "col" && "w-full text-left", "text-neutral-400 hover:bg-neutral-100")}
@@ -157,13 +179,10 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
               <span className={orientation === "row" ? "truncate" : ""}>{it.label}</span>
             </button>
           );
-        }
-
-        // CTA de aquisição — botão de destaque na cor primária do evento.
-        if (it.state === "highlight") {
-          return (
+        } else if (it.state === "highlight") {
+          // CTA de aquisição — botão de destaque na cor primária do evento.
+          node = (
             <NavLink
-              key={it.to}
               to={it.to}
               onClick={onNavigate}
               className={cn(
@@ -177,27 +196,33 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
               <span className={orientation === "row" ? "truncate" : ""}>{it.label}</span>
             </NavLink>
           );
+        } else {
+          node = (
+            <NavLink
+              to={it.to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  base,
+                  isActive
+                    ? orientation === "col"
+                      ? "bg-primary-50 font-medium text-primary-700"
+                      : "text-primary-600"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                )
+              }
+            >
+              {iconEl}
+              <span className={orientation === "row" ? "truncate" : ""}>{it.label}</span>
+            </NavLink>
+          );
         }
 
         return (
-          <NavLink
-            key={it.to}
-            to={it.to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                base,
-                isActive
-                  ? orientation === "col"
-                    ? "bg-primary-50 font-medium text-primary-700"
-                    : "text-primary-600"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              )
-            }
-          >
-            {iconEl}
-            <span className={orientation === "row" ? "truncate" : ""}>{it.label}</span>
-          </NavLink>
+          <Fragment key={it.to}>
+            {header}
+            {node}
+          </Fragment>
         );
       })}
     </>
@@ -206,6 +231,9 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, setRole, can, logout } = useAuth();
+  const mySeal = sealForRole(user.role, user.sponsorKind);
+  // Documento legal aberto (rodapé e atalho da barra lateral).
+  const [legalDoc, setLegalDoc] = useState<LegalDocId | null>(null);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false); // drawer mobile/tablet
 
@@ -273,14 +301,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar — desktop */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-neutral-200 bg-white px-4 py-6 lg:flex">
         <Brand />
-        <nav className="mt-8 flex flex-col gap-1">
+        <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
           <NavItems items={items} orientation="col" />
         </nav>
-        <div className="mt-auto flex items-center gap-3 rounded-md border border-neutral-100 p-3">
+        <div className="mt-4 flex items-center gap-3 rounded-md border border-neutral-100 p-3">
           <NavLink to="/perfil" className="flex min-w-0 flex-1 items-center gap-3 rounded-md hover:opacity-80">
-            <Avatar name={user.name} src={user.avatarUrl} size="sm" />
+            <SealAvatar name={user.name} src={user.avatarUrl} seal={mySeal} size="sm" />
             <div className="min-w-0">
               <p className="truncate text-body font-medium text-neutral-900">{user.name}</p>
+              {/* Papel em texto, igual para todos os perfis — sem tag colorida. */}
               <p className="truncate text-body-sm text-neutral-600">{ROLE_LABEL[user.role]}</p>
             </div>
           </NavLink>
@@ -292,6 +321,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <LogOut className="h-4 w-4" />
           </button>
         </div>
+        <LegalLink onOpen={() => setLegalDoc("termos")} />
       </aside>
 
       {/* Coluna principal */}
@@ -323,14 +353,49 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-10 lg:px-8">
           {children}
         </main>
+
+        {/* Rodapé legal — discreto, presente em toda a área logada */}
+        <footer className="mx-auto w-full max-w-6xl px-4 pb-8 lg:px-8">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-neutral-200 pt-4 text-body-sm text-neutral-500">
+            <span>© 2026 Sustainable Finance Summit. Todos os direitos reservados.</span>
+            {LEGAL_ORDER.map((id) => (
+              <span key={id} className="inline-flex items-center gap-2">
+                <span aria-hidden className="text-neutral-300">|</span>
+                <button onClick={() => setLegalDoc(id)} className="hover:text-primary-600 hover:underline">
+                  {LEGAL_DOCS[id].title}
+                </button>
+              </span>
+            ))}
+          </p>
+        </footer>
       </div>
 
-      {/* Drawer do menu — mobile/tablet */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col border-r border-neutral-200 bg-white px-4 py-5 shadow-pop">
-            <div className="flex items-center justify-between">
+      {/* Drawer do menu — mobile/tablet. Sempre montado para animar entrada e
+          saída (fade no overlay + deslize do painel). */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        aria-hidden={!menuOpen}
+        className={cn(
+          "fixed inset-0 z-40 overflow-hidden lg:hidden",
+          menuOpen ? "pointer-events-auto" : "pointer-events-none"
+        )}
+      >
+        <div
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out",
+            menuOpen ? "opacity-100" : "opacity-0"
+          )}
+        />
+        <aside
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col border-r border-neutral-200 bg-white px-4 py-5 shadow-pop transition-transform duration-300 ease-out will-change-transform",
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="flex items-center justify-between">
               <Brand />
               <button
                 onClick={() => setMenuOpen(false)}
@@ -349,7 +414,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setMenuOpen(false)}
                 className="flex min-w-0 flex-1 items-center gap-3 rounded-md hover:opacity-80"
               >
-                <Avatar name={user.name} src={user.avatarUrl} size="sm" />
+                <SealAvatar name={user.name} src={user.avatarUrl} seal={mySeal} size="sm" />
                 <div className="min-w-0">
                   <p className="truncate text-body font-medium text-neutral-900">{user.name}</p>
                   <p className="truncate text-body-sm text-neutral-600">{ROLE_LABEL[user.role]}</p>
@@ -363,10 +428,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
-          </aside>
-        </div>
-      )}
+            <LegalLink
+              onOpen={() => {
+                setMenuOpen(false);
+                setLegalDoc("termos");
+              }}
+            />
+        </aside>
+      </div>
+
+      <LegalModal
+        open={!!legalDoc}
+        onClose={() => setLegalDoc(null)}
+        docInicial={legalDoc ?? "termos"}
+      />
     </div>
+  );
+}
+
+/** Atalho discreto para os documentos legais, junto ao bloco do perfil. */
+function LegalLink({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="mt-2 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-body-sm text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+    >
+      <ShieldCheck className="h-4 w-4" /> Legal &amp; Privacidade
+    </button>
   );
 }
 
