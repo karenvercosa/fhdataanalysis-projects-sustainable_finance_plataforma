@@ -1,0 +1,40 @@
+# ==============================================================================
+# .dockerignore — reduz o contexto de build e evita vazar segredos nas imagens
+# ==============================================================================
+
+# Dependências: reinstaladas dentro da imagem via `yarn install --frozen-lockfile`
+node_modules
+**/node_modules
+
+# Artefatos de build: gerados dentro da imagem por `yarn build`
+.next
+out
+build
+*.tsbuildinfo
+
+# Segredos: injetados em runtime via env_file / K8s Secret — nunca na imagem
+.env
+.env.*
+
+# Histórico e metadados do Git
+.git
+.gitignore
+
+# Testes, cobertura e análise estática (não usados no build da imagem)
+coverage
+sonar
+vitest.config.ts
+
+# CI/CD e ferramentas de desenvolvimento
+.github
+.claude
+.agents
+Dockerfile*
+docker-compose*.yml
+seed-prod.sh
+README.md
+
+# Sistema operacional / editores
+.DS_Store
+.vscode
+.idea

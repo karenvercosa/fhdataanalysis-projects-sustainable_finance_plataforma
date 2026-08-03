@@ -1,35 +1,67 @@
+"use client";
+
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, LogIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
 import { Checkbox } from "@/components/ui";
 import { HOME_BY_ROLE } from "@/lib/roles";
+import { caminhoInternoSeguro } from "@/lib/safe-redirect";
 
 /**
  * Tela de Login — réplica fiel do template do Figma "Tela de Login" (node 4023:664).
  * Fundo: imagem do próprio design system (public/login-bg.png).
  * Card translúcido (primary/header-bg rgba(25,48,43,.9)), inputs neutros,
  * botão "Entrar" em primary/subtle (#8DD596).
+ *
+ * A autenticação é a do Better Auth, contra a mesma base da landing page: quem
+ * se cadastrou lá entra aqui com a senha provisória recebida por e-mail.
  */
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const t = useTranslations("RegisterPage");
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [lembrar, setLembrar] = useState(false);
 
-  // Já autenticado? Não faz sentido ver a tela de login.
-  if (isAuthenticated) return <Navigate to="/app" replace />;
+  /**
+   * Para onde ir depois de entrar. O middleware anexa `?next=` quando barra
+   * alguém numa rota protegida; o valor passa por `caminhoInternoSeguro`, que
+   * descarta qualquer destino capaz de virar outra origem (open redirect).
+   */
+  const destinoAposLogin = (role: keyof typeof HOME_BY_ROLE) => {
+    const pedido = new URLSearchParams(location.search).get("next");
+    return caminhoInternoSeguro(pedido, HOME_BY_ROLE[role]);
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = login(email, password);
+    if (submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    const result = await login(email, password);
+    setSubmitting(false);
+
     if (result.ok && result.role) {
-      navigate(HOME_BY_ROLE[result.role]);
+      navigate(destinoAposLogin(result.role));
     } else {
       setError(result.error ?? "Não foi possível entrar.");
     }
+  };
+
+  const handleGoogle = async () => {
+    // O destino do OAuth também é normalizado: o Better Auth só aceita
+    // caminhos dentro de `trustedOrigins`, e aqui garantimos que nem chega a
+    // sair uma URL absoluta.
+    const pedido = new URLSearchParams(location.search).get("next");
+    await loginWithGoogle(caminhoInternoSeguro(pedido, "/inicio"));
   };
 
   return (
@@ -106,28 +138,26 @@ export default function LoginPage() {
             {/* Botão Entrar */}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#8DD596] px-6 py-3 font-body text-button text-[#102823] shadow-card transition hover:brightness-95 active:brightness-90"
+              disabled={submitting}
+              className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#8DD596] px-6 py-3 font-body text-button text-[#102823] shadow-card transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
             >
               <LogIn className="h-5 w-5" />
-              Entrar
+              {submitting ? "Entrando..." : "Entrar"}
             </button>
 
             {/* Divisor */}
             <div className="flex items-center gap-3 text-body-sm text-white/60">
-              <span className="h-px flex-1 bg-white/20" /> ou <span className="h-px flex-1 bg-white/20" />
+              <span className="h-px flex-1 bg-white/20" /> {t("ou")} <span className="h-px flex-1 bg-white/20" />
             </div>
 
             {/* Login social (Google) */}
             <button
               type="button"
-              onClick={() => {
-                loginWithGoogle();
-                navigate(HOME_BY_ROLE.guest);
-              }}
+              onClick={handleGoogle}
               className="flex w-full items-center justify-center gap-2 rounded-sm bg-white px-6 py-3 font-body text-button text-neutral-900 shadow-card transition hover:bg-neutral-50"
             >
               <GoogleIcon />
-              Continuar com Google
+              {t("btnGoogle")}
             </button>
           </form>
 
@@ -144,7 +174,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Cadastro (onboarding Fase 1) */}
+          {/* Cadastro */}
           <p className="w-full text-center text-body-sm text-white/80">
             Não tem conta?{" "}
             <Link to="/cadastro" className="font-medium text-white underline">

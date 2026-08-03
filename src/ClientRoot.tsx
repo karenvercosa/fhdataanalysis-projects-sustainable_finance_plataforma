@@ -15,14 +15,20 @@ import { TierMatrixProvider } from "./context/TierMatrixContext";
 import { ParticipationProvider } from "./context/ParticipationContext";
 import { CookieConsentProvider } from "./context/CookieConsentContext";
 import { CookieBanner } from "./components/legal/CookieBanner";
+import { type SessaoCliente } from "@/types";
 
-// Raiz client-side: providers + roteamento (montada via next/dynamic ssr:false).
-export default function ClientRoot() {
+/**
+ * Raiz client-side: providers + roteamento (montada via next/dynamic ssr:false).
+ *
+ * `sessao` vem do Server Component que já autorizou a rota — papel e
+ * capacidades resolvidos no banco. É `null` nas telas públicas (login/cadastro).
+ */
+export default function ClientRoot({ sessao }: Readonly<{ sessao: SessaoCliente | null }>) {
   return (
     <React.StrictMode>
       <BrowserRouter>
         <PermissionsProvider>
-          <AuthProvider>
+          <AuthProvider sessao={sessao}>
             <FavoritesProvider>
               <InterestsProvider>
                 <VouchersProvider>

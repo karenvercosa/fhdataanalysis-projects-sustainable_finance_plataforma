@@ -1,5 +1,21 @@
+# ==============================================================================
+# docker-compose.prod.yml — stack completa de produção (front + db + redis + migrator)
+#
+# É a MESMA stack em dois modos:
+#
+#   1) Local / SonarQube — constrói as 4 imagens a partir dos Dockerfiles do repo:
+#        yarn sonar                    (faz isso automaticamente)
+#        docker compose -f docker-compose.prod.yml up -d --build
+#
+# Pré-requisito do serviço `postgres`: prisma/init.sql (gerado por
+# `yarn db:init-sql`; o sonar/start.sh e o deploy.yml fazem isso sozinhos).
+# ==============================================================================
+
+name: sustainable-finance-prod
+
 services:
   postgres:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${DB_IMAGE_TAG:-db-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile.db
@@ -20,6 +36,7 @@ services:
       retries: 5
 
   redis:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${REDIS_IMAGE_TAG:-redis-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile.redis
@@ -28,15 +45,23 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redisdata_prod:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
+  # Job de schema + seed. Roda até o fim e sai; o `app` só sobe depois disso.
   migrator:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${MIGRATION_IMAGE_TAG:-migration-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile.migration
     container_name: migrator_sustainable_finance_prod
+    restart: 'no'
     env_file: .env
     environment:
       - DATABASE_URL=${DATABASE_URL_DOCKER}
@@ -45,6 +70,7 @@ services:
         condition: service_healthy
 
   app:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${FRONT_IMAGE_TAG:-front-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile
@@ -60,6 +86,14 @@ services:
     depends_on:
       migrator:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'node -e "fetch(\"http://127.0.0.1:3000/\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 volumes:
   pgdata_prod:
