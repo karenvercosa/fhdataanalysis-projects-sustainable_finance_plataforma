@@ -4,18 +4,23 @@ import { Badge, Button, Card, CardBody, Modal } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/context/AuthContext";
+import { useTierMatrix } from "@/context/TierMatrixContext";
+import { TIER_FEATURE_ROWS } from "@/data/tierMatrix";
 import {
   COMMERCIAL_CONTACT,
-  TIER_BENEFITS,
   TIER_PANEL_KEY,
   TIER_UPGRADE_KEY,
-  benefitsGained,
-  tiersAbove,
-  type SponsorTier,
   type UpgradeRequest
 } from "@/data/sponsorTiers";
 
-const TIER_TONE = { Ouro: "warning", Prata: "info", Bronze: "neutral" } as const;
+const TIER_TONE: Record<string, "warning" | "info" | "neutral"> = {
+  Ouro: "warning",
+  Prata: "info",
+  Bronze: "neutral"
+};
+
+/** Cota sem tom próprio (renomeada no Admin) cai no neutro. */
+const tomDaCota = (nome: string) => TIER_TONE[nome] ?? "neutral";
 
 function today() {
   return new Date().toLocaleDateString("pt-BR");
@@ -51,12 +56,38 @@ function CommercialContact() {
  * Sugere ao curador/patrocinador o upgrade da cota contratada. O upgrade é
  * conduzido pelo responsável comercial: o curador registra o interesse e recebe
  * a devolutiva de que será contatado em breve.
+ *
+ * Os pontos exibidos saem da **Matriz de Cotas do Admin**, e não de uma lista
+ * fixa: o que aparece aqui é exatamente o que está marcado em
+ * `/admin/cotas`. Assim o Admin liga um recurso numa cota e o patrocinador
+ * passa a ver aquele ponto na mesma hora, sem ninguém precisar editar código.
  */
 export function TierUpgradeCard() {
   const { user } = useAuth();
-  const tier: SponsorTier = user.tier ?? "Bronze";
+  const { matrix, featuresOf } = useTierMatrix();
+
+  // A ordem das cotas é a da matriz — é ela que o Admin controla (inclusive os
+  // nomes). A cota do usuário vem do selo concedido no cadastro.
+  const ordem = matrix.map((t) => t.name);
+  const tier = user.tier ?? ordem[0] ?? "Bronze";
+
   // Todas as cotas acima da atual — dá para pular níveis (Bronze → Ouro).
-  const options = tiersAbove(tier);
+  // Cota desconhecida (renomeada depois de concedida) cai em `-1`, e o
+  // `slice(0)` acaba oferecendo a lista inteira, que é o comportamento útil.
+  const options = ordem.slice(ordem.indexOf(tier) + 1);
+
+  /** Recursos LIGADOS numa cota, no rótulo da matriz. */
+  const pontosDaCota = (nome: string) => {
+    const recursos = featuresOf(nome);
+    return TIER_FEATURE_ROWS.filter((r) => recursos[r.key]).map((r) => r.label);
+  };
+
+  /** O que a cota destino acrescenta em relação à atual. */
+  const pontosGanhos = (de: string, para: string) => {
+    const atuais = featuresOf(de);
+    const alvo = featuresOf(para);
+    return TIER_FEATURE_ROWS.filter((r) => alvo[r.key] && !atuais[r.key]).map((r) => r.label);
+  };
 
   const [request, setRequest] = usePersistentState<UpgradeRequest | null>(TIER_UPGRADE_KEY, null);
   // Recolhido por padrão: a oferta fica disponível sem competir com métricas e leads.
@@ -75,12 +106,12 @@ export function TierUpgradeCard() {
     return () => window.removeEventListener("resize", measure);
   }, [expanded, options.length]);
   // Cota escolhida no modal. Na cota máxima (Ouro) o contato é sobre renovação.
-  const [target, setTarget] = useState<SponsorTier>(options[0] ?? tier);
+  const [target, setTarget] = useState<string>(options[0] ?? tier);
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false); // etapa de devolutiva dentro do modal
   const [message, setMessage] = useState("");
 
-  const openFor = (t: SponsorTier) => {
+  const openFor = (t: string) => {
     setTarget(t);
     setOpen(true);
   };
@@ -147,7 +178,7 @@ export function TierUpgradeCard() {
               </span>
             </span>
             <span className="inline-flex items-center gap-2 text-body-sm text-neutral-600">
-              Cota atual <Badge tone={TIER_TONE[tier]}>{tier}</Badge>
+              Cota atual <Badge tone={tomDaCota(tier)}>{tier}</Badge>
               <ChevronDown
                 className={cn(
                   "h-5 w-5 shrink-0 text-neutral-500 transition-transform duration-300 ease-out",
@@ -177,13 +208,13 @@ export function TierUpgradeCard() {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-h4 text-neutral-900">Cota {t}</p>
-                        <Badge tone={TIER_TONE[t]}>{t}</Badge>
+                        <Badge tone={tomDaCota(t)}>{t}</Badge>
                       </div>
                       <p className="text-body-sm text-neutral-600">
                         O que você ganha saindo do {tier}:
                       </p>
                       <ul className="flex-1 space-y-1.5">
-                        {benefitsGained(tier, t).map((b) => (
+                        {pontosGanhos(tier, t).map((b) => (
                           <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
                             <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
                             {b}
@@ -192,7 +223,7 @@ export function TierUpgradeCard() {
                       </ul>
                       <Button
                         fullWidth
-                        variant={t === "Ouro" ? "primary" : "outline"}
+                        variant={t === options[options.length - 1] ? "primary" : "outline"}
                         onClick={() => openFor(t)}
                         leftIcon={<ArrowUpRight className="h-4 w-4" />}
                       >
@@ -211,7 +242,7 @@ export function TierUpgradeCard() {
                   Benefícios ativos da cota {tier}:
                 </p>
                 <ul className="grid gap-1.5 sm:grid-cols-2">
-                  {TIER_BENEFITS[tier].map((b) => (
+                  {pontosDaCota(tier).map((b) => (
                     <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
                       {b}
@@ -290,7 +321,7 @@ export function TierUpgradeCard() {
                 <select
                   id="upgrade-tier"
                   value={target}
-                  onChange={(e) => setTarget(e.target.value as SponsorTier)}
+                  onChange={(e) => setTarget(e.target.value)}
                   className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                 >
                   {options.map((t) => (

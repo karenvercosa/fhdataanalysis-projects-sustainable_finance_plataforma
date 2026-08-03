@@ -103,6 +103,7 @@ export async function POST(req: Request) {
       emailEnviado,
       empresaDoVoucher: resgate?.empresaNome,
       voucherAplicado: dados.voucher ? Boolean(resgate) : undefined,
+      voucherPendente: resgate?.status === "pendente",
     });
   } catch (error: any) {
     console.error("[api/cadastro/completar]", error);

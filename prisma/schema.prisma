@@ -49,6 +49,18 @@ enum TipoVoucher {
   @@map("tipo_voucher")
 }
 
+// Situação do resgate de um voucher que pertence a um curador/patrocinador.
+//
+// `pendente` é o estado inicial: o convite foi usado no cadastro, mas o dono
+// do voucher ainda não liberou. Só a aprovação vincula a pessoa à empresa.
+enum StatusResgateVoucher {
+  pendente
+  aprovado
+  negado
+
+  @@map("status_resgate_voucher")
+}
+
 enum StatusIngresso {
   reservado
   pago
@@ -274,6 +286,8 @@ model Usuario {
   solicitacoesRecebidas  SolicitacaoReuniao[]    @relation("DestinatarioReuniao")
   certificados           Certificado[]
   notificacoes           Notificacao[]
+  vouchersDoCurador      Voucher[]               @relation("VouchersDoCurador")
+  resgatesDeVoucher      VoucherResgate[]
 
   @@map("usuario")
 }
@@ -293,14 +307,44 @@ model Voucher {
   usosMaximos  Int         @map("usos_maximos")
   usosFeitos   Int         @default(0) @map("usos_feitos")
   empresaNome  String      @map("empresa_nome") @db.VarChar(180)
+  // CNPJ alfanumérico (12 posições alfanuméricas + 2 dígitos), já formatado.
   empresaCnpj  String?     @map("empresa_cnpj") @db.VarChar(18)
+  // Curador/patrocinador responsável. Quando preenchido, cada resgate nasce
+  // `pendente` e passa pela aprovação dele; sem curador o voucher é
+  // institucional e o resgate é liberado na hora.
+  curadorId    String?     @map("curador_id") @db.Uuid
+  curador      Usuario?    @relation("VouchersDoCurador", fields: [curadorId], references: [id], onDelete: SetNull)
   ativo        Boolean     @default(true)
   criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz
   atualizadoEm DateTime    @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
 
-  usuarios Usuario[] @relation("VoucherResgatado")
+  usuarios Usuario[]        @relation("VoucherResgatado")
+  resgates VoucherResgate[]
 
+  @@index([curadorId])
   @@map("voucher")
+}
+
+// Registro de quem usou qual voucher, e em que pé está a autorização.
+//
+// Existe separado de `usuario.voucher_id` porque são coisas diferentes: aqui
+// fica o PEDIDO (com histórico e decisão do curador); lá fica o vínculo em
+// vigor, que só é gravado quando o resgate é aprovado.
+model VoucherResgate {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  voucherId  String               @map("voucher_id") @db.Uuid
+  usuarioId  String               @map("usuario_id") @db.Uuid
+  status     StatusResgateVoucher @default(pendente)
+  criadoEm   DateTime             @default(now()) @map("criado_em") @db.Timestamptz
+  decididoEm DateTime?            @map("decidido_em") @db.Timestamptz
+
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  // Uma pessoa resgata cada voucher uma única vez.
+  @@unique([voucherId, usuarioId])
+  @@index([status])
+  @@map("voucher_resgate")
 }
 
 model UsuarioPerfil {

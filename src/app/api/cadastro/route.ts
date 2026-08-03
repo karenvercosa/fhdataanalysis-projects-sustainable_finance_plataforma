@@ -145,6 +145,9 @@ export async function POST(req: Request) {
       emailEnviado: envio.success,
       empresaDoVoucher: resgate?.empresaNome,
       voucherAplicado: dados.voucher ? Boolean(resgate) : undefined,
+      // Voucher de curador/patrocinador: o vínculo com a empresa só existe
+      // depois que o dono do convite liberar.
+      voucherPendente: resgate?.status === "pendente",
     });
   } catch (error: any) {
     console.error("[api/cadastro]", error);

@@ -124,10 +124,18 @@ export default function RegisterPage() {
         return;
       }
 
-      setSucessoDesc(
+      const baseDesc =
         dados?.emailEnviado === false
           ? t("sucessoEmailFalhou")
-          : t("sucessoSenhaDesc", { email: form.email.trim().toLowerCase() }),
+          : t("sucessoSenhaDesc", { email: form.email.trim().toLowerCase() });
+
+      // Voucher de curador/patrocinador fica aguardando a liberação do dono do
+      // convite — a pessoa precisa saber disso, senão estranha o vínculo com a
+      // empresa não aparecer.
+      setSucessoDesc(
+        dados?.voucherPendente
+          ? `${baseDesc} Seu voucher foi enviado para aprovação do responsável — avisaremos quando ele liberar.`
+          : baseDesc,
       );
 
       // Interesses e prova de consentimento (o que foi aceito, por quem e quando).

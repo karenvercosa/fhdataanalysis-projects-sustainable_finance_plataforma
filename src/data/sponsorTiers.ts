@@ -7,9 +7,31 @@ export type SponsorTier = "Bronze" | "Prata" | "Ouro";
 export const TIER_ORDER: SponsorTier[] = ["Bronze", "Prata", "Ouro"];
 
 /**
- * Benefícios de cada cota. São cumulativos (a cota maior entrega tudo o que a
- * anterior entrega) e refletem o que já existe na plataforma: esteira de logos,
- * banner rotativo (2:1), logo nos cards de programação e lote de vouchers.
+ * A cota que o Admin concedeu, quando é uma cota conhecida.
+ *
+ * A cota mora em `usuario.selo` — é o campo "Selo / Cota" da tela de usuários
+ * do Admin. Esta função é a ponte entre aquela coluna e o `tier` da sessão;
+ * sem ela o curador entra sem cota nenhuma e a plataforma trata todo mundo
+ * como Bronze.
+ *
+ * Os nomes conferidos são os do seletor do Admin. Se as cotas forem
+ * renomeadas na aba "Cotas", renomeie também as opções daquele seletor — os
+ * dois lugares se encontram por nome.
+ */
+export function cotaDoSelo(selo: string | null | undefined): SponsorTier | undefined {
+  return TIER_ORDER.includes(selo as SponsorTier) ? (selo as SponsorTier) : undefined;
+}
+
+/**
+ * ⚠️ NÃO ESTÁ EM USO pelo `TierUpgradeCard`.
+ *
+ * Lista fixa de benefícios por cota, de quando o card ainda não lia a Matriz
+ * de Cotas do Admin. Hoje os pontos exibidos são os recursos LIGADOS naquela
+ * matriz (`TIER_FEATURE_ROWS` + `useTierMatrix`), para o que o Admin marca ser
+ * exatamente o que o patrocinador vê.
+ *
+ * Mantida como referência dos benefícios comerciais que não são recursos da
+ * plataforma (esteira de logos, lote de vouchers, sessão patrocinada).
  */
 export const TIER_BENEFITS: Record<SponsorTier, string[]> = {
   Bronze: [
@@ -44,28 +66,33 @@ export const TIER_UPGRADE_KEY = "sf_tier_upgrade_request";
 /** Preferência de recolher/expandir o painel de cotas. */
 export const TIER_PANEL_KEY = "sf_tier_panel_expanded";
 
-/** Solicitação de upgrade aberta pelo curador/patrocinador. */
+/**
+ * Solicitação de upgrade aberta pelo curador/patrocinador.
+ *
+ * `from`/`to` são `string`, e não `SponsorTier`, porque as cotas podem ser
+ * renomeadas na aba "Cotas" do Admin — a solicitação guarda o nome que estava
+ * valendo no momento em que foi feita.
+ */
 export interface UpgradeRequest {
-  from: SponsorTier;
-  to: SponsorTier;
+  from: string;
+  to: string;
   message: string;
   /** Data legível da solicitação (dd/mm/aaaa). */
   requestedAt: string;
 }
 
 /**
- * Todas as cotas acima da atual — o patrocinador pode pular níveis
- * (ex.: sair do Bronze direto para o Ouro). Vazio quando já está no topo.
+ * ⚠️ NÃO ESTÁ EM USO — ver a nota de `TIER_BENEFITS`.
+ *
+ * Ordem das cotas a partir da lista fixa. O card passou a tirar a ordem da
+ * própria Matriz de Cotas, que é o que o Admin controla.
  */
 export function tiersAbove(tier: SponsorTier): SponsorTier[] {
   const i = TIER_ORDER.indexOf(tier);
   return i < 0 ? [] : TIER_ORDER.slice(i + 1);
 }
 
-/**
- * Benefícios ganhos ao migrar de uma cota para outra. Como as cotas são
- * cumulativas, quem sai do Bronze para o Ouro leva também os do Prata.
- */
+/** ⚠️ NÃO ESTÁ EM USO — ver a nota de `TIER_BENEFITS`. */
 export function benefitsGained(from: SponsorTier, to: SponsorTier): string[] {
   const start = TIER_ORDER.indexOf(from) + 1;
   const end = TIER_ORDER.indexOf(to);

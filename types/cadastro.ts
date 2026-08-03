@@ -22,4 +22,13 @@ export interface RespostaCadastro {
   emailEnviado?: boolean;
   email?: string;
   error?: string;
+  /** Empresa dona do voucher resgatado, quando houve um. */
+  empresaDoVoucher?: string;
+  /** `false` quando o código informado não pôde ser resgatado. */
+  voucherAplicado?: boolean;
+  /**
+   * Voucher de curador/patrocinador: o resgate ficou aguardando a liberação
+   * do dono do convite, então o vínculo com a empresa ainda não vale.
+   */
+  voucherPendente?: boolean;
 }

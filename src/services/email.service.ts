@@ -9,6 +9,11 @@ import {
   confirmarTrocaSenhaEmail,
   type ConfirmarTrocaSenhaEmailProps,
 } from "@/emails/confirmar-troca-senha";
+import {
+  ASSUNTO_SOLICITACAO_VOUCHERS,
+  solicitacaoVouchersEmail,
+  type SolicitacaoVouchersEmailProps,
+} from "@/emails/solicitacao-vouchers";
 
 // O transporter é criado sob demanda, e não no escopo do módulo: assim o
 // `next build` roda sem nenhuma credencial de SMTP dentro da imagem Docker.
@@ -93,6 +98,34 @@ export async function sendConfirmacaoTrocaSenhaEmail(
     return { success: true, id: info.messageId };
   } catch (error: any) {
     console.error("[email.service] Erro SMTP (confirmação de troca de senha):", error);
+    return { success: false, error: error?.message || "Erro ao enviar e-mail." };
+  }
+}
+
+/**
+ * Envia ao time comercial o pedido de vouchers adicionais de um
+ * curador/patrocinador.
+ *
+ * Vai para `EMAIL_TO` (a caixa comercial), com `replyTo` no solicitante: o
+ * remetente continua sendo a conta autenticada no SMTP — usar o e-mail do
+ * curador ali faria a mensagem ser barrada por SPF/DKIM.
+ */
+export async function sendSolicitacaoVouchersEmail(dados: SolicitacaoVouchersEmailProps) {
+  try {
+    const { html, text } = solicitacaoVouchersEmail(dados);
+
+    const info = await getTransporter().sendMail({
+      from: `Sustainable Finance <${EMAIL_FROM}>`,
+      to: process.env.EMAIL_TO || EMAIL_FROM,
+      replyTo: dados.email,
+      subject: ASSUNTO_SOLICITACAO_VOUCHERS,
+      html,
+      text,
+    });
+
+    return { success: true, id: info.messageId };
+  } catch (error: any) {
+    console.error("[email.service] Erro SMTP (solicitação de vouchers):", error);
     return { success: false, error: error?.message || "Erro ao enviar e-mail." };
   }
 }

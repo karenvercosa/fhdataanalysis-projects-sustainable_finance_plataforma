@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getSessaoServidor } from "@/lib/rbac.server";
+import { cotaDoSelo } from "@/data/sponsorTiers";
 import { type SessaoCliente } from "@/types";
 
 export const runtime = "nodejs";
@@ -34,6 +35,9 @@ export async function GET() {
       ticketCode: sessao.ticketCode,
       tipoConta: sessao.tipoConta,
       selo: sessao.selo,
+      // A cota de patrocínio É o selo concedido pelo Admin. Sem esta
+      // linha o curador chega sem cota e a plataforma o trata como Bronze.
+      tier: cotaDoSelo(sessao.selo),
     },
     capabilities: sessao.capabilities,
     senhaProvisoria: sessao.senhaProvisoria,

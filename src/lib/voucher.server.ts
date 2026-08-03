@@ -4,7 +4,12 @@ import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { ErroDeEntrada } from "@/lib/admin.server";
 import { texto } from "@/lib/cadastro";
-import { TipoVoucher, type VoucherAdmin } from "@/types";
+import { apenasCnpj, cnpjCompleto, formatarCnpj } from "@/lib/cnpj";
+import {
+  TipoVoucher,
+  type StatusResgateVoucher,
+  type VoucherAdmin,
+} from "@/types";
 
 /**
  * ============================================================================
@@ -27,6 +32,7 @@ export function voucherParaJson(v: {
   usosFeitos: number;
   empresaNome: string;
   empresaCnpj: string | null;
+  curadorId: string | null;
   ativo: boolean;
 }): VoucherAdmin {
   return {
@@ -38,6 +44,7 @@ export function voucherParaJson(v: {
     usosFeitos: v.usosFeitos,
     empresaNome: v.empresaNome,
     empresaCnpj: v.empresaCnpj,
+    curadorId: v.curadorId,
     ativo: v.ativo,
   };
 }
@@ -51,6 +58,7 @@ export const SELECAO_VOUCHER = {
   usosFeitos: true,
   empresaNome: true,
   empresaCnpj: true,
+  curadorId: true,
   ativo: true,
 } as const;
 
@@ -72,7 +80,8 @@ export function lerFormularioVoucher(body: any) {
   const codigo = normalizarCodigo(texto(body?.codigo));
   const tipo = texto(body?.tipo) as TipoVoucher;
   const empresaNome = texto(body?.empresaNome);
-  const empresaCnpj = texto(body?.empresaCnpj);
+  const cnpjBruto = texto(body?.empresaCnpj);
+  const curadorId = texto(body?.curadorId);
   const usosMaximos = Number(body?.usosMaximos);
   const valorBruto = body?.valor;
 
@@ -82,6 +91,13 @@ export function lerFormularioVoucher(body: any) {
   if (!empresaNome) throw new ErroDeEntrada("Informe a empresa dona do voucher.");
   if (!Number.isInteger(usosMaximos) || usosMaximos < 1) {
     throw new ErroDeEntrada("Os usos máximos devem ser um número inteiro maior que zero.");
+  }
+
+  // O CNPJ é opcional, mas se vier tem que estar completo — meio documento no
+  // banco não identifica ninguém. A normalização é a mesma do formulário, para
+  // o banco nunca guardar duas grafias do mesmo número.
+  if (apenasCnpj(cnpjBruto) && !cnpjCompleto(cnpjBruto)) {
+    throw new ErroDeEntrada("O CNPJ está incompleto — são 14 posições.");
   }
 
   // O voucher gratuito não tem valor: guardar um número ali só criaria a
@@ -103,7 +119,8 @@ export function lerFormularioVoucher(body: any) {
     valor,
     usosMaximos,
     empresaNome,
-    empresaCnpj: empresaCnpj || null,
+    empresaCnpj: formatarCnpj(cnpjBruto) || null,
+    curadorId: curadorId || null,
     ativo: body?.ativo !== false,
   };
 }
@@ -133,26 +150,39 @@ export async function voucherUtilizavel(codigo: string): Promise<boolean> {
 /**
  * Resgata o voucher para um usuário, dentro de uma transação.
  *
- * A contagem de usos e o vínculo precisam cair juntos, e a checagem do limite
- * precisa acontecer no mesmo passo do incremento: o `updateMany` com
- * `usosFeitos < usosMaximos` no filtro faz o próprio banco recusar o resgate
- * que estouraria a cota, sem a janela de corrida que um "lê e depois grava"
- * abriria entre dois cadastros simultâneos.
+ * A contagem de usos e o registro do resgate precisam cair juntos, e a
+ * checagem do limite precisa acontecer no mesmo passo do incremento: o
+ * `updateMany` com `usosFeitos < usosMaximos` no filtro faz o próprio banco
+ * recusar o resgate que estouraria a cota, sem a janela de corrida que um
+ * "lê e depois grava" abriria entre dois cadastros simultâneos.
  *
- * Devolve a empresa dona quando o resgate valeu, ou `null` quando o código não
- * existe, está inativo ou esgotou.
+ * O uso é RESERVADO já no pedido, mesmo quando ele fica pendente — caso
+ * contrário um voucher de 10 convites poderia acumular 50 pedidos e o curador
+ * aprovaria mais gente do que comprou. Negar devolve o uso à cota.
+ *
+ * Quem tem curador nasce `pendente` e ainda NÃO vale: o vínculo com a empresa
+ * só é gravado na aprovação. Voucher institucional (sem curador) é aprovado na
+ * hora, e aí sim a empresa é aplicada de imediato.
+ *
+ * Devolve `null` quando o código não existe, está inativo ou esgotou.
  */
 export async function resgatarVoucher(
   usuarioId: string,
   codigo: string,
-): Promise<{ empresaNome: string } | null> {
+): Promise<{ empresaNome: string; status: StatusResgateVoucher } | null> {
   const normalizado = normalizarCodigo(codigo);
   if (!normalizado) return null;
 
   return prisma.$transaction(async (tx) => {
     const voucher = await tx.voucher.findUnique({
       where: { codigo: normalizado },
-      select: { id: true, empresaNome: true, ativo: true, usosMaximos: true },
+      select: {
+        id: true,
+        empresaNome: true,
+        ativo: true,
+        usosMaximos: true,
+        curadorId: true,
+      },
     });
 
     if (!voucher?.ativo) return null;
@@ -164,16 +194,108 @@ export async function resgatarVoucher(
 
     if (consumido.count === 0) return null;
 
+    const status: StatusResgateVoucher = voucher.curadorId ? "pendente" : "aprovado";
+
+    await tx.voucherResgate.upsert({
+      where: { voucherId_usuarioId: { voucherId: voucher.id, usuarioId } },
+      create: {
+        voucherId: voucher.id,
+        usuarioId,
+        status,
+        decididoEm: status === "aprovado" ? new Date() : null,
+      },
+      update: { status, decididoEm: status === "aprovado" ? new Date() : null },
+    });
+
     await tx.usuario.update({
       where: { id: usuarioId },
       data: {
-        voucherId: voucher.id,
+        // O código declarado fica registrado dos dois jeitos; o VÍNCULO
+        // (`voucherId` + empresa) só existe depois de aprovado.
         voucher: normalizado,
-        // O vínculo pedido: a empresa da pessoa passa a ser a dona do voucher.
-        empresaNome: voucher.empresaNome,
+        ...(status === "aprovado"
+          ? { voucherId: voucher.id, empresaNome: voucher.empresaNome }
+          : {}),
       },
     });
 
-    return { empresaNome: voucher.empresaNome };
+    return { empresaNome: voucher.empresaNome, status };
+  });
+}
+
+/**
+ * Aplica a decisão do curador sobre um resgate.
+ *
+ * As três transições que interessam:
+ *
+ *  - **aprovar** — grava o vínculo (`usuario.voucher_id` + empresa do voucher).
+ *    Se o resgate estava negado, o uso volta a ser consumido da cota, e a
+ *    aprovação é recusada quando não há convite sobrando.
+ *  - **negar** — desfaz o vínculo e devolve o uso à cota. É também o botão
+ *    "desativar" de quem já estava aprovado.
+ *  - repetir a mesma decisão não faz nada, para um duplo clique não contar
+ *    duas vezes na cota.
+ *
+ * `curadorId` não é confiança: a consulta exige que o voucher seja daquele
+ * curador, então um id de resgate alheio simplesmente não é encontrado.
+ */
+export async function decidirResgate(
+  curadorId: string,
+  resgateId: string,
+  decisao: Extract<StatusResgateVoucher, "aprovado" | "negado">,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  return prisma.$transaction(async (tx) => {
+    const resgate = await tx.voucherResgate.findFirst({
+      where: { id: resgateId, voucher: { curadorId } },
+      select: {
+        id: true,
+        status: true,
+        usuarioId: true,
+        voucher: {
+          select: { id: true, empresaNome: true, usosMaximos: true, usosFeitos: true },
+        },
+      },
+    });
+
+    if (!resgate) return { ok: false as const, erro: "Resgate não encontrado." };
+    if (resgate.status === decisao) return { ok: true as const };
+
+    const { voucher } = resgate;
+
+    if (decisao === "aprovado") {
+      // Só volta a consumir a cota quem estava negado — pendente já reservou.
+      if (resgate.status === "negado") {
+        if (voucher.usosFeitos >= voucher.usosMaximos) {
+          return { ok: false as const, erro: "O voucher não tem convites disponíveis." };
+        }
+        await tx.voucher.update({
+          where: { id: voucher.id },
+          data: { usosFeitos: { increment: 1 } },
+        });
+      }
+
+      await tx.usuario.update({
+        where: { id: resgate.usuarioId },
+        data: { voucherId: voucher.id, empresaNome: voucher.empresaNome },
+      });
+    } else {
+      // Negar devolve o convite para a cota — o uso deixa de existir.
+      await tx.voucher.update({
+        where: { id: voucher.id },
+        data: { usosFeitos: { decrement: 1 } },
+      });
+
+      await tx.usuario.update({
+        where: { id: resgate.usuarioId },
+        data: { voucherId: null },
+      });
+    }
+
+    await tx.voucherResgate.update({
+      where: { id: resgate.id },
+      data: { status: decisao, decididoEm: new Date() },
+    });
+
+    return { ok: true as const };
   });
 }

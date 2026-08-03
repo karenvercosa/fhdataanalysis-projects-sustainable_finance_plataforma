@@ -4,7 +4,8 @@ import { AlertCircle, ChevronLeft, Plus, Search, Pencil, Trash2, Percent, CheckC
 import { Badge, Button, Card, CardBody, CardHeader, Input, Loader, Modal } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { api } from "@/lib/admin-api";
-import { TIPO_VOUCHER_LABEL, TipoVoucher, type VoucherAdmin } from "@/types";
+import { apenasCnpj, cnpjCompleto, formatarCnpj } from "@/lib/cnpj";
+import { TIPO_VOUCHER_LABEL, TipoVoucher, type UsuarioAdmin, type VoucherAdmin } from "@/types";
 
 const TIPOS = Object.values(TipoVoucher);
 
@@ -21,6 +22,7 @@ const EMPTY_FORM = {
   usosMaximos: "100",
   empresaNome: "",
   empresaCnpj: "",
+  curadorId: "",
   ativo: true,
 };
 
@@ -40,6 +42,7 @@ function descreveValor(v: VoucherAdmin): string {
  */
 export default function VouchersAdmin() {
   const [vouchers, setVouchers] = useState<VoucherAdmin[]>([]);
+  const [curadores, setCuradores] = useState<UsuarioAdmin[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erroLista, setErroLista] = useState<string | null>(null);
 
@@ -64,8 +67,14 @@ export default function VouchersAdmin() {
     setCarregando(true);
     setErroLista(null);
     try {
-      const dados = await api.get<{ vouchers: VoucherAdmin[] }>("/api/admin/vouchers");
+      // Os curadores vêm da mesma lista de usuários: é quem pode ser dono de
+      // um voucher e aparecer com ele no próprio painel.
+      const [dados, contas] = await Promise.all([
+        api.get<{ vouchers: VoucherAdmin[] }>("/api/admin/vouchers"),
+        api.get<{ usuarios: UsuarioAdmin[] }>("/api/admin/usuarios"),
+      ]);
       setVouchers(dados.vouchers);
+      setCuradores(contas.usuarios.filter((u) => u.role === "curator"));
     } catch (e: any) {
       setErroLista(e?.message ?? "Não foi possível carregar os vouchers.");
     } finally {
@@ -101,6 +110,7 @@ export default function VouchersAdmin() {
       usosMaximos: String(v.usosMaximos),
       empresaNome: v.empresaNome,
       empresaCnpj: v.empresaCnpj ?? "",
+      curadorId: v.curadorId ?? "",
       ativo: v.ativo,
     });
     setFormError(null);
@@ -108,10 +118,13 @@ export default function VouchersAdmin() {
   };
 
   const precisaValor = form.tipo !== TipoVoucher.gratuito;
+  // O CNPJ é opcional; se começou a ser digitado, precisa ficar completo.
+  const cnpjOk = !apenasCnpj(form.empresaCnpj) || cnpjCompleto(form.empresaCnpj);
   const canSave =
     form.codigo.trim().length > 0 &&
     form.empresaNome.trim().length > 0 &&
     Number(form.usosMaximos) >= 1 &&
+    cnpjOk &&
     (!precisaValor || Number(form.valor) > 0) &&
     !salvando;
 
@@ -127,6 +140,7 @@ export default function VouchersAdmin() {
       usosMaximos: Number(form.usosMaximos),
       empresaNome: form.empresaNome,
       empresaCnpj: form.empresaCnpj,
+      curadorId: form.curadorId,
       ativo: form.ativo,
     };
 
@@ -229,7 +243,12 @@ export default function VouchersAdmin() {
                   <td className="px-4 py-3 text-neutral-600">
                     {v.empresaNome}
                     {v.empresaCnpj && (
-                      <span className="ml-2 text-body-sm text-neutral-400">{v.empresaCnpj}</span>
+                      <span className="ml-2 font-mono text-body-sm text-neutral-400">{v.empresaCnpj}</span>
+                    )}
+                    {v.curadorId && (
+                      <span className="ml-2 text-body-sm text-primary-600">
+                        · {curadores.find((c) => c.id === v.curadorId)?.nome ?? "curador"}
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -354,10 +373,39 @@ export default function VouchersAdmin() {
 
           <Input
             label="CNPJ da empresa"
-            placeholder="00.000.000/0000-00"
+            placeholder="AB.CDE.FGH/IJKL-01"
+            inputMode="text"
+            autoCapitalize="characters"
             value={form.empresaCnpj}
-            onChange={(e) => setForm((f) => ({ ...f, empresaCnpj: e.target.value }))}
+            // A máscara é aplicada a cada tecla: o campo aceita letras nas 12
+            // primeiras posições (CNPJ alfanumérico) e só dígitos nas duas
+            // últimas, e já sai formatado.
+            onChange={(e) => setForm((f) => ({ ...f, empresaCnpj: formatarCnpj(e.target.value) }))}
+            error={cnpjOk ? undefined : "CNPJ incompleto — são 14 posições."}
+            success={cnpjCompleto(form.empresaCnpj)}
+            hint="Opcional. Aceita letras: desde 2026 o CNPJ é alfanumérico nas 12 primeiras posições."
           />
+
+          <div className="space-y-1.5">
+            <label className="block text-h5 text-neutral-900">Curador / patrocinador</label>
+            <select
+              value={form.curadorId}
+              onChange={(e) => setForm((f) => ({ ...f, curadorId: e.target.value }))}
+              className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
+            >
+              <option value="">Nenhum — voucher institucional</option>
+              {curadores.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome} ({c.email})
+                </option>
+              ))}
+            </select>
+            <p className="text-body-sm text-neutral-600">
+              {form.curadorId
+                ? "O voucher aparece no painel dele, e cada resgate espera a liberação dele."
+                : "Sem curador, o resgate é liberado na hora do cadastro."}
+            </p>
+          </div>
 
           <div className="space-y-1.5">
             <label className="block text-h5 text-neutral-900">Status</label>

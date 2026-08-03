@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { tokenDeTrocaDeSenhaValido } from "@/lib/auth";
 import { getSessaoServidor, podeServidor } from "@/lib/rbac.server";
+import { cotaDoSelo } from "@/data/sponsorTiers";
 import {
   ROTA_HOME,
   ROTA_LOGIN,
@@ -108,6 +109,9 @@ export default async function CatchAllPage({
       ticketCode: sessao.ticketCode,
       tipoConta: sessao.tipoConta,
       selo: sessao.selo,
+      // A cota de patrocínio É o selo concedido pelo Admin. Sem esta
+      // linha o curador chega sem cota e a plataforma o trata como Bronze.
+      tier: cotaDoSelo(sessao.selo),
     },
     capabilities: sessao.capabilities,
     senhaProvisoria: sessao.senhaProvisoria,
