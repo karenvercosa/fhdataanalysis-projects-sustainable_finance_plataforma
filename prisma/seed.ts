@@ -17,9 +17,9 @@ const prisma = new PrismaClient();
 
 // Sobrescreva por env em produção — o padrão existe para o ambiente local
 // subir funcionando com `yarn db:seed`.
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@sf.com").toLowerCase();
-const ADMIN_SENHA = process.env.ADMIN_PASSWORD || "SFSPlataforma2026!";
-const ADMIN_NOME = process.env.ADMIN_NAME || "Admin SF";
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase();
+const ADMIN_SENHA = process.env.ADMIN_PASSWORD || "";
+const ADMIN_NOME = process.env.ADMIN_NAME || "";
 
 async function semearAdmin() {
   const senhaHash = await hashPassword(ADMIN_SENHA);

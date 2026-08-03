@@ -17,12 +17,20 @@ export interface AcessoPlataformaEmailProps {
   senha: string;
   /** Endereço da plataforma, para a pessoa saber onde usar a senha. */
   url?: string;
+  /**
+   * Link do botão "Criar minha senha": abre direto a tela de nova senha, sem
+   * precisar entrar antes com a provisória. É o caminho curto do cadastro à
+   * plataforma — a senha provisória fica como alternativa.
+   */
+  linkCriarSenha?: string;
 }
 
 const COR = {
   fundo: "#f4f6f5",
   borda: "#e3e8e6",
   marca: "#02976E",
+  botao: "#8DD596",
+  botaoTexto: "#102823",
   titulo: "#102823",
   texto: "#4b5651",
   rotulo: "#8a938f",
@@ -65,6 +73,7 @@ export function acessoPlataformaEmail({
   email,
   senha,
   url,
+  linkCriarSenha,
 }: Readonly<AcessoPlataformaEmailProps>): { html: string; text: string } {
   const primeiroNome = nome.trim().split(/\s+/)[0] || nome;
 
@@ -72,6 +81,24 @@ export function acessoPlataformaEmail({
   const valorSenha = `margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:700;line-height:28px;letter-spacing:2px;color:${COR.marca};`;
   const valorUrl = `margin:0;font-size:15px;line-height:22px;color:${COR.marca};`;
   const divisor = `<tr><td style="padding:24px 0;"><div style="height:1px;background:${COR.borda};"></div></td></tr>`;
+
+  // Botão de criar a senha definitiva. Fica antes dos dados de acesso porque é
+  // o caminho recomendado; a senha provisória logo abaixo é o plano B.
+  const botao = linkCriarSenha
+    ? `
+                  <tr>
+                    <td align="center" style="padding:24px 0 4px 0;">
+                      <a href="${esc(linkCriarSenha)}" style="display:inline-block;padding:14px 28px;border-radius:6px;background:${COR.botao};color:${COR.botaoTexto};font-size:15px;font-weight:700;text-decoration:none;">Criar minha senha e entrar</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center">
+                      <p style="margin:0;font-size:12px;line-height:20px;color:${COR.rodape};">
+                        Ao criar a senha por este botão, você já entra na plataforma.
+                      </p>
+                    </td>
+                  </tr>`
+    : "";
 
   const html = `<!doctype html>
 <html lang="pt-BR">
@@ -97,21 +124,22 @@ export function acessoPlataformaEmail({
                       <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${COR.marca};">Sustainable Finance 2026</p>
                       <h1 style="margin:12px 0 8px 0;font-size:22px;font-weight:700;color:${COR.titulo};">Cadastro confirmado, ${esc(primeiroNome)}!</h1>
                       <p style="margin:0;font-size:14px;line-height:22px;color:${COR.texto};">
-                        Sua conta foi criada com sucesso. Geramos uma senha provisória para você — use-a
-                        junto com o seu e-mail no primeiro acesso à plataforma.
+                        Sua conta foi criada com sucesso. Clique no botão abaixo para criar a sua
+                        senha e entrar direto na plataforma.
                       </p>
                     </td>
                   </tr>
+                  ${botao}
                   ${divisor}
                   ${bloco("E-mail de acesso", email, valorPadrao)}
-                  ${bloco("Senha do primeiro acesso", senha, valorSenha)}
+                  ${bloco("Senha provisória (alternativa)", senha, valorSenha)}
                   ${url ? bloco("Endereço da plataforma", url, valorUrl) : ""}
                   ${divisor}
                   <tr>
                     <td>
                       <p style="margin:0;font-size:13px;line-height:20px;color:${COR.texto};">
-                        Ao acessar a plataforma pela primeira vez, utilize essa senha. Recomendamos
-                        trocá-la por uma senha pessoal logo depois de entrar.
+                        Prefere entrar pelo formulário? Use o e-mail acima com a senha provisória — a
+                        plataforma vai pedir que você crie a sua senha definitiva em seguida.
                       </p>
                       <p style="margin:12px 0 0 0;font-size:13px;line-height:20px;color:${COR.texto};">
                         Guarde este e-mail em local seguro e não compartilhe a senha com ninguém.
@@ -138,15 +166,16 @@ export function acessoPlataformaEmail({
     "",
     `Cadastro confirmado, ${primeiroNome}!`,
     "",
-    "Sua conta foi criada com sucesso. Geramos uma senha provisória para você —",
-    "use-a junto com o seu e-mail no primeiro acesso à plataforma.",
+    "Sua conta foi criada com sucesso. Use o link abaixo para criar a sua senha e",
+    "entrar direto na plataforma.",
+    ...(linkCriarSenha ? ["", `Criar minha senha e entrar: ${linkCriarSenha}`] : []),
     "",
     `E-mail de acesso: ${email}`,
-    `Senha do primeiro acesso: ${senha}`,
+    `Senha provisória (alternativa): ${senha}`,
     ...(url ? [`Endereço da plataforma: ${url}`] : []),
     "",
-    "Ao acessar a plataforma pela primeira vez, utilize essa senha. Recomendamos",
-    "trocá-la por uma senha pessoal logo depois de entrar.",
+    "Prefere entrar pelo formulário? Use o e-mail acima com a senha provisória — a",
+    "plataforma vai pedir que você crie a sua senha definitiva em seguida.",
     "",
     "Guarde este e-mail em local seguro e não compartilhe a senha com ninguém.",
     "",

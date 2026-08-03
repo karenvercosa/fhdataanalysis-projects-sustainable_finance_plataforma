@@ -14,11 +14,20 @@ import { type RegraRota } from "@/types";
  */
 
 /** Rotas acessíveis sem sessão. */
-export const ROTAS_PUBLICAS = ["/login", "/cadastro"] as const;
+export const ROTAS_PUBLICAS = [
+  "/login",
+  "/cadastro",
+  "/esqueci-senha",
+  // Aberta no middleware porque quem esqueceu a senha chega deslogado. O
+  // acesso de verdade é decidido no Server Component, que só entrega a tela
+  // mediante um token de troca de senha válido vindo do e-mail.
+  "/trocar-senha",
+] as const;
 
 /** Ordem não importa: a busca escolhe sempre o prefixo mais longo que casar. */
 export const REGRAS_ROTAS: RegraRota[] = [
   { prefixo: "/inicio", capacidade: null },
+  { prefixo: "/primeiro-acesso", capacidade: null },
   { prefixo: "/perfil", capacidade: null },
   { prefixo: "/conteudos", capacidade: null },
   { prefixo: "/programacao", capacidade: "view:public-content" },
@@ -41,6 +50,18 @@ export const ROTA_SEM_PERMISSAO = "/conteudos";
 
 /** Destino de quem não tem sessão. */
 export const ROTA_LOGIN = "/login";
+
+/** Destino de quem já está autenticado e tenta abrir o login. */
+export const ROTA_HOME = "/inicio";
+
+/**
+ * Tela do primeiro acesso: enquanto a senha gravada for a provisória enviada
+ * por e-mail, é a ÚNICA rota autenticada liberada.
+ */
+export const ROTA_PRIMEIRO_ACESSO = "/primeiro-acesso";
+
+/** Formulário da nova senha — só abre com o token do e-mail de confirmação. */
+export const ROTA_TROCAR_SENHA = "/trocar-senha";
 
 export function ehRotaPublica(pathname: string): boolean {
   return ROTAS_PUBLICAS.some((r) => pathname === r || pathname.startsWith(`${r}/`));

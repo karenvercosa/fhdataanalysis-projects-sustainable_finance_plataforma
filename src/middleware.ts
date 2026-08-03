@@ -39,7 +39,16 @@ export function middleware(req: NextRequest) {
 
   const resposta = aplicarIdioma(req);
 
-  // Rotas públicas (login, cadastro e o retorno do OAuth) passam direto.
+  // Rotas públicas (login, cadastro, recuperação de senha e o retorno do
+  // OAuth) passam direto.
+  //
+  // Barrar aqui quem já está logado seria um laço: este corte enxerga só a
+  // PRESENÇA do cookie, e um cookie obsoleto (sessão expirada, conta apagada
+  // ou desativada) existe sem valer nada. O middleware mandaria de `/login`
+  // para `/inicio`, o Server Component não acharia sessão e mandaria de volta
+  // para `/login`, indefinidamente. Quem já entrou é devolvido em
+  // `src/app/[[...slug]]/page.tsx`, que resolve a sessão de verdade contra o
+  // banco e por isso sabe a diferença entre "logado" e "tem cookie".
   if (ehRotaPublica(pathname)) return resposta;
 
   const temSessao = getSessionCookie(req);

@@ -10,9 +10,9 @@
 //  pelo código.
 // =====================================================================
 
-import { type Capability, type MatrizPermissoes, type Role } from "@/types";
+import { type Capability, type MatrizPermissoes, type Role, type TipoConta } from "@/types";
 
-export type { Capability, Role } from "@/types";
+export type { Capability, Role, TipoConta } from "@/types";
 
 export const ROLE_LABEL: Record<Role, string> = {
   guest: "Plano Gratuito",
@@ -111,3 +111,14 @@ export const HOME_BY_ROLE: Record<Role, string> = {
   operator: "/operacao",
   admin: "/admin"
 };
+
+/**
+ * Destino do login depois de confirmada a senha definitiva.
+ *
+ * O Plano Gratuito sempre cai na home, mesmo que um dia acumule um perfil
+ * operacional: sem assinatura não há painel a abrir. O assinante segue o
+ * painel do seu papel (curador, operador, admin) ou também a home.
+ */
+export function destinoPorTipoConta(role: Role, tipoConta: TipoConta): string {
+  return tipoConta === "gratuito" ? HOME_BY_ROLE.guest : HOME_BY_ROLE[role];
+}

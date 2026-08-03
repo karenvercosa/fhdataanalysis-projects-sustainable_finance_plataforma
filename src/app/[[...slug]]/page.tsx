@@ -1,9 +1,13 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { tokenDeTrocaDeSenhaValido } from "@/lib/auth";
 import { getSessaoServidor, podeServidor } from "@/lib/rbac.server";
 import {
+  ROTA_HOME,
   ROTA_LOGIN,
+  ROTA_PRIMEIRO_ACESSO,
   ROTA_SEM_PERMISSAO,
+  ROTA_TROCAR_SENHA,
   ehRequisicaoDeInfraestrutura,
   ehRotaPublica,
   regraDaRota,
@@ -35,7 +39,11 @@ export const dynamic = "force-dynamic";
  */
 export default async function CatchAllPage({
   params,
-}: Readonly<{ params: { slug?: string[] } }>) {
+  searchParams,
+}: Readonly<{
+  params: { slug?: string[] };
+  searchParams: Record<string, string | string[] | undefined>;
+}>) {
   const pathname = `/${(params.slug ?? []).join("/")}`;
 
   // Arquivo que não existe em `public/` cai aqui pelo catch-all — é o caso do
@@ -43,14 +51,42 @@ export default async function CatchAllPage({
   // Sem isto ele viraria um redirect para o login em vez de um 404 honesto.
   if (ehRequisicaoDeInfraestrutura(pathname)) notFound();
 
+  // A troca de senha é pública (quem esqueceu a senha chega deslogado), mas
+  // não é aberta: só entra quem veio do botão do e-mail de confirmação. O
+  // token que o Better Auth acabou de validar é a prova disso, e é conferido
+  // de novo aqui — sem ele a tela nem chega a ser enviada ao navegador.
+  if (pathname === ROTA_TROCAR_SENHA) {
+    const token = primeiroValor(searchParams.token);
+    if (!(await tokenDeTrocaDeSenhaValido(token))) {
+      redirect(`${ROTA_LOGIN}?erro=token-invalido`);
+    }
+    return <SpaRoot sessao={null} />;
+  }
+
   // Login e cadastro são as únicas telas servidas sem sessão.
   if (ehRotaPublica(pathname)) {
+    // Quem já está autenticado não volta para o login: é a mesma regra do
+    // middleware, repetida aqui porque uma navegação client-side da SPA não
+    // passa por ele.
+    if (pathname === ROTA_LOGIN && (await getSessaoServidor(await headers()))) {
+      redirect(ROTA_HOME);
+    }
     return <SpaRoot sessao={null} />;
   }
 
   const sessao = await getSessaoServidor(await headers());
   if (!sessao) {
     redirect(`${ROTA_LOGIN}?next=${encodeURIComponent(pathname)}`);
+  }
+
+  // Primeiro acesso pendente: a senha gravada ainda é a provisória que foi
+  // enviada por e-mail. Nenhuma outra tela abre até ela ser trocada — senão
+  // bastaria digitar a URL para pular a etapa. E, uma vez trocada, a tela do
+  // primeiro acesso deixa de existir para essa pessoa.
+  if (pathname === ROTA_PRIMEIRO_ACESSO) {
+    if (!sessao.senhaProvisoria) redirect(ROTA_HOME);
+  } else if (sessao.senhaProvisoria) {
+    redirect(ROTA_PRIMEIRO_ACESSO);
   }
 
   const regra = regraDaRota(pathname);
@@ -70,9 +106,18 @@ export default async function CatchAllPage({
       isPaid: sessao.isPaid,
       hasCredential: sessao.hasCredential,
       ticketCode: sessao.ticketCode,
+      tipoConta: sessao.tipoConta,
+      selo: sessao.selo,
     },
     capabilities: sessao.capabilities,
+    senhaProvisoria: sessao.senhaProvisoria,
   };
 
   return <SpaRoot sessao={sessaoCliente} />;
+}
+
+/** `?token=a&token=b` chega como array; para nós só o primeiro valor conta. */
+function primeiroValor(valor: string | string[] | undefined): string {
+  if (Array.isArray(valor)) return valor[0] ?? "";
+  return valor ?? "";
 }

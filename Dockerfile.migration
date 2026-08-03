@@ -8,9 +8,11 @@ WORKDIR /app
 # Copia os arquivos de configuração do projeto
 COPY package.json yarn.lock* tsconfig.json ./
 
-# Copia a pasta do Prisma e o código fonte necessário para o seed
+# Copia a pasta do Prisma, o código fonte necessário para o seed e os scripts
+# de banco (a senha do role de aplicação é aplicada por um deles).
 COPY prisma ./prisma
 COPY src ./src
+COPY scripts ./scripts
 
 # Instala todas as dependências (necessário para o ts-node e typescript rodarem o seed)
 RUN yarn install --frozen-lockfile
@@ -30,11 +32,18 @@ COPY --from=builder --chown=node:node /app/package.json ./
 COPY --from=builder --chown=node:node /app/tsconfig.json ./
 COPY --from=builder --chown=node:node /app/prisma ./prisma
 COPY --from=builder --chown=node:node /app/src ./src
+COPY --from=builder --chown=node:node /app/scripts ./scripts
 
 # Roda o Job como não-root (SonarQube docker:S6471). HOME precisa apontar para
 # um diretório gravável porque o `npx` grava cache lá.
 ENV HOME=/home/node
 USER node
 
-# Comando padrão que será executado quando o container do Job iniciar
-CMD ["sh", "-c", "npx prisma db push && yarn db:seed"]
+# Comando padrão que será executado quando o container do Job iniciar.
+#
+# `migrate deploy` passou a ser obrigatório: é ele que aplica as políticas de
+# RLS e cria o role `sf_app` — `db push` só sincroniza tabelas e colunas, e
+# sozinho deixaria o banco sem nenhuma proteção de linha. Em seguida
+# `db:role` define a senha do role, e só então o seed (que já conecta como
+# `sf_app`) consegue gravar.
+CMD ["sh", "-c", "npx prisma migrate deploy && yarn db:role && npx prisma db push && yarn db:seed"]

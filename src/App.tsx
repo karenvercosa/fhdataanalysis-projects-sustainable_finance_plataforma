@@ -5,6 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 
 import LoginPage from "@/views/LoginPage";
 import RegisterPage from "@/views/RegisterPage";
+import EsqueciSenhaPage from "@/views/EsqueciSenhaPage";
+import TrocarSenhaPage from "@/views/TrocarSenhaPage";
+import PrimeiroAcessoPage from "@/views/PrimeiroAcessoPage";
 import ParticipantDashboard from "@/views/ParticipantDashboard";
 import CredentialPage from "@/views/CredentialPage";
 import CertificatePage from "@/views/CertificatePage";
@@ -20,6 +23,7 @@ import OperatorPanel from "@/views/OperatorPanel";
 import AdminDashboard from "@/views/AdminDashboard";
 import ProgrammingPage from "@/views/ProgrammingPage";
 import UsersAdmin from "@/views/admin/UsersAdmin";
+import VouchersAdmin from "@/views/admin/VouchersAdmin";
 import ModuleCrud from "@/views/admin/ModuleCrud";
 import InterestsAdmin from "@/views/admin/InterestsAdmin";
 import ReportsAdmin from "@/views/admin/ReportsAdmin";
@@ -29,13 +33,26 @@ import ProfilePage from "@/views/ProfilePage";
 
 /** Layout autenticado: protege as rotas e envolve no AppShell. */
 function ShellLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, senhaProvisoria } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // Enquanto a senha for a provisória do e-mail, nenhuma tela do app abre —
+  // mesma regra que o Server Component aplica antes de servir a página.
+  if (senhaProvisoria) return <Navigate to="/primeiro-acesso" replace />;
   return (
     <AppShell>
       <Outlet />
     </AppShell>
   );
+}
+
+/**
+ * Telas de autenticação que não fazem sentido para quem já entrou. Espelha o
+ * corte do middleware, para a navegação client-side não driblar a regra.
+ */
+function SomenteDeslogado({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) return <Navigate to="/inicio" replace />;
+  return <>{children}</>;
 }
 
 /**
@@ -53,8 +70,25 @@ export default function App() {
   return (
     <Routes>
       {/* Login & Cadastro — standalone, sem o shell do app */}
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <SomenteDeslogado>
+            <LoginPage />
+          </SomenteDeslogado>
+        }
+      />
       <Route path="/cadastro" element={<RegisterPage />} />
+
+      {/* Recuperação e troca de senha — também fora do shell.
+          `/trocar-senha` depende do token que o e-mail de confirmação
+          carrega; sem ele o servidor nem entrega esta rota. */}
+      <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+      <Route path="/trocar-senha" element={<TrocarSenhaPage />} />
+
+      {/* Primeiro acesso: única tela liberada enquanto a senha for a
+          provisória enviada por e-mail. */}
+      <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage />} />
 
       {/* Rotas internas dentro do AppShell */}
       <Route element={<ShellLayout />}>
@@ -181,6 +215,16 @@ export default function App() {
           element={
             <RoleGuard capability="manage:platform">
               <UsersAdmin />
+            </RoleGuard>
+          }
+        />
+        {/* Vouchers têm tela própria (gravam no banco), então precisam vir
+            ANTES do `/admin/:module`, que cai no CRUD genérico. */}
+        <Route
+          path="/admin/vouchers"
+          element={
+            <RoleGuard capability="manage:platform">
+              <VouchersAdmin />
             </RoleGuard>
           }
         />

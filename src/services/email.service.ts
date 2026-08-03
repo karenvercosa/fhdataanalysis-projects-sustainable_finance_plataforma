@@ -4,6 +4,11 @@ import {
   acessoPlataformaEmail,
   type AcessoPlataformaEmailProps,
 } from "@/emails/acesso-plataforma";
+import {
+  assuntoConfirmarTrocaSenha,
+  confirmarTrocaSenhaEmail,
+  type ConfirmarTrocaSenhaEmailProps,
+} from "@/emails/confirmar-troca-senha";
 
 // O transporter é criado sob demanda, e não no escopo do módulo: assim o
 // `next build` roda sem nenhuma credencial de SMTP dentro da imagem Docker.
@@ -60,6 +65,34 @@ export async function sendAcessoPlataformaEmail(
     return { success: true, id: info.messageId };
   } catch (error: any) {
     console.error("[email.service] Erro SMTP (acesso plataforma):", error);
+    return { success: false, error: error?.message || "Erro ao enviar e-mail." };
+  }
+}
+
+/**
+ * Envia o e-mail de confirmação que libera a tela de troca de senha.
+ *
+ * Vale tanto para o primeiro acesso (senha ainda provisória) quanto para o
+ * "esqueci a senha": o que muda é só o texto. O link é o do Better Auth, que
+ * valida o token antes de devolver a pessoa para `/trocar-senha`.
+ */
+export async function sendConfirmacaoTrocaSenhaEmail(
+  dados: ConfirmarTrocaSenhaEmailProps & { email: string },
+) {
+  try {
+    const { html, text } = confirmarTrocaSenhaEmail(dados);
+
+    const info = await getTransporter().sendMail({
+      from: `Sustainable Finance <${EMAIL_FROM}>`,
+      to: dados.email,
+      subject: assuntoConfirmarTrocaSenha(dados.motivo),
+      html,
+      text,
+    });
+
+    return { success: true, id: info.messageId };
+  } catch (error: any) {
+    console.error("[email.service] Erro SMTP (confirmação de troca de senha):", error);
     return { success: false, error: error?.message || "Erro ao enviar e-mail." };
   }
 }

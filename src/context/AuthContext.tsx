@@ -23,8 +23,18 @@ export type { CurrentUser } from "@/types";
 interface AuthState {
   user: CurrentUser;
   isAuthenticated: boolean;
-  /** Login por e-mail/senha (Better Auth). */
-  login: (email: string, password: string) => Promise<LoginResult>;
+  /**
+   * Papel REAL do usuário, como o servidor resolveu. Difere de `user.role`
+   * enquanto o Admin estiver usando o seletor de perfil do protótipo.
+   */
+  roleServidor: Role;
+  /** Primeiro acesso pendente: a senha ainda é a provisória do e-mail. */
+  senhaProvisoria: boolean;
+  /**
+   * Login por e-mail/senha (Better Auth). `lembrar` decide se o cookie de
+   * sessão é persistente ou morre ao fechar o navegador.
+   */
+  login: (email: string, password: string, lembrar?: boolean) => Promise<LoginResult>;
   /** Login/cadastro social (Google) — redireciona para o provedor. */
   loginWithGoogle: (callbackURL?: string) => Promise<void>;
   /** Fase 2: conclui o checkout → libera a plataforma. `credential` (Presencial) gera a credencial. */
@@ -85,6 +95,9 @@ export function AuthProvider({
   const [capabilities, setCapabilities] = useState<Capability[]>(sessao?.capabilities ?? []);
   // Papel real, para saber se o seletor de demonstração está ativo.
   const [roleServidor, setRoleServidor] = useState<Role>(sessao?.user.role ?? "guest");
+  const [senhaProvisoria, setSenhaProvisoria] = useState<boolean>(
+    sessao?.senhaProvisoria ?? false,
+  );
 
   const permissions = usePermissions(); // matriz RBAC editável (só experiência)
 
@@ -93,6 +106,7 @@ export function AuthProvider({
     setIsAuthenticated(!!dados);
     setCapabilities(dados?.capabilities ?? []);
     setRoleServidor(dados?.user.role ?? "guest");
+    setSenhaProvisoria(dados?.senhaProvisoria ?? false);
   }, []);
 
   const recarregarSessao = useCallback(async () => {
@@ -109,11 +123,17 @@ export function AuthProvider({
     () => ({
       user,
       isAuthenticated,
+      roleServidor,
+      senhaProvisoria,
 
-      login: async (email, password) => {
+      login: async (email, password, lembrar = false) => {
         const { error } = await authClient.signIn.email({
           email: email.trim().toLowerCase(),
           password,
+          // "Lembrar de mim": com `false` o Better Auth grava um cookie de
+          // sessão, que o navegador descarta ao fechar; com `true` o cookie
+          // é persistente e vale até `session.expiresIn`.
+          rememberMe: lembrar,
         });
 
         if (error) {
@@ -127,8 +147,14 @@ export function AuthProvider({
         const dados = await resp.json();
         if (!dados?.user) return { ok: false, error: "Não foi possível carregar a sessão." };
 
-        aplicarSessao(dados as SessaoCliente);
-        return { ok: true, role: (dados as SessaoCliente).user.role };
+        const sessaoNova = dados as SessaoCliente;
+        aplicarSessao(sessaoNova);
+        return {
+          ok: true,
+          role: sessaoNova.user.role,
+          tipoConta: sessaoNova.user.tipoConta,
+          precisaTrocarSenha: Boolean(sessaoNova.senhaProvisoria),
+        };
       },
 
       loginWithGoogle: async (callbackURL = "/inicio") => {
@@ -180,7 +206,16 @@ export function AuthProvider({
 
       recarregarSessao
     }),
-    [user, isAuthenticated, capabilities, roleServidor, permissions, aplicarSessao, recarregarSessao]
+    [
+      user,
+      isAuthenticated,
+      capabilities,
+      roleServidor,
+      senhaProvisoria,
+      permissions,
+      aplicarSessao,
+      recarregarSessao
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

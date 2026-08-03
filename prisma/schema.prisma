@@ -4,7 +4,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Conexão de RUNTIME: o role `sf_app`, que não é dono das tabelas e por
+  // isso está sujeito às políticas de RLS (ver a migração
+  // `20260803180000_rls_role_de_aplicacao`).
+  url = env("DATABASE_URL")
+  // Conexão de MIGRAÇÃO: o dono do banco. Prisma Migrate, `db push` e
+  // introspecção usam esta URL — DDL exige privilégios que `sf_app` não tem,
+  // e é justamente essa separação que dá sentido ao RLS.
+  directUrl = env("DATABASE_URL_OWNER")
 }
 
 // -----------------------------------------------------------------------------
@@ -26,8 +33,20 @@ enum PerfilUsuario {
   patrocinador
   palestrante
   participante
+  // Perfil de entrada: toda conta nova nasce `gratuito`. Não concede nada além
+  // do Plano Gratuito (`guest` no RBAC) — o upgrade é que troca o perfil.
+  gratuito
 
   @@map("perfil_usuario")
+}
+
+enum TipoVoucher {
+  // 100% de desconto — o convite corporativo clássico.
+  gratuito
+  desconto_percentual
+  desconto_valor
+
+  @@map("tipo_voucher")
 }
 
 enum StatusIngresso {
@@ -210,14 +229,25 @@ model Usuario {
   // Espelhamos o mesmo hash aqui para a plataforma de usuário, que lê esta
   // tabela — nunca a senha em texto puro.
   senhaHash       String?    @map("senha_hash")
+  // Hash da senha PROVISÓRIA enviada por e-mail no cadastro. Enquanto estiver
+  // preenchido, a conta ainda está no primeiro acesso: a plataforma obriga a
+  // troca antes de liberar qualquer tela. Quando a senha definitiva é criada,
+  // este campo é apagado e o novo hash vai para `senhaHash`.
+  senhaProvisoriaHash String? @map("senha_provisoria_hash")
   telefone        String?    @db.VarChar(20)
   cargo           String?    @db.VarChar(120)
   empresaNome     String?    @map("empresa_nome") @db.VarChar(180)
   avatarUrl       String?    @map("avatar_url")
   bio             String?
-  // Código do voucher corporativo informado no cadastro. A validação/resgate
-  // acontece na plataforma; aqui apenas guardamos o que a pessoa declarou.
+  // Código do voucher corporativo informado no cadastro — o que a pessoa
+  // digitou, guardado como está. O vínculo de verdade é o `voucherId` abaixo.
   voucher         String?    @db.VarChar(60)
+  // Voucher efetivamente resgatado no cadastro. É por ele que a conta fica
+  // ligada à empresa dona do convite (`empresaNome` é copiado do voucher).
+  voucherId       String?    @map("voucher_id") @db.Uuid
+  voucherUsado    Voucher?   @relation("VoucherResgatado", fields: [voucherId], references: [id])
+  // Selo/cota exibido pelo Admin (Ouro, Prata, Bronze). Nulo = sem selo.
+  selo            String?    @db.VarChar(10)
   ativo           Boolean    @default(true)
   emailVerified   Boolean    @default(false) @map("email_verified")
   // ID do cliente no Asaas (cus_...), para não recadastrar a cada cobrança.
@@ -246,6 +276,31 @@ model Usuario {
   notificacoes           Notificacao[]
 
   @@map("usuario")
+}
+
+// Voucher corporativo — o convite que uma empresa distribui.
+//
+// A empresa dona mora aqui mesmo (nome e CNPJ), e não numa tabela separada,
+// porque é assim que ela é usada: quem se cadastra com o código passa a
+// pertencer a essa empresa. O cadastro copia `empresaNome` para o usuário e
+// guarda o vínculo em `usuario.voucher_id`.
+model Voucher {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo       String      @unique @db.VarChar(60)
+  tipo         TipoVoucher @default(gratuito)
+  // Percentual (0–100) ou valor em reais. Ignorado quando o tipo é `gratuito`.
+  valor        Decimal?    @db.Decimal(10, 2)
+  usosMaximos  Int         @map("usos_maximos")
+  usosFeitos   Int         @default(0) @map("usos_feitos")
+  empresaNome  String      @map("empresa_nome") @db.VarChar(180)
+  empresaCnpj  String?     @map("empresa_cnpj") @db.VarChar(18)
+  ativo        Boolean     @default(true)
+  criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm DateTime    @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  usuarios Usuario[] @relation("VoucherResgatado")
+
+  @@map("voucher")
 }
 
 model UsuarioPerfil {

@@ -8,6 +8,7 @@ import {
   type Capability,
   type Role,
   type SessaoServidor,
+  type TipoConta,
 } from "@/types";
 
 /**
@@ -31,9 +32,9 @@ import {
 /**
  * Tradução do enum do banco para os papéis da interface.
  *
- * O banco tem 8 perfis e a plataforma trabalha com 6: startup, investidor e
- * participante compartilham as mesmas telas (`attendee`), e patrocinador
- * compartilha as do curador.
+ * O banco tem 9 perfis e a plataforma trabalha com 6: startup, investidor e
+ * participante compartilham as mesmas telas (`attendee`), patrocinador
+ * compartilha as do curador e `gratuito` é o próprio Plano Gratuito (`guest`).
  */
 const PERFIL_PARA_ROLE: Record<PerfilUsuario, Role> = {
   [PerfilUsuario.admin]: "admin",
@@ -44,6 +45,24 @@ const PERFIL_PARA_ROLE: Record<PerfilUsuario, Role> = {
   [PerfilUsuario.participante]: "attendee",
   [PerfilUsuario.startup]: "attendee",
   [PerfilUsuario.investidor]: "attendee",
+  [PerfilUsuario.gratuito]: "guest",
+};
+
+/**
+ * Perfil gravado quando o Admin escolhe um papel na tela de usuários.
+ *
+ * É o inverso de `PERFIL_PARA_ROLE`, e precisa ser declarado à parte porque
+ * aquele mapa não é injetor: `startup`, `investidor` e `participante` levam
+ * todos a `attendee`, e `patrocinador` e `curador` levam a `curator`. Aqui
+ * fica a escolha canônica de cada papel — a que o CRUD grava.
+ */
+export const ROLE_PARA_PERFIL: Record<Role, PerfilUsuario> = {
+  guest: PerfilUsuario.gratuito,
+  attendee: PerfilUsuario.participante,
+  speaker: PerfilUsuario.palestrante,
+  curator: PerfilUsuario.curador,
+  operator: PerfilUsuario.operadorCredenciamento,
+  admin: PerfilUsuario.admin,
 };
 
 /**
@@ -68,10 +87,17 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
       email: true,
       avatarUrl: true,
       ativo: true,
+      selo: true,
+      senhaProvisoriaHash: true,
       perfis: { select: { perfil: true } },
       ingressos: {
         where: { statusIngresso: "pago" },
         select: { qrCode: true },
+        take: 1,
+      },
+      assinaturas: {
+        where: { status: "ativa" },
+        select: { id: true },
         take: 1,
       },
     },
@@ -83,6 +109,7 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
   const perfis = usuario.perfis.map((p) => p.perfil as PerfilUsuario);
   const role = roleEfetivo(perfis);
   const ingresso = usuario.ingressos[0];
+  const isPaid = Boolean(ingresso);
 
   return {
     id: usuario.id,
@@ -92,7 +119,10 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
     role,
     capabilities: DEFAULT_MATRIX[role] ?? [],
     perfis,
-    isPaid: Boolean(ingresso),
+    selo: usuario.selo,
+    tipoConta: tipoDeConta(role, isPaid, usuario.assinaturas.length > 0),
+    senhaProvisoria: Boolean(usuario.senhaProvisoriaHash),
+    isPaid,
     hasCredential: Boolean(ingresso?.qrCode),
     ticketCode: ingresso?.qrCode,
   };
@@ -102,6 +132,22 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
 export function roleEfetivo(perfis: PerfilUsuario[]): Role {
   const papeis = perfis.map((p) => PERFIL_PARA_ROLE[p]).filter(Boolean);
   return PRECEDENCIA.find((r) => papeis.includes(r)) ?? "guest";
+}
+
+/**
+ * Tipo comercial da conta.
+ *
+ * É `gratuito` só quem está no Plano Gratuito puro: nenhum perfil concedido
+ * pela organização, nenhum ingresso pago e nenhuma assinatura ativa. Qualquer
+ * uma dessas três coisas já caracteriza um assinante.
+ */
+export function tipoDeConta(
+  role: Role,
+  isPaid: boolean,
+  assinaturaAtiva: boolean,
+): TipoConta {
+  if (role !== "guest" || isPaid || assinaturaAtiva) return "assinante";
+  return "gratuito";
 }
 
 /** `true` quando o papel resolvido no servidor possui a capacidade. */

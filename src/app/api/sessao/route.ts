@@ -32,8 +32,11 @@ export async function GET() {
       isPaid: sessao.isPaid,
       hasCredential: sessao.hasCredential,
       ticketCode: sessao.ticketCode,
+      tipoConta: sessao.tipoConta,
+      selo: sessao.selo,
     },
     capabilities: sessao.capabilities,
+    senhaProvisoria: sessao.senhaProvisoria,
   };
 
   return NextResponse.json(corpo);

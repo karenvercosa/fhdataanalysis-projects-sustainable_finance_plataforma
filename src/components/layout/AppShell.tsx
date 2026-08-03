@@ -230,7 +230,7 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, setRole, can, logout } = useAuth();
+  const { user, roleServidor, setRole, can, logout } = useAuth();
   const mySeal = sealForRole(user.role, user.sponsorKind);
   // Documento legal aberto (rodapé e atalho da barra lateral).
   const [legalDoc, setLegalDoc] = useState<LegalDocId | null>(null);
@@ -274,7 +274,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           return [];
         });
 
-  const RoleSelect = (
+  /**
+   * Seletor de perfil — ferramenta de administração, não de uso comum.
+   *
+   * Ele troca só o papel EXIBIDO, para o Admin conferir como cada perfil vê a
+   * plataforma; o servidor continua decidindo pelo papel real. Por isso a
+   * condição olha `roleServidor`, e não `user.role`: assim que o Admin escolhe
+   * "Plano Gratuito" no seletor, `user.role` deixa de ser `admin` — se a
+   * checagem fosse por ele, o seletor sumiria da tela e não haveria como
+   * voltar. Os demais perfis não veem a caixa.
+   */
+  const RoleSelect = roleServidor === "admin" && (
     <div className="flex items-center gap-2">
       <span className="hidden text-body-sm text-neutral-600 sm:inline">Perfil:</span>
       <select

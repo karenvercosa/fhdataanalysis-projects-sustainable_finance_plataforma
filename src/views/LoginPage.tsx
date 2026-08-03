@@ -6,8 +6,11 @@ import { AlertCircle, LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
 import { Checkbox } from "@/components/ui";
-import { HOME_BY_ROLE } from "@/lib/roles";
+import { CampoSenha } from "@/components/auth/CampoSenha";
+import { destinoPorTipoConta } from "@/lib/roles";
+import { ROTA_PRIMEIRO_ACESSO } from "@/lib/rotas";
 import { caminhoInternoSeguro } from "@/lib/safe-redirect";
+import { type LoginResult } from "@/types";
 
 /**
  * Tela de Login — réplica fiel do template do Figma "Tela de Login" (node 4023:664).
@@ -25,18 +28,29 @@ export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    mensagemDeErro(new URLSearchParams(location.search).get("erro")),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [lembrar, setLembrar] = useState(false);
 
+  /** `?next=` do middleware, já saneado contra open redirect. */
+  const proximoDestino = () =>
+    caminhoInternoSeguro(new URLSearchParams(location.search).get("next"), "");
+
   /**
-   * Para onde ir depois de entrar. O middleware anexa `?next=` quando barra
-   * alguém numa rota protegida; o valor passa por `caminhoInternoSeguro`, que
-   * descarta qualquer destino capaz de virar outra origem (open redirect).
+   * Para onde ir depois de entrar.
+   *
+   * A ordem é a mesma da triagem do login social (`/api/pos-login`): senha
+   * ainda provisória manda para o primeiro acesso; caso contrário vale o
+   * `?next=` que o middleware guardou, ou a home do tipo de conta.
    */
-  const destinoAposLogin = (role: keyof typeof HOME_BY_ROLE) => {
-    const pedido = new URLSearchParams(location.search).get("next");
-    return caminhoInternoSeguro(pedido, HOME_BY_ROLE[role]);
+  const destinoAposLogin = (result: LoginResult) => {
+    if (result.precisaTrocarSenha) return ROTA_PRIMEIRO_ACESSO;
+    return (
+      proximoDestino() ||
+      destinoPorTipoConta(result.role ?? "guest", result.tipoConta ?? "gratuito")
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,22 +60,28 @@ export default function LoginPage() {
     setSubmitting(true);
     setError(null);
 
-    const result = await login(email, password);
+    const result = await login(email, password, lembrar);
     setSubmitting(false);
 
     if (result.ok && result.role) {
-      navigate(destinoAposLogin(result.role));
+      navigate(destinoAposLogin(result));
     } else {
       setError(result.error ?? "Não foi possível entrar.");
     }
   };
 
   const handleGoogle = async () => {
-    // O destino do OAuth também é normalizado: o Better Auth só aceita
-    // caminhos dentro de `trustedOrigins`, e aqui garantimos que nem chega a
-    // sair uma URL absoluta.
-    const pedido = new URLSearchParams(location.search).get("next");
-    await loginWithGoogle(caminhoInternoSeguro(pedido, "/inicio"));
+    // O OAuth não volta para uma tela: volta para `/api/pos-login`, que
+    // confere no banco se a conta existe, se a senha ainda é a provisória e
+    // qual é o tipo de conta antes de decidir o destino. O `?next=` viaja
+    // junto, já normalizado — o Better Auth só aceita caminhos dentro de
+    // `trustedOrigins`, e aqui garantimos que nem chega a sair uma URL
+    // absoluta.
+    const next = proximoDestino();
+    const triagem = next
+      ? `/api/pos-login?next=${encodeURIComponent(next)}`
+      : "/api/pos-login";
+    await loginWithGoogle(triagem);
   };
 
   return (
@@ -80,7 +100,7 @@ export default function LoginPage() {
             <img
               src="/sf-logo.svg"
               alt="Sustainable Finance"
-              className="h-[84px] w-auto"
+              className="h-14 max-w-[150px] w-auto"
             />
 
             {/* Título + subtítulo */}
@@ -120,20 +140,13 @@ export default function LoginPage() {
             </div>
 
             {/* Senha */}
-            <div className="w-full space-y-2">
-              <label htmlFor="password" className="block text-h5 text-white">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-10 w-full rounded-md border border-neutral-200 bg-neutral-100 px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none transition-colors focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
+            <CampoSenha
+              id="password"
+              label="Senha"
+              autoComplete="current-password"
+              value={password}
+              onChange={setPassword}
+            />
 
             {/* Botão Entrar */}
             <button
@@ -169,9 +182,9 @@ export default function LoginPage() {
               label="Lembrar de mim"
               labelClassName="text-body text-white"
             />
-            <button type="button" className="text-body underline hover:text-primary-200">
+            <Link to="/esqueci-senha" className="text-body underline hover:text-primary-200">
               Esqueceu a senha?
-            </button>
+            </Link>
           </div>
 
           {/* Cadastro */}
@@ -185,6 +198,22 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Traduz o `?erro=` com que o servidor devolve alguém para o login.
+ *
+ * Só existem os códigos que o próprio servidor emite; qualquer outro valor
+ * (inclusive um forjado na URL) não vira mensagem nenhuma.
+ */
+function mensagemDeErro(codigo: string | null): string | null {
+  if (codigo === "login-social") {
+    return "Não foi possível entrar com o Google. Tente novamente.";
+  }
+  if (codigo === "token-invalido") {
+    return "O link de troca de senha expirou ou já foi usado. Peça um novo e-mail.";
+  }
+  return null;
 }
 
 function GoogleIcon() {

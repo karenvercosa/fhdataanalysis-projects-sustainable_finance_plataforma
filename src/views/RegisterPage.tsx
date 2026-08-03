@@ -215,7 +215,7 @@ export default function RegisterPage() {
         className="relative z-10 w-full max-w-md space-y-6 rounded-md bg-[rgba(25,48,43,0.92)] p-6 backdrop-blur-sm shadow-xl"
       >
         <div className="flex flex-col items-center gap-2 text-center">
-          <img src="/sf-logo.svg" alt="Sustainable Finance" className="h-16" />
+          <img src="/sf-logo.svg" alt="Sustainable Finance" className="h-14 max-w-[150px] w-auto" />
           <h1 className="text-h2 text-white">{t("titulo")}</h1>
           <p className="text-body text-white/80">{t("subtitulo")}</p>
         </div>

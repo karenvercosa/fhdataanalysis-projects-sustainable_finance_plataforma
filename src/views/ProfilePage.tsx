@@ -11,7 +11,6 @@ import { DeleteAccount } from "@/components/DeleteAccount";
 import { sealForRole } from "@/lib/seals";
 import { PageHeader } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/roles";
-import { SEED_USERS, type AdminUser } from "@/data/users";
 import { BRAND_KEY, BRAND_SEED, type BrandContent } from "@/data/brandContent";
 import { cn } from "@/lib/utils";
 
@@ -58,9 +57,9 @@ export default function ProfilePage() {
   const [form, setForm] = useState<Profile>(stored);
   const [toast, setToast] = useState(false);
 
-  // Selo injetado pelo Admin: lê o registro do usuário (sf_users) pelo e-mail.
-  const [adminUsers] = usePersistentState<AdminUser[]>("sf_users_v2", SEED_USERS);
-  const myTag = adminUsers.find((u) => u.email.toLowerCase() === user.email.toLowerCase())?.tag;
+  // Selo concedido pelo Admin. Vem da sessão — o servidor lê `usuario.selo`,
+  // a mesma coluna que o CRUD de usuários grava.
+  const myTag = user.selo;
 
   // Conteúdos publicados (exibidos no perfil público do curador).
   const isCurator = user.role === "curator";

@@ -11,6 +11,8 @@ export default defineConfig({
     seed: "yarn tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // O CLI faz DDL (migrate, db push, introspect): precisa do dono do banco.
+    // O role de runtime (`sf_app`) não tem esses privilégios — de propósito.
+    url: process.env["DATABASE_URL_OWNER"],
   },
 });

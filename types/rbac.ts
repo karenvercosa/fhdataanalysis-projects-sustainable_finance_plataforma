@@ -53,9 +53,20 @@ export const PerfilUsuario = {
   patrocinador: "patrocinador",
   palestrante: "palestrante",
   participante: "participante",
+  /** Perfil de entrada: toda conta criada na plataforma nasce com ele. */
+  gratuito: "gratuito",
 } as const;
 
 export type PerfilUsuario = (typeof PerfilUsuario)[keyof typeof PerfilUsuario];
+
+/**
+ * Tipo comercial da conta, decidido no servidor.
+ *
+ * `gratuito` — cadastro feito, sem assinatura nem ingresso pago;
+ * `assinante` — assinatura da plataforma ativa, ingresso pago ou perfil
+ * concedido pela organização (palestrante, curador, operador, admin).
+ */
+export type TipoConta = "gratuito" | "assinante";
 
 /** Sessão resolvida no servidor: papel e capacidades vêm do banco, não do cliente. */
 export interface SessaoServidor {
@@ -67,6 +78,15 @@ export interface SessaoServidor {
   capabilities: Capability[];
   /** Perfis crus do banco — úteis para regras específicas (ex.: patrocinador). */
   perfis: PerfilUsuario[];
+  /** Selo/cota concedido pelo Admin (Ouro, Prata, Bronze) ou `null`. */
+  selo: string | null;
+  /** Plano Gratuito ou assinante — decide o destino depois do login. */
+  tipoConta: TipoConta;
+  /**
+   * A senha gravada ainda é a provisória enviada por e-mail no cadastro.
+   * Enquanto for `true`, a plataforma só libera a troca de senha.
+   */
+  senhaProvisoria: boolean;
   /** Tem ingresso pago/confirmado: libera o conteúdo premium. */
   isPaid: boolean;
   /** Só o ingresso presencial gera credencial (QR de check-in). */

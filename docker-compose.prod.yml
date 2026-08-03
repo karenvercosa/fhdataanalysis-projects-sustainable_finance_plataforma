@@ -64,7 +64,11 @@ services:
     restart: 'no'
     env_file: .env
     environment:
+      # O migrator faz DDL e cria o role da aplicação: conecta como DONO.
+      # `DATABASE_URL` fica com a conexão da app porque o seed roda por ela —
+      # e assim o seed também prova que o RLS não bloqueou o caminho normal.
       - DATABASE_URL=${DATABASE_URL_DOCKER}
+      - DATABASE_URL_OWNER=${DATABASE_URL_OWNER_DOCKER}
     depends_on:
       postgres:
         condition: service_healthy
