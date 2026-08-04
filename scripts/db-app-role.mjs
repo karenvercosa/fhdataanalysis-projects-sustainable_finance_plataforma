@@ -54,7 +54,7 @@ if (!senha) {
 
 // Aspas simples dobradas: a senha entra num literal SQL, e `ALTER ROLE` não
 // aceita parâmetro ligado ($1) para senha.
-const senhaSql = `'${senha.replace(/'/g, "''")}'`;
+const senhaSql = `'${senha.replaceAll("'", "''")}'`;
 
 const prisma = new PrismaClient({ datasources: { db: { url: urlDono } } });
 
@@ -72,8 +72,8 @@ try {
 
   await prisma.$executeRawUnsafe(`ALTER ROLE ${ROLE} WITH LOGIN PASSWORD ${senhaSql}`);
   console.log(`✅ Role ${ROLE} pronto para a aplicação conectar.`);
-} catch (erro) {
-  console.error(`❌ Não foi possível configurar o role ${ROLE}:`, erro.message);
+} catch (err) {
+  console.error(`❌ Não foi possível configurar o role ${ROLE}:`, err.message);
   process.exit(1);
 } finally {
   await prisma.$disconnect();

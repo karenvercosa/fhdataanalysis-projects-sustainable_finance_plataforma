@@ -48,7 +48,17 @@ const InterestsContext = createContext<InterestsState | null>(null);
  * e as telas públicas que usam a nuvem pedem por `garantirCarregado()`. Sem
  * isso, a tela de login disparava uma requisição que ninguém ia usar.
  */
-export function InterestsProvider({ children }: { children: ReactNode }) {
+// Atualizadores puros no topo do módulo: aninhados no `useMemo` eles chegavam a
+// cinco níveis de closure (SonarQube S2004).
+function acrescentarInteresse(prev: Interesse[], interesse: Interesse): Interesse[] {
+  return prev.some((i) => i.id === interesse.id) ? prev : [...prev, interesse];
+}
+
+function removerInteresse(prev: Interesse[], id: string): Interesse[] {
+  return prev.filter((i) => i.id !== id);
+}
+
+export function InterestsProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { isAuthenticated } = useAuth();
   const [catalogo, setCatalogo] = useState<Interesse[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -85,13 +95,11 @@ export function InterestsProvider({ children }: { children: ReactNode }) {
         const nome = name.trim();
         if (!nome) return;
         const { interesse } = await api.post<{ interesse: Interesse }>("/api/interesses", { nome });
-        setCatalogo((prev) =>
-          prev.some((i) => i.id === interesse.id) ? prev : [...prev, interesse]
-        );
+        setCatalogo((prev) => acrescentarInteresse(prev, interesse));
       },
       remove: async (id) => {
         await api.remove(`/api/interesses/${id}`);
-        setCatalogo((prev) => prev.filter((i) => i.id !== id));
+        setCatalogo((prev) => removerInteresse(prev, id));
       }
     }),
     [catalogo, carregado, carregar]

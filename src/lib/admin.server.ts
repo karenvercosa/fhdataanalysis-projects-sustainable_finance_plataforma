@@ -19,17 +19,17 @@ export async function rotaAdmin<T>(
 ): Promise<NextResponse> {
   try {
     return NextResponse.json(await handler());
-  } catch (erro: any) {
-    if (erro instanceof ErroAutorizacao) {
-      return NextResponse.json({ error: erro.message }, { status: erro.status });
+  } catch (err: any) {
+    if (err instanceof ErroAutorizacao) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    if (erro instanceof ErroDeEntrada || erro instanceof ErroAsaas) {
+    if (err instanceof ErroDeEntrada || err instanceof ErroAsaas) {
       // Recusa do gateway é dado do formulário, não falha do servidor.
-      return NextResponse.json({ error: erro.message }, { status: 400 });
+      return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error(`[${contexto}]`, erro);
+    console.error(`[${contexto}]`, err);
     return NextResponse.json(
-      { error: erro?.message || "Não foi possível concluir a operação." },
+      { error: err?.message || "Não foi possível concluir a operação." },
       { status: 500 },
     );
   }

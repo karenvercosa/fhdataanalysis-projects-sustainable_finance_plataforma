@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 /** `pt` -> `pt-BR` no atributo `lang`, que espera uma tag BCP 47 completa. */
 const LANG_HTML: Record<string, string> = { pt: "pt-BR", en: "en" };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // Idioma e mensagens resolvidos no servidor (cookie `NEXT_LOCALE`), para o
   // provider entregá-los prontos aos Client Components — inclusive à SPA, que
   // é montada com `ssr: false`.

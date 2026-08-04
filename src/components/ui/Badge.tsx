@@ -16,11 +16,11 @@ export function Badge({
   children,
   tone = "neutral",
   className
-}: {
+}: Readonly<{
   children: React.ReactNode;
   tone?: Tone;
   className?: string;
-}) {
+}>) {
   return (
     <span
       className={cn(

@@ -54,14 +54,13 @@ const CONTEUDO: Record<
 
 interface Props {
   nome: string;
-  email: string;
 }
 
 /**
  * Captação comercial na tela inicial: dois convites lado a lado para quem pode
  * entrar no evento como Curador ou Patrocinador.
  */
-export function PartnershipBanners({ nome }: Props) {
+export function PartnershipBanners({ nome }: Readonly<Props>) {
   // "Já enviou" vale só para esta visita: o registro agora é o e-mail que saiu.
   const [enviados, setEnviados] = useState<TipoParceria[]>([]);
   const [aberto, setAberto] = useState<TipoParceria | null>(null);

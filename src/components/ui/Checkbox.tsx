@@ -16,7 +16,7 @@ export function Checkbox({
   id,
   className,
   labelClassName
-}: {
+}: Readonly<{
   checked: boolean;
   onChange: (next: boolean) => void;
   /** Texto ao lado. Sem ele, passe `aria-label` via `label`. */
@@ -27,7 +27,7 @@ export function Checkbox({
   className?: string;
   /** Cor/tamanho do rótulo — necessário sobre fundos escuros. */
   labelClassName?: string;
-}) {
+}>) {
   const autoId = useId();
   const inputId = id ?? autoId;
 

@@ -52,6 +52,12 @@ const dataCurta = (iso: string) =>
  *    empresa só existe depois que ele permite. Negar (ou desativar depois)
  *    desfaz o vínculo e devolve o convite para a cota.
  */
+/** Borda/fundo do resgate conforme o status (era ternário aninhado). */
+function classeDoResgate(pendente: boolean, aprovado: boolean): string {
+  if (pendente) return "border-warning-500/40 bg-warning-50/40";
+  return aprovado ? "border-neutral-100" : "border-neutral-200 bg-neutral-50 opacity-80";
+}
+
 export default function CuratorDashboard() {
   const { user } = useAuth();
   const credCode = credentialCode(user.role, user.email, user.ticketCode);
@@ -227,11 +233,7 @@ export default function CuratorDashboard() {
                 key={r.id}
                 className={cn(
                   "flex flex-wrap items-center justify-between gap-3 rounded-md border p-3",
-                  pendente
-                    ? "border-warning-500/40 bg-warning-50/40"
-                    : aprovado
-                    ? "border-neutral-100"
-                    : "border-neutral-200 bg-neutral-50 opacity-80"
+                  classeDoResgate(pendente, aprovado)
                 )}
               >
                 <div className="min-w-0">

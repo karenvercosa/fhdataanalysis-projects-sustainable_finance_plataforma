@@ -59,8 +59,8 @@ export async function GET(req: NextRequest) {
   if (sessao.senhaProvisoria) {
     // O disparo falha em silêncio quando o SMTP está fora: a tela do primeiro
     // acesso mostra o estado e oferece o reenvio.
-    await pedirTrocaDeSenha(sessao.email).catch((erro) => {
-      console.error("[api/pos-login] Falha ao enviar a confirmação:", erro);
+    await pedirTrocaDeSenha(sessao.email).catch((err) => {
+      console.error("[api/pos-login] Falha ao enviar a confirmação:", err);
     });
     return destino(ROTA_PRIMEIRO_ACESSO);
   }

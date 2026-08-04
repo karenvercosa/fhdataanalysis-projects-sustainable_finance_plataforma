@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { tokenDeTrocaDeSenhaValido } from "@/lib/auth";
 import { getSessaoServidor, podeServidor } from "@/lib/rbac.server";
+import { type Role } from "@/lib/roles";
 import { cotaDoSelo } from "@/data/sponsorTiers";
 import {
   ROTA_HOME,
@@ -18,6 +19,31 @@ import SpaRoot from "./SpaRoot";
 
 // Depende do cookie de sessão de cada visitante: nunca pode ser pré-renderizada.
 export const dynamic = "force-dynamic";
+
+/**
+ * Primeiro acesso pendente: a senha gravada ainda é a provisória que foi
+ * enviada por e-mail. Nenhuma outra tela abre até ela ser trocada — senão
+ * bastaria digitar a URL para pular a etapa. E, uma vez trocada, a tela do
+ * primeiro acesso deixa de existir para essa pessoa.
+ *
+ * Devolve para onde redirecionar, ou `null` quando a rota está liberada.
+ */
+function destinoPorSenhaProvisoria(pathname: string, senhaProvisoria: boolean): string | null {
+  if (pathname === ROTA_PRIMEIRO_ACESSO) return senhaProvisoria ? null : ROTA_HOME;
+  return senhaProvisoria ? ROTA_PRIMEIRO_ACESSO : null;
+}
+
+/**
+ * Capacidade exigida pela rota. Devolve o destino do bloqueio, ou `null`
+ * quando o papel pode entrar.
+ */
+function destinoPorPermissao(pathname: string, role: Role): string | null {
+  const regra = regraDaRota(pathname);
+  if (!regra?.capacidade || podeServidor(role, regra.capacidade)) return null;
+  // O Plano Gratuito entra nas telas de conversão para ver a amostra.
+  const amostraLiberada = regra.previewGratuito && role === "guest";
+  return amostraLiberada ? null : ROTA_SEM_PERMISSAO;
+}
 
 /**
  * Porta de entrada de TODAS as telas da plataforma.
@@ -69,33 +95,22 @@ export default async function CatchAllPage({
     // Quem já está autenticado não volta para o login: é a mesma regra do
     // middleware, repetida aqui porque uma navegação client-side da SPA não
     // passa por ele.
-    if (pathname === ROTA_LOGIN && (await getSessaoServidor(await headers()))) {
+    if (pathname === ROTA_LOGIN && (await getSessaoServidor(headers()))) {
       redirect(ROTA_HOME);
     }
     return <SpaRoot sessao={null} />;
   }
 
-  const sessao = await getSessaoServidor(await headers());
+  const sessao = await getSessaoServidor(headers());
   if (!sessao) {
     redirect(`${ROTA_LOGIN}?next=${encodeURIComponent(pathname)}`);
   }
 
-  // Primeiro acesso pendente: a senha gravada ainda é a provisória que foi
-  // enviada por e-mail. Nenhuma outra tela abre até ela ser trocada — senão
-  // bastaria digitar a URL para pular a etapa. E, uma vez trocada, a tela do
-  // primeiro acesso deixa de existir para essa pessoa.
-  if (pathname === ROTA_PRIMEIRO_ACESSO) {
-    if (!sessao.senhaProvisoria) redirect(ROTA_HOME);
-  } else if (sessao.senhaProvisoria) {
-    redirect(ROTA_PRIMEIRO_ACESSO);
-  }
+  const destinoDaSenha = destinoPorSenhaProvisoria(pathname, sessao.senhaProvisoria);
+  if (destinoDaSenha) redirect(destinoDaSenha);
 
-  const regra = regraDaRota(pathname);
-  if (regra?.capacidade && !podeServidor(sessao.role, regra.capacidade)) {
-    // O Plano Gratuito entra nas telas de conversão para ver a amostra.
-    const amostraLiberada = regra.previewGratuito && sessao.role === "guest";
-    if (!amostraLiberada) redirect(ROTA_SEM_PERMISSAO);
-  }
+  const destinoDaPermissao = destinoPorPermissao(pathname, sessao.role);
+  if (destinoDaPermissao) redirect(destinoDaPermissao);
 
   const sessaoCliente: SessaoCliente = {
     user: {

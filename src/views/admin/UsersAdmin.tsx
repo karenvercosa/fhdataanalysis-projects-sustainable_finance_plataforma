@@ -31,6 +31,12 @@ const TAG_TONE: Record<string, "warning" | "info" | "neutral"> = {
  * de criar a senha definitiva. A diferença é o perfil, que o Admin escolhe em
  * vez de sair sempre como Plano Gratuito.
  */
+/** Rótulo do botão de salvar conforme o estado (era ternário aninhado). */
+function rotuloDoBotaoSalvar(salvando: boolean, editando: boolean): string {
+  if (salvando) return "Salvando…";
+  return editando ? "Salvar" : "Criar";
+}
+
 export default function UsersAdmin() {
   const [users, setUsers] = useState<UsuarioAdmin[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -102,7 +108,7 @@ export default function UsersAdmin() {
     setShowForm(true);
   };
 
-  const validEmail = /\S+@\S+\.\S+/.test(form.email);
+  const validEmail = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(form.email.trim());
   const canSave = form.nome.trim().length >= 2 && validEmail && !salvando;
 
   const save = async () => {
@@ -293,7 +299,7 @@ export default function UsersAdmin() {
               Cancelar
             </Button>
             <Button onClick={save} disabled={!canSave}>
-              {salvando ? "Salvando…" : editing ? "Salvar" : "Criar"}
+              {rotuloDoBotaoSalvar(salvando, Boolean(editing))}
             </Button>
           </>
         }
@@ -321,8 +327,11 @@ export default function UsersAdmin() {
           />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Perfil</label>
+              <label htmlFor="usuario-perfil" className="block text-h5 text-neutral-900">
+                Perfil
+              </label>
               <select
+                id="usuario-perfil"
                 value={form.role}
                 onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))}
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
@@ -335,8 +344,11 @@ export default function UsersAdmin() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Status</label>
+              <label htmlFor="usuario-status" className="block text-h5 text-neutral-900">
+                Status
+              </label>
               <select
+                id="usuario-status"
                 value={form.ativo ? "Ativo" : "Inativo"}
                 onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.value === "Ativo" }))}
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
@@ -349,8 +361,11 @@ export default function UsersAdmin() {
           {/* Selo/cota (Ouro/Prata/Bronze). Na lista, só é exibido para
               Curador/Patrocinador e Palestrante. */}
           <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Selo / Cota</label>
+            <label htmlFor="usuario-selo" className="block text-h5 text-neutral-900">
+              Selo / Cota
+            </label>
             <select
+              id="usuario-selo"
               value={form.selo}
               onChange={(e) => setForm((f) => ({ ...f, selo: e.target.value as Selo }))}
               className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"

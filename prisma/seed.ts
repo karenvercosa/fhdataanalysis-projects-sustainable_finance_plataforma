@@ -1,19 +1,20 @@
+import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "better-auth/crypto";
 
 /**
- * Seed da PLATAFORMA.
+ * Seed ÚNICA do banco compartilhado.
  *
- * A landing page e a plataforma rodam no MESMO servidor, contra o MESMO banco
- * e o mesmo Redis. Cada seed cuida da sua parte, sem se atropelar:
+ * A landing page e a plataforma rodam no MESMO servidor, contra o MESMO banco,
+ * e publicam UMA única imagem de migração (a mesma tag no Docker Hub). Então
+ * esta seed atende às duas:
  *
- *  - a da landing page semeia o conteúdo do site (`landing_page_content`);
- *  - esta garante o administrador, as cotas de patrocínio e o catálogo de
- *    interesses — o que a plataforma precisa para abrir funcionando.
+ *  - administrador, cotas de patrocínio e catálogo de interesses (plataforma);
+ *  - conteúdo do site em PT e EN (landing page).
  *
- * Nenhuma das duas apaga o que é da outra. E todas as escritas daqui são
- * `upsert` sem `update`: rodar a seed de novo (num deploy, por exemplo) não
- * desfaz nada que o Admin tenha ajustado pelas telas.
+ * Todas as escritas são `upsert`/`create` condicionais, nunca `deleteMany`:
+ * rodar a seed de novo a cada deploy não pode desfazer o que a equipe ajustou
+ * pelos painéis em produção.
  *
  * A senha é gravada do mesmo jeito que o Better Auth grava no cadastro: hash
  * scrypt na tabela `account` (provider `credential`), espelhado em
@@ -149,6 +150,45 @@ async function semearInteresses() {
   return INTERESSES.length;
 }
 
+/**
+ * Conteúdo da landing page (PT/EN).
+ *
+ * É um SNAPSHOT do `src/data/seedContent.ts` da landing page, exportado para
+ * JSON. Existe aqui porque a plataforma e a landing page publicam UMA única
+ * imagem de migração — a mesma tag no Docker Hub —, então uma só seed precisa
+ * atender às duas. Copiar o `.ts` traria junto todo o conteúdo e os catálogos
+ * de mensagens da LP; o JSON quebra esse acoplamento.
+ *
+ * Para atualizar depois de mexer no conteúdo da LP:
+ *
+ *   npx tsx -e 'import {SEED_DATA_PT,SEED_DATA_EN} from "@/data/seedContent"; \
+ *     console.log(JSON.stringify({PT:SEED_DATA_PT,EN:SEED_DATA_EN},null,2))' \
+ *     > ../plataforma/prisma/landing-page-content.json
+ */
+async function semearLandingPage() {
+  const caminho = new URL("./landing-page-content.json", import.meta.url);
+  const conteudo = JSON.parse(readFileSync(caminho, "utf8")) as Record<string, unknown>;
+
+  let criados = 0;
+  for (const lang of ["PT", "EN"] as const) {
+    // `upsert` sem `update`, e NÃO o `deleteMany` da seed original da LP: o
+    // conteúdo é editável pelo painel, e apagar tudo a cada deploy desfaria o
+    // que a equipe tivesse ajustado em produção.
+    const existente = await prisma.landingPageContent.findUnique({
+      where: { lang },
+      select: { id: true },
+    });
+    if (existente) continue;
+
+    await prisma.landingPageContent.create({
+      data: { lang, data: conteudo[lang] as any },
+    });
+    criados += 1;
+  }
+
+  return criados;
+}
+
 async function main() {
   console.log("🔄 Semeando o usuário administrador da plataforma...");
   const id = await semearAdmin();
@@ -159,13 +199,22 @@ async function main() {
 
   const interesses = await semearInteresses();
   console.log(`✅ Catálogo de interesses pronto: ${interesses} temas`);
+
+  const idiomas = await semearLandingPage();
+  console.log(
+    idiomas
+      ? `✅ Conteúdo da landing page semeado (${idiomas} idioma(s))`
+      : "✅ Conteúdo da landing page já existia — preservado",
+  );
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// O projeto é ESM (`"type": "module"`), então o await de topo é direto — a
+// cadeia de promessas só existia para contornar a ausência dele.
+try {
+  await main();
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
+}

@@ -146,8 +146,8 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
 
 /** Papel efetivo a partir dos perfis do banco. Sem perfil algum = `guest`. */
 export function roleEfetivo(perfis: PerfilUsuario[]): Role {
-  const papeis = perfis.map((p) => PERFIL_PARA_ROLE[p]).filter(Boolean);
-  return PRECEDENCIA.find((r) => papeis.includes(r)) ?? "guest";
+  const papeis = new Set(perfis.map((p) => PERFIL_PARA_ROLE[p]).filter(Boolean));
+  return PRECEDENCIA.find((r) => papeis.has(r)) ?? "guest";
 }
 
 /**

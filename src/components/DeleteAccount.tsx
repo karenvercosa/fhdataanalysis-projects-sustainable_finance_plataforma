@@ -76,8 +76,8 @@ export function DeleteAccount() {
           <div className="flex items-start gap-3 rounded-md border border-error-500/40 bg-error-50 p-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-error-500" />
             <p className="text-body-sm text-neutral-700">
-              A exclusão é <strong>permanente</strong>. Não é possível recuperar a conta
-              <strong> {user.email}</strong> depois.
+              A exclusão é <strong>permanente</strong>. Não é possível recuperar a conta{" "}
+              <strong>{user.email}</strong> depois.
             </p>
           </div>
 

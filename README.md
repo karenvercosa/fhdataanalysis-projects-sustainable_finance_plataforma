@@ -243,9 +243,21 @@ Row Level Security valer alguma coisa:
 O modelo é **deny by default**: a migração
 `20260803180000_rls_role_de_aplicacao` lista as tabelas da aplicação, e só elas
 recebem `GRANT` e uma política. Tabela nova nasce **inacessível** ao `sf_app`
-até alguém conceder — inclusive `_prisma_migrations`, que a app nunca lê. Todas
-as tabelas usam `FORCE ROW LEVEL SECURITY`, então nem uma conexão que voltasse a
-usar o dono por engano escaparia das políticas.
+até alguém conceder — inclusive `_prisma_migrations`, que a app nunca lê.
+
+> ⚠️ **`FORCE ROW LEVEL SECURITY` não alcança o dono aqui.** As tabelas usam
+> `FORCE`, o que normalmente sujeitaria o próprio dono às políticas — mas
+> `sfuser` é criado pela imagem do Postgres como **SUPERUSUÁRIO**, e
+> superusuário tem `BYPASSRLS`: ignora RLS sempre, com ou sem `FORCE`. Ou seja,
+> a proteção existe para `sf_app` e **não** para a conexão de migração. É por
+> isso que `DATABASE_URL` precisa apontar para `sf_app` nas duas aplicações: se
+> alguma delas voltar a conectar como `sfuser`, o RLS deixa de valer para ela
+> sem nenhum aviso.
+
+A landing page compartilha este banco e usa o **mesmo** role `sf_app` em
+runtime. O schema dela espelha as tabelas da plataforma de propósito: o Job de
+deploy roda `db push`, e um schema desatualizado consideraria as tabelas novas
+"a mais" e as apagaria.
 
 As políticas são `USING (true)`: a autorização por usuário continua no servidor
 (`exigirCapacidade` / `getSessaoServidor`). O que o RLS entrega aqui é

@@ -68,7 +68,7 @@ function SomenteDeslogado({ children }: Readonly<{ children: React.ReactNode }>)
  * modo PREVIEW (a própria página renderiza a amostra). Demais perfis sem a
  * capacidade são redirecionados.
  */
-function AcquireGuard({ capability, children }: { capability: Parameters<ReturnType<typeof useAuth>["can"]>[0]; children: React.ReactNode }) {
+function AcquireGuard({ capability, children }: Readonly<{ capability: Parameters<ReturnType<typeof useAuth>["can"]>[0]; children: React.ReactNode }>) {
   const { can, user } = useAuth();
   if (can(capability) || user.role === "guest") return <>{children}</>;
   return <Navigate to="/conteudos" replace />;

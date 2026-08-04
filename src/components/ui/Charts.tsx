@@ -26,13 +26,13 @@ export function Donut({
   thickness = 22,
   centerValue,
   centerLabel
-}: {
+}: Readonly<{
   segments: Segment[];
   size?: number;
   thickness?: number;
   centerValue?: string;
   centerLabel?: string;
-}) {
+}>) {
   const total = segments.reduce((a, s) => a + s.value, 0) || 1;
   const r = (size - thickness) / 2;
   const circ = 2 * Math.PI * r;
@@ -92,11 +92,11 @@ export function BarChart({
   data,
   max,
   className
-}: {
+}: Readonly<{
   data: Segment[];
   max?: number;
   className?: string;
-}) {
+}>) {
   const m = max ?? Math.max(...data.map((d) => d.value), 1);
   return (
     <div className={cn("space-y-3", className)}>

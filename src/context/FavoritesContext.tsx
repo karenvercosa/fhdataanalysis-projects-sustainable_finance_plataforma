@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { usePersistentState } from "@/hooks/usePersistentState";
+import { alternarNaLista } from "@/lib/utils";
 import { SESSIONS } from "@/data/mock";
 
 interface FavoritesState {
@@ -14,7 +15,7 @@ const INITIAL = SESSIONS.filter((s) => s.favorite).map((s) => s.id);
 
 const FavoritesContext = createContext<FavoritesState | null>(null);
 
-export function FavoritesProvider({ children }: { children: ReactNode }) {
+export function FavoritesProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [ids, setIds] = usePersistentState<string[]>("sf_favorites", INITIAL);
 
   const value = useMemo<FavoritesState>(() => {
@@ -22,8 +23,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     return {
       favorites: set,
       isFavorite: (id) => set.has(id),
-      toggle: (id) =>
-        setIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])),
+      toggle: (id) => setIds((prev) => alternarNaLista(prev, id)),
       count: ids.length
     };
   }, [ids, setIds]);

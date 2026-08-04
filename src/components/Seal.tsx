@@ -3,7 +3,7 @@ import { SEAL, type SealKind } from "@/lib/seals";
 import { cn } from "@/lib/utils";
 
 /** Tag colorida do papel (Palestrante / Curador / Patrocinador). */
-export function SealBadge({ seal, className }: { seal?: SealKind; className?: string }) {
+export function SealBadge({ seal, className }: Readonly<{ seal?: SealKind; className?: string }>) {
   if (!seal) return null;
   return (
     <span
@@ -28,13 +28,13 @@ export function SealAvatar({
   seal,
   size = "md",
   className
-}: {
+}: Readonly<{
   name: string;
   src?: string;
   seal?: SealKind;
   size?: "sm" | "md" | "lg";
   className?: string;
-}) {
+}>) {
   return (
     <Avatar
       name={name}
@@ -46,7 +46,7 @@ export function SealAvatar({
 }
 
 /** Legenda das cores — usada onde vários selos convivem (ex.: Networking). */
-export function SealLegend({ seals, className }: { seals: SealKind[]; className?: string }) {
+export function SealLegend({ seals, className }: Readonly<{ seals: SealKind[]; className?: string }>) {
   return (
     <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-1", className)}>
       {seals.map((s) => (

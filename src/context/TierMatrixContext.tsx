@@ -45,7 +45,7 @@ const TierMatrixContext = createContext<TierMatrixState | null>(null);
  * o provider chamava `/api/cotas` já na tela de login, onde a resposta só podia
  * ser 401.
  */
-export function TierMatrixProvider({ children }: { children: ReactNode }) {
+export function TierMatrixProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { isAuthenticated } = useAuth();
   const [matrix, setMatrix] = useState<TierMatrix>(DEFAULT_TIER_MATRIX);
   const [carregada, setCarregada] = useState(false);

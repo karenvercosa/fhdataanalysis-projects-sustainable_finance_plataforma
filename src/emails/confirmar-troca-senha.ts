@@ -39,11 +39,11 @@ const COR = {
 /** Escapa o que vem do cadastro (o nome é digitado pela própria pessoa). */
 function esc(valor: string): string {
   return valor
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 const TEXTOS: Record<

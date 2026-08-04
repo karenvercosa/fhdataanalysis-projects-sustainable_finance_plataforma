@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils";
  * Em produção, trocar por `qrcode.react` mantendo a mesma API (value/size).
  * Reconhecimento em vez de recordação (Heurística 6): credencial num clique.
  */
-export function QRCode({ value, size = 200, className }: { value: string; size?: number; className?: string }) {
+export function QRCode({ value, size = 200, className }: Readonly<{ value: string; size?: number; className?: string }>) {
   const grid = 21; // QR v1
   const cell = size / grid;
   // Hash simples e estável → matriz pseudo-aleatória reproduzível.
   let seed = 0;
-  for (let i = 0; i < value.length; i++) seed = (seed * 31 + value.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < value.length; i++) seed = (seed * 31 + (value.codePointAt(i) ?? 0)) >>> 0;
   const rng = (i: number) => ((seed ^ (i * 2654435761)) >>> 0) % 100 < 48;
 
   const cells: JSX.Element[] = [];

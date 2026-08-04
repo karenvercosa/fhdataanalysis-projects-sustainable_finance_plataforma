@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, Download, Linkedin, Sparkles } from "lucide-react";
+import { Check, Download, Sparkles } from "lucide-react";
+import { LinkedinIcon } from "@/components/icons/LinkedinIcon";
 import { Button, Modal } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,12 @@ export interface EuVouCardProps {
  * Card "Eu Vou" (1:1) para compartilhamento social. Ocupa 100% da largura do
  * container — que precisa declarar `container-type: inline-size`.
  */
+/** Rótulo do botão de download da imagem (era ternário aninhado). */
+function rotuloDoDownload(baixando: boolean, baixado: boolean): string {
+  if (baixando) return "Gerando…";
+  return baixado ? "Imagem gerada" : "Baixar imagem (PNG)";
+}
+
 export function EuVouCard({
   nomeUsuario,
   cargoEmpresa,
@@ -194,7 +201,7 @@ Vou estar no maior encontro de finanças sustentáveis do país, dia 04/09, em G
 #SustainableFinance2026 #ESG #FinançasSustentáveis`;
 
 /** Preview do card + ações de compartilhamento. */
-export function EuVouShare(props: EuVouCardProps) {
+export function EuVouShare(props: Readonly<EuVouCardProps>) {
   const [baixando, setBaixando] = useState(false);
   const [baixado, setBaixado] = useState(false);
   const [linkedinAberto, setLinkedinAberto] = useState(false);
@@ -219,12 +226,12 @@ export function EuVouShare(props: EuVouCardProps) {
           loading={baixando}
           leftIcon={baixado ? <Check className="h-4 w-4" /> : <Download className="h-4 w-4" />}
         >
-          {baixando ? "Gerando…" : baixado ? "Imagem gerada" : "Baixar imagem (PNG)"}
+          {rotuloDoDownload(baixando, baixado)}
         </Button>
         <Button
           className="bg-[#0A66C2] hover:bg-[#095196]"
           onClick={() => setLinkedinAberto(true)}
-          leftIcon={<Linkedin className="h-4 w-4" />}
+          leftIcon={<LinkedinIcon className="h-4 w-4" />}
         >
           Compartilhar no LinkedIn
         </Button>
@@ -256,7 +263,7 @@ export function EuVouShare(props: EuVouCardProps) {
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-full bg-[#0A66C2] text-white">
-              <Linkedin className="h-5 w-5" />
+              <LinkedinIcon className="h-5 w-5" />
             </div>
             <div>
               <p className="text-body font-medium text-neutral-900">{props.nomeUsuario}</p>

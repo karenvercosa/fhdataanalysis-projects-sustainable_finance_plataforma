@@ -30,6 +30,23 @@ const BRAND_ICON: Record<BrandFormat, React.ComponentType<{ className?: string }
   Artigo: FileText
 };
 
+/**
+ * Dono dos materiais publicados. Era uma cadeia de três ternários numa linha só
+ * (SonarQube S3358); em mapa a regra de cada papel fica explícita.
+ */
+function donoDosMateriais(role: string, email: string): string {
+  if (role === "curator") return "cur_1"; // curador fixo do protótipo
+  if (role === "speaker") return `spk:${email}`;
+  if (role === "admin") return `adm:${email}`;
+  return "";
+}
+
+/** Título do modal conforme a ação e o papel de quem publica. */
+function tituloDoModal(editando: boolean, isSpeaker: boolean): string {
+  const alvo = isSpeaker ? "material" : "conteúdo";
+  return editando ? `Editar ${alvo}` : `Novo ${alvo}`;
+}
+
 export default function ContentHub() {
   const { can, user } = useAuth();
   const navigate = useNavigate();
@@ -44,7 +61,7 @@ export default function ContentHub() {
   const isAdmin = user.role === "admin"; // admin também insere conteúdo (como o curador)
   const canCreate = isCurator || isSpeaker || isAdmin;
   // Dono dos próprios materiais: curador fixo (cur_1); palestrante/admin pelo e-mail.
-  const myOwnerId = isCurator ? "cur_1" : isSpeaker ? `spk:${user.email}` : isAdmin ? `adm:${user.email}` : "";
+  const myOwnerId = donoDosMateriais(user.role, user.email);
   const [filter, setFilter] = useState<Filter>("Todos");
   // Conteúdos publicados por curadores/palestrantes (aparecem na Seção de Conteúdos).
   const [brand, setBrand] = usePersistentState<BrandContent[]>(BRAND_KEY, BRAND_SEED);
@@ -54,7 +71,8 @@ export default function ContentHub() {
   const myPanels = useMemo(() => {
     if (!isSpeaker) return [];
     const named = sessions.filter((s) => s.speaker === user.name);
-    const src = named.length ? named : sessions[0] ? [sessions[0]] : [];
+    // Protótipo: sem painel casando pelo nome, usa a primeira sessão como demo.
+    const src = named.length ? named : sessions.slice(0, 1);
     return src.map((s) => s.title);
   }, [isSpeaker, sessions, user.name]);
   const myCompany = useMemo(
@@ -300,7 +318,7 @@ export default function ContentHub() {
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
-        title={editId ? (isSpeaker ? "Editar material" : "Editar conteúdo") : isSpeaker ? "Novo material" : "Novo conteúdo"}
+        title={tituloDoModal(Boolean(editId), isSpeaker)}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
@@ -312,8 +330,8 @@ export default function ContentHub() {
           <Input label="Título" placeholder="Nome do material" value={form.title}
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
           <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Formato</label>
-            <select value={form.format} onChange={(e) => setForm((f) => ({ ...f, format: e.target.value as BrandFormat }))}
+            <label htmlFor="conteudo-formato" className="block text-h5 text-neutral-900">Formato</label>
+            <select id="conteudo-formato" value={form.format} onChange={(e) => setForm((f) => ({ ...f, format: e.target.value as BrandFormat }))}
               className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900">
               {BRAND_FORMATS.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -323,8 +341,8 @@ export default function ContentHub() {
           <div className="space-y-3 rounded-md bg-neutral-50 p-3">
             <p className="text-h5 text-neutral-900">Associações{!isSpeaker && <span className="font-normal text-neutral-500"> (opcional)</span>}</p>
             <div className="space-y-1.5">
-              <label className="block text-body-sm text-neutral-700">Painel{isSpeaker && " (em que você palestra)"}</label>
-              <select value={form.panel} onChange={(e) => setForm((f) => ({ ...f, panel: e.target.value }))}
+              <label htmlFor="conteudo-painel" className="block text-body-sm text-neutral-700">Painel{isSpeaker && " (em que você palestra)"}</label>
+              <select id="conteudo-painel" value={form.panel} onChange={(e) => setForm((f) => ({ ...f, panel: e.target.value }))}
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900">
                 {!isSpeaker && <option value="">— Nenhum —</option>}
                 {(isSpeaker ? myPanels : PANEL_OPTIONS).map((v) => <option key={v} value={v}>{v}</option>)}
@@ -338,16 +356,16 @@ export default function ContentHub() {
             ) : (
               <>
                 <div className="space-y-1.5">
-                  <label className="block text-body-sm text-neutral-700">Palestrante</label>
-                  <select value={form.speaker} onChange={(e) => setForm((f) => ({ ...f, speaker: e.target.value }))}
+                  <label htmlFor="conteudo-palestrante" className="block text-body-sm text-neutral-700">Palestrante</label>
+                  <select id="conteudo-palestrante" value={form.speaker} onChange={(e) => setForm((f) => ({ ...f, speaker: e.target.value }))}
                     className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900">
                     <option value="">— Nenhum —</option>
                     {SPEAKER_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-body-sm text-neutral-700">Empresa</label>
-                  <select value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                  <label htmlFor="conteudo-empresa" className="block text-body-sm text-neutral-700">Empresa</label>
+                  <select id="conteudo-empresa" value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                     className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900">
                     <option value="">— Nenhuma —</option>
                     {BRAND_COMPANIES.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -366,7 +384,7 @@ export default function ContentHub() {
             />
           ) : (
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Arquivo</label>
+              <p className="block text-h5 text-neutral-900">Arquivo</p>
               <div className="flex flex-wrap items-center gap-2">
                 <label className={cn("inline-flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 text-body-sm text-neutral-700 hover:bg-neutral-50")}>
                   <Upload className="h-4 w-4" /> {form.fileName ? "Trocar arquivo" : "Enviar arquivo"}
@@ -398,7 +416,7 @@ export default function ContentHub() {
 }
 
 /** Campo somente-leitura (palestrante/empresa preenchidos automaticamente). */
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function ReadOnlyField({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="space-y-1.5">
       <label className="block text-body-sm text-neutral-700">{label}</label>

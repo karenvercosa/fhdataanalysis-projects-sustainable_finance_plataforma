@@ -12,7 +12,7 @@ import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale } from "./routing";
  * acoplar o boot da plataforma ao Redis.
  */
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const bruto = cookieStore.get(LOCALE_COOKIE)?.value;
   const locale = isLocale(bruto) ? bruto : DEFAULT_LOCALE;
 

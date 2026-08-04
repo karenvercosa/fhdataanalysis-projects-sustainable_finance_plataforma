@@ -40,6 +40,12 @@ function descreveValor(v: VoucherAdmin): string {
  * o código passa a pertencer à empresa dona dele. Por isso a empresa é campo
  * obrigatório aqui — é ela que o cadastro copia para o perfil da pessoa.
  */
+/** Rótulo do botão de salvar conforme o estado (era ternário aninhado). */
+function rotuloDoBotaoSalvar(salvando: boolean, editando: boolean): string {
+  if (salvando) return "Salvando…";
+  return editando ? "Salvar" : "Criar";
+}
+
 export default function VouchersAdmin() {
   const [vouchers, setVouchers] = useState<VoucherAdmin[]>([]);
   const [curadores, setCuradores] = useState<UsuarioAdmin[]>([]);
@@ -303,7 +309,7 @@ export default function VouchersAdmin() {
               Cancelar
             </Button>
             <Button onClick={save} disabled={!canSave}>
-              {salvando ? "Salvando…" : editing ? "Salvar" : "Criar"}
+              {rotuloDoBotaoSalvar(salvando, Boolean(editing))}
             </Button>
           </>
         }
@@ -325,8 +331,11 @@ export default function VouchersAdmin() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Tipo</label>
+              <label htmlFor="voucher-tipo" className="block text-h5 text-neutral-900">
+                Tipo
+              </label>
               <select
+                id="voucher-tipo"
                 value={form.tipo}
                 onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as TipoVoucher }))}
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
@@ -387,8 +396,11 @@ export default function VouchersAdmin() {
           />
 
           <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Curador / patrocinador</label>
+            <label htmlFor="voucher-curador" className="block text-h5 text-neutral-900">
+              Curador / patrocinador
+            </label>
             <select
+              id="voucher-curador"
               value={form.curadorId}
               onChange={(e) => setForm((f) => ({ ...f, curadorId: e.target.value }))}
               className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
@@ -408,8 +420,11 @@ export default function VouchersAdmin() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Status</label>
+            <label htmlFor="voucher-status" className="block text-h5 text-neutral-900">
+              Status
+            </label>
             <select
+              id="voucher-status"
               value={form.ativo ? "Ativo" : "Inativo"}
               onChange={(e) => setForm((f) => ({ ...f, ativo: e.target.value === "Ativo" }))}
               className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"

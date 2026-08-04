@@ -62,6 +62,126 @@ function CommercialContact() {
  * `/admin/cotas`. Assim o Admin liga um recurso numa cota e o patrocinador
  * passa a ver aquele ponto na mesma hora, sem ninguém precisar editar código.
  */
+/** Cartões das cotas acima da atual — o caminho de upgrade. */
+function OpcoesDeUpgrade({
+  options,
+  tier,
+  pontosGanhos,
+  onEscolher
+}: Readonly<{
+  options: string[];
+  tier: string;
+  pontosGanhos: (de: string, para: string) => string[];
+  onEscolher: (cota: string) => void;
+}>) {
+  return (
+      <>
+        {/* Uma opção por cota disponível acima da atual */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {options.map((t) => (
+            <div
+              key={t}
+              className="flex flex-col gap-3 rounded-md border border-neutral-200 p-4 transition-shadow hover:shadow-card"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-h4 text-neutral-900">Cota {t}</p>
+                <Badge tone={tomDaCota(t)}>{t}</Badge>
+              </div>
+              <p className="text-body-sm text-neutral-600">
+                O que você ganha saindo do {tier}:
+              </p>
+              <ul className="flex-1 space-y-1.5">
+                {pontosGanhos(tier, t).map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                fullWidth
+                variant={t === options.at(-1) ? "primary" : "outline"}
+                onClick={() => onEscolher(t)}
+                leftIcon={<ArrowUpRight className="h-4 w-4" />}
+              >
+                Quero a cota {t}
+              </Button>
+            </div>
+          ))}
+        </div>
+        <p className="text-body-sm text-neutral-600">
+          O upgrade é feito com o responsável comercial do evento.
+        </p>
+      </>
+  );
+}
+
+/** Já na cota máxima: mostra os benefícios ativos e o contato comercial. */
+function CotaMaxima({
+  tier,
+  pontos,
+  onFalarComComercial
+}: Readonly<{ tier: string; pontos: string[]; onFalarComComercial: () => void }>) {
+  return (
+      <>
+        <p className="text-body-sm font-medium text-neutral-900">
+          Benefícios ativos da cota {tier}:
+        </p>
+        <ul className="grid gap-1.5 sm:grid-cols-2">
+          {pontos.map((b) => (
+            <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+              {b}
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <Button onClick={onFalarComComercial} leftIcon={<ArrowUpRight className="h-4 w-4" />}>
+            Falar com o comercial
+          </Button>
+          <p className="text-body-sm text-neutral-600">
+            Renovação e condições especiais com o responsável comercial.
+          </p>
+        </div>
+      </>
+  );
+}
+
+/** Título do modal — era uma cadeia de ternários aninhados (SonarQube S3358). */
+function tituloDoModal(enviado: boolean, temOpcoes: boolean, alvo: string): string {
+  if (enviado) return "Solicitação enviada";
+  return temOpcoes ? `Upgrade para a cota ${alvo}` : "Falar com o comercial";
+}
+
+/** Devolutiva persistente depois que a solicitação de upgrade foi registrada. */
+function SolicitacaoRegistrada({
+  request,
+  onCancelar
+}: Readonly<{ request: UpgradeRequest; onCancelar: () => void }>) {
+  return (
+    <Card className="border-primary-500 bg-primary-50">
+      <CardBody className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-3">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+          <div className="min-w-0">
+            <p className="text-h4 text-neutral-900">Solicitação de upgrade enviada</p>
+            <p className="text-body-sm text-neutral-700">
+              O responsável comercial entrará em contato em breve para falar sobre a cota{" "}
+              <strong>{request.to}</strong>. Solicitado em {request.requestedAt}.
+            </p>
+            <p className="mt-1 text-body-sm text-neutral-600">
+              {COMMERCIAL_CONTACT.name} · {COMMERCIAL_CONTACT.email}
+            </p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onCancelar}>
+          Cancelar solicitação
+        </Button>
+      </CardBody>
+    </Card>
+  );
+}
+
 export function TierUpgradeCard() {
   const { user } = useAuth();
   const { matrix, featuresOf } = useTierMatrix();
@@ -130,27 +250,7 @@ export function TierUpgradeCard() {
   return (
     <>
       {request ? (
-        // ---- Estado 2: solicitação registrada → devolutiva persistente ----
-        <Card className="border-primary-500 bg-primary-50">
-          <CardBody className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 gap-3">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
-              <div className="min-w-0">
-                <p className="text-h4 text-neutral-900">Solicitação de upgrade enviada</p>
-                <p className="text-body-sm text-neutral-700">
-                  O responsável comercial entrará em contato em breve para falar sobre a cota{" "}
-                  <strong>{request.to}</strong>. Solicitado em {request.requestedAt}.
-                </p>
-                <p className="mt-1 text-body-sm text-neutral-600">
-                  {COMMERCIAL_CONTACT.name} · {COMMERCIAL_CONTACT.email}
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setRequest(null)}>
-              Cancelar solicitação
-            </Button>
-          </CardBody>
-        </Card>
+        <SolicitacaoRegistrada request={request} onCancelar={() => setRequest(null)} />
       ) : (
         // ---- Estado 1: sugestão de upgrade ----
         <Card>
@@ -198,66 +298,14 @@ export function TierUpgradeCard() {
             <div ref={contentRef}>
               <CardBody className="space-y-3">
             {options.length ? (
-              <>
-                {/* Uma opção por cota disponível acima da atual */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {options.map((t) => (
-                    <div
-                      key={t}
-                      className="flex flex-col gap-3 rounded-md border border-neutral-200 p-4 transition-shadow hover:shadow-card"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-h4 text-neutral-900">Cota {t}</p>
-                        <Badge tone={tomDaCota(t)}>{t}</Badge>
-                      </div>
-                      <p className="text-body-sm text-neutral-600">
-                        O que você ganha saindo do {tier}:
-                      </p>
-                      <ul className="flex-1 space-y-1.5">
-                        {pontosGanhos(tier, t).map((b) => (
-                          <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
-                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        fullWidth
-                        variant={t === options[options.length - 1] ? "primary" : "outline"}
-                        onClick={() => openFor(t)}
-                        leftIcon={<ArrowUpRight className="h-4 w-4" />}
-                      >
-                        Quero a cota {t}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-body-sm text-neutral-600">
-                  O upgrade é feito com o responsável comercial do evento.
-                </p>
-              </>
+              <OpcoesDeUpgrade
+                options={options}
+                tier={tier}
+                pontosGanhos={pontosGanhos}
+                onEscolher={openFor}
+              />
             ) : (
-              <>
-                <p className="text-body-sm font-medium text-neutral-900">
-                  Benefícios ativos da cota {tier}:
-                </p>
-                <ul className="grid gap-1.5 sm:grid-cols-2">
-                  {pontosDaCota(tier).map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <Button onClick={() => openFor(tier)} leftIcon={<ArrowUpRight className="h-4 w-4" />}>
-                    Falar com o comercial
-                  </Button>
-                  <p className="text-body-sm text-neutral-600">
-                    Renovação e condições especiais com o responsável comercial.
-                  </p>
-                </div>
-              </>
+              <CotaMaxima tier={tier} pontos={pontosDaCota(tier)} onFalarComComercial={() => openFor(tier)} />
             )}
               </CardBody>
             </div>
@@ -268,13 +316,7 @@ export function TierUpgradeCard() {
       <Modal
         open={open}
         onClose={closeModal}
-        title={
-          sent
-            ? "Solicitação enviada"
-            : options.length
-            ? `Upgrade para a cota ${target}`
-            : "Falar com o comercial"
-        }
+        title={tituloDoModal(sent, options.length > 0, target)}
         footer={
           sent ? (
             <Button onClick={closeModal}>Concluir</Button>

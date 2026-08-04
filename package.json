@@ -14,11 +14,13 @@
     "db:push": "npx prisma db push",
     "db:role": "node scripts/db-app-role.mjs",
     "db:seed": "npx tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "db:up": "yarn db:generate && yarn db:migrate && yarn db:role && yarn db:push && yarn db:seed",
     "infra:up": "docker-compose up -d --build",
     "infra:down": "docker-compose down",
     "sonar": "bash ./sonar/start.sh",
-    "sonar:down": "docker compose -f sonar/docker-compose.prod.yml down -v && docker volume rm -f sonar_sonar_db sonar_sonarqube_data sonar_sonarqube_extensions sonar_sonarqube_logs 2>/dev/null; true"
+    "sonar:down": "docker compose -f sonar/docker-compose.yml down -v && docker volume rm -f sonar_sonar_db sonar_sonarqube_data sonar_sonarqube_extensions sonar_sonarqube_logs 2>/dev/null; true"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -41,6 +43,7 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.3",
     "@types/node": "^20.14.0",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^18.3.12",

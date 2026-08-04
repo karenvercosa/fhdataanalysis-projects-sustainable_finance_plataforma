@@ -119,7 +119,7 @@ const ADMIN_ITEMS: ComputedNav[] = [
   { to: "/admin/interesses", label: "Interesses", icon: Sparkles, state: "normal" }
 ];
 
-function Brand({ compact = false }: { compact?: boolean }) {
+function Brand({ compact = false }: Readonly<{ compact?: boolean }>) {
   return (
     <div className="flex items-center gap-2">
       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary-500 font-heading text-white">
@@ -135,7 +135,13 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; orientation: "row" | "col"; onNavigate?: () => void }) {
+/** Classe do item de navegação conforme estado e orientação da barra. */
+function classeDoItemAtivo(isActive: boolean, orientation: "row" | "col"): string {
+  if (!isActive) return "text-neutral-600 hover:bg-neutral-100";
+  return orientation === "col" ? "bg-primary-50 font-medium text-primary-700" : "text-primary-600";
+}
+
+function NavItems({ items, orientation, onNavigate }: Readonly<{ items: ComputedNav[]; orientation: "row" | "col"; onNavigate?: () => void }>) {
   const navigate = useNavigate();
   const base =
     orientation === "col"
@@ -201,16 +207,7 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
             <NavLink
               to={it.to}
               onClick={onNavigate}
-              className={({ isActive }) =>
-                cn(
-                  base,
-                  isActive
-                    ? orientation === "col"
-                      ? "bg-primary-50 font-medium text-primary-700"
-                      : "text-primary-600"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                )
-              }
+              className={({ isActive }) => cn(base, classeDoItemAtivo(isActive, orientation))}
             >
               {iconEl}
               <span className={orientation === "row" ? "truncate" : ""}>{it.label}</span>
@@ -229,7 +226,44 @@ function NavItems({ items, orientation, onNavigate }: { items: ComputedNav[]; or
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+/** Papéis com árvore de navegação própria, fora do RBAC. */
+const ITENS_POR_PAPEL: Partial<Record<Role, ComputedNav[]>> = {
+  guest: GUEST_ITEMS,
+  speaker: SPEAKER_ITEMS,
+  curator: CURATOR_ITEMS,
+  operator: OPERATOR_ITEMS,
+  admin: ADMIN_ITEMS
+};
+
+/** Itens derivados das capacidades do papel (caminho padrão, via RBAC). */
+function itensDoRbac(can: (cap: Capability) => boolean, isPaid: boolean | undefined): ComputedNav[] {
+  return NAV.flatMap((n) => {
+    if (!can(n.cap)) return [];
+    if (n.highlight && isPaid) return []; // já adquiriu → some o CTA
+    return [{ to: n.to, label: n.label, icon: n.icon, state: n.highlight ? "highlight" : "normal" }];
+  });
+}
+
+/**
+ * Resolve a árvore de navegação do papel. Era uma cadeia de seis ternários
+ * encadeados dentro do componente — ilegível e a maior fatia da complexidade
+ * cognitiva do `AppShell` (SonarQube S3776/S3358).
+ */
+function itensDeNavegacao(
+  role: Role,
+  hasCredential: boolean | undefined,
+  isPaid: boolean | undefined,
+  can: (cap: Capability) => boolean
+): ComputedNav[] {
+  const proprios = ITENS_POR_PAPEL[role];
+  if (proprios) return proprios;
+  // Online (hasCredential === false) não tem Credencial; demais têm.
+  if (role === "attendee")
+    return hasCredential === false ? ATTENDEE_BASE : [...ATTENDEE_BASE, CREDENTIAL_ITEM];
+  return itensDoRbac(can, isPaid);
+}
+
+export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {
   const { user, roleServidor, setRole, can, logout } = useAuth();
   const mySeal = sealForRole(user.role, user.sponsorKind);
   // Documento legal aberto (rodapé e atalho da barra lateral).
@@ -250,29 +284,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   // Não Pago e Participante Geral/Palestrante têm árvores próprias; demais seguem o RBAC.
-  const items: ComputedNav[] =
-    user.role === "guest"
-      ? GUEST_ITEMS
-      : user.role === "speaker"
-      ? SPEAKER_ITEMS
-      : user.role === "curator"
-      ? CURATOR_ITEMS
-      : user.role === "operator"
-      ? OPERATOR_ITEMS
-      : user.role === "admin"
-      ? ADMIN_ITEMS
-      : user.role === "attendee"
-      ? // Online (hasCredential === false) não tem Credencial; demais têm.
-        user.hasCredential === false
-        ? ATTENDEE_BASE
-        : [...ATTENDEE_BASE, CREDENTIAL_ITEM]
-      : NAV.flatMap((n) => {
-          if (can(n.cap)) {
-            if (n.highlight && user.isPaid) return []; // já adquiriu → some o CTA
-            return [{ to: n.to, label: n.label, icon: n.icon, state: n.highlight ? "highlight" : "normal" }];
-          }
-          return [];
-        });
+  const items = itensDeNavegacao(user.role, user.hasCredential, user.isPaid, can);
 
   /**
    * Seletor de perfil — ferramenta de administração, não de uso comum.
@@ -392,10 +404,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           menuOpen ? "pointer-events-auto" : "pointer-events-none"
         )}
       >
-        <div
+        {/* Overlay como <button>: um <div onClick> só respondia ao mouse, e
+            quem navega por teclado ficava sem como fechar o menu (SonarQube
+            S1082/S6848). `tabIndex={-1}` com o menu fechado tira o botão
+            invisível da ordem de tabulação. */}
+        <button
+          type="button"
+          aria-label="Fechar menu tocando fora"
+          tabIndex={menuOpen ? 0 : -1}
           onClick={() => setMenuOpen(false)}
           className={cn(
-            "absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out",
+            "absolute inset-0 w-full cursor-default bg-black/40 transition-opacity duration-300 ease-out",
             menuOpen ? "opacity-100" : "opacity-0"
           )}
         />
@@ -457,7 +476,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /** Atalho discreto para os documentos legais, junto ao bloco do perfil. */
-function LegalLink({ onOpen }: { onOpen: () => void }) {
+function LegalLink({ onOpen }: Readonly<{ onOpen: () => void }>) {
   return (
     <button
       onClick={onOpen}
@@ -473,11 +492,11 @@ export function PageHeader({
   title,
   subtitle,
   icon: Icon = LayoutDashboard
-}: {
+}: Readonly<{
   title: string;
   subtitle?: string;
   icon?: React.ComponentType<{ className?: string }>;
-}) {
+}>) {
   return (
     <div className="mb-6 flex items-start gap-3">
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-primary-50 text-primary-600">

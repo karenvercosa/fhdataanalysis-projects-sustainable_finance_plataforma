@@ -34,11 +34,11 @@ const COR = {
 /** Escapa o que foi digitado pelo curador antes de entrar no HTML. */
 function esc(valor: string): string {
   return valor
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 /** Quebras de linha do textarea viram `<br>` — depois do escape, nunca antes. */

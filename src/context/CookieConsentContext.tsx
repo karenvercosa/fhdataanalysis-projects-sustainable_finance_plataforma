@@ -27,7 +27,7 @@ interface CookieConsentState {
 
 const CookieConsentContext = createContext<CookieConsentState | null>(null);
 
-export function CookieConsentProvider({ children }: { children: ReactNode }) {
+export function CookieConsentProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [prefs, setPrefs] = usePersistentState<CookiePrefs | null>(COOKIE_CONSENT_KEY, null);
   const [painelAberto, setPainelAberto] = useState(false);
 

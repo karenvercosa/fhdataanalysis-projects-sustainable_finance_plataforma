@@ -28,7 +28,7 @@ export function apenasCnpj(valor: string): string {
   for (const caractere of limpo) {
     if (saida.length >= TAMANHO) break;
     const soDigito = saida.length >= TAMANHO_BASE;
-    if (soDigito && !/[0-9]/.test(caractere)) continue;
+    if (soDigito && !/\d/.test(caractere)) continue;
     saida += caractere;
   }
 
@@ -71,5 +71,5 @@ export function formatarCnpj(valor: string): string {
  */
 export function cnpjCompleto(valor: string): boolean {
   const base = apenasCnpj(valor);
-  return base.length === TAMANHO && /^[0-9]{2}$/.test(base.slice(TAMANHO_BASE));
+  return base.length === TAMANHO && /^\d{2}$/.test(base.slice(TAMANHO_BASE));
 }

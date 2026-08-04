@@ -92,9 +92,9 @@ export function SponsorAdBanner() {
 
       {/* Indicadores / navegação */}
       <div className="flex items-center justify-center gap-1.5 pt-1">
-        {playlist.map((_, i) => (
+        {playlist.map((item, i) => (
           <button
-            key={i}
+            key={item.id}
             onClick={() => setIndex(i)}
             aria-label={`Ir para divulgação ${i + 1}`}
             aria-current={i === index}

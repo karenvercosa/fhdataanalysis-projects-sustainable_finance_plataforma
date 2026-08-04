@@ -23,8 +23,8 @@ export async function promoverPorPagamento(usuarioId: string): Promise<void> {
     select: { perfil: true },
   });
 
-  const somenteGratuito =
-    perfis.length === 0 || perfis.every((p) => p.perfil === PerfilUsuario.gratuito);
+  // `every` já devolve true para lista vazia — o teste de tamanho era redundante.
+  const somenteGratuito = perfis.every((p) => p.perfil === PerfilUsuario.gratuito);
 
   if (!somenteGratuito) return;
 

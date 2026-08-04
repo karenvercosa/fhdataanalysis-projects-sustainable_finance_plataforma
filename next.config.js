@@ -28,6 +28,10 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Build enxuto para o Docker: gera `.next/standalone` com o server.js e apenas
+  // as dependências realmente usadas (output file tracing). O Dockerfile copia
+  // essa pasta — sem esta opção o build não a cria e o COPY quebra.
+  output: "standalone",
   // O type-check roda no build; o lint fica separado.
   eslint: { ignoreDuringBuilds: true },
 };

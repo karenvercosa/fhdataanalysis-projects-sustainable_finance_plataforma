@@ -7,8 +7,8 @@
 #        yarn sonar                    (faz isso automaticamente)
 #        docker compose -f docker-compose.prod.yml up -d --build
 #
-# Pré-requisito do serviço `postgres`: prisma/init.sql (gerado por
-# `yarn db:init-sql`; o sonar/start.sh e o deploy.yml fazem isso sozinhos).
+# O `postgres` sobe vazio; todo o schema (inclusive RLS e o role `sf_app`) vem
+# das migrações aplicadas pelo serviço `migrator`. Nenhum pré-requisito manual.
 # ==============================================================================
 
 name: sustainable-finance-prod
@@ -29,11 +29,20 @@ services:
       - '5432:5432'
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
+    # O `-h 127.0.0.1` é obrigatório: enquanto o entrypoint roda o
+    # /docker-entrypoint-initdb.d/01-schema.sql, ele sobe um servidor temporário
+    # com `listen_addresses = ''` — só socket Unix. Um `pg_isready` sem host
+    # passa por esse socket e declara o container saudável cedo demais; o
+    # migrator então conecta por TCP na porta ainda fechada e morre com P1001.
+    # Forçando TCP, o healthcheck só passa quando a porta 5432 realmente atende.
+    # O init do schema leva ~50s, daí o start_period generoso.
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
-      interval: 10s
+      test:
+        ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 120s
 
   redis:
     image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${REDIS_IMAGE_TAG:-redis-v1.0.0}

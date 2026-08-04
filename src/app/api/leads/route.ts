@@ -7,7 +7,7 @@ import { type TipoLead } from "@/emails/lead-plataforma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TIPOS: TipoLead[] = ["presencial", "curador", "patrocinador"];
+const TIPOS = new Set<TipoLead>(["presencial", "curador", "patrocinador"]);
 const MENSAGEM_MAXIMA = 2000;
 
 /**
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     const telefone = texto((corpo as any)?.telefone);
     const mensagem = texto((corpo as any)?.mensagem);
 
-    if (!TIPOS.includes(tipo)) throw new ErroDeEntrada("Tipo de solicitação inválido.");
+    if (!TIPOS.has(tipo)) throw new ErroDeEntrada("Tipo de solicitação inválido.");
     if (!empresa || !cargo || !telefone) {
       throw new ErroDeEntrada("Preencha empresa, cargo e telefone.");
     }

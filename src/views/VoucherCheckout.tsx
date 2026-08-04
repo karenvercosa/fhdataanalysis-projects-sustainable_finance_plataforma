@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Ticket, Tag, CheckCircle2, QrCode, Gift, Monitor, MapPin, CreditCard, Infinity as InfinityIcon } from "lucide-react";
+import { Ticket, Tag, CheckCircle2, QrCode, Gift, Monitor, MapPin, CreditCard, Infinity as InfinityIcon, type LucideIcon } from "lucide-react";
 import { Badge, Button, Card, CardBody, CardHeader, Input } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { PreInscricaoPresencial } from "@/components/PreInscricaoPresencial";
@@ -16,6 +16,167 @@ type VState = "idle" | "checking" | "valid" | "invalid";
 const ONLINE_PRICE = 290;
 const PRESENCIAL_PRICE = 480; // referência; o voucher costuma zerar/abater
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Rótulo do benefício do voucher — sai do JSX para não virar ternário aninhado. */
+function descricaoDoVoucher(voucher: Voucher): string {
+  if (voucher.kind === "free") return "Acesso gratuito";
+  if (voucher.kind === "percent") return `${voucher.value}% de desconto`;
+  return `${brl(voucher.value)} de desconto`;
+}
+
+/** Tela de confirmação (pós-checkout). */
+function TelaConfirmacao({ presencial, total }: Readonly<{ presencial: boolean; total: number }>) {
+  return (
+    <div className="mx-auto max-w-2xl space-y-4">
+      <Card>
+        <CardBody className="flex flex-col items-center gap-3 py-8 text-center">
+          <CheckCircle2 className="h-14 w-14 text-success-500" />
+          <h1 className="text-h2 text-neutral-900">
+            {presencial ? "Ingresso resgatado!" : "Pagamento confirmado!"}
+          </h1>
+          <p className="max-w-md text-body text-neutral-600">
+            {presencial ? (
+              <>
+                Sua <strong>credencial</strong> já está disponível na aba <strong>Credencial</strong> e você
+                tem <strong>acesso completo</strong> à plataforma.
+              </>
+            ) : (
+              <>
+                Você agora tem <strong>acesso ilimitado</strong> a toda a plataforma (streaming, conteúdos e
+                downloads). O ingresso Online é digital — não há credencial de entrada.
+              </>
+            )}
+          </p>
+          <div className="flex items-center gap-2 rounded-md bg-success-50 px-3 py-2 text-success-500">
+            {presencial ? <QrCode className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
+            Ingresso {presencial ? "Presencial" : "Online"} · {total === 0 ? "Grátis" : brl(total)}
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
+/** Um dos dois cartões de escolha do tipo de ingresso. */
+function OpcaoIngresso({
+  icon: Icon,
+  titulo,
+  selecionado,
+  onSelect,
+  destaque,
+  descricao
+}: Readonly<{
+  icon: LucideIcon;
+  titulo: string;
+  selecionado: boolean;
+  onSelect: () => void;
+  destaque: React.ReactNode;
+  descricao: React.ReactNode;
+}>) {
+  return (
+    <button
+      onClick={onSelect}
+      className={cn(
+        "rounded-lg border p-4 text-left transition-colors",
+        selecionado ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-primary-300"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="h-5 w-5 text-primary-600" />
+          <span className="text-h4 text-neutral-900">{titulo}</span>
+        </div>
+        {destaque}
+      </div>
+      <p className="mt-1 text-body-sm text-neutral-600">{descricao}</p>
+    </button>
+  );
+}
+
+/** Bloco do voucher: campo, resultado da validação e pré-inscrição. */
+function BlocoVoucher({
+  code,
+  vState,
+  voucher,
+  isGuest,
+  user,
+  company,
+  jobTitle,
+  onCodeChange,
+  onCheck
+}: Readonly<{
+  code: string;
+  vState: VState;
+  voucher: Voucher | null;
+  isGuest: boolean;
+  user: { name: string; email: string };
+  company: string;
+  jobTitle: string;
+  onCodeChange: (valor: string) => void;
+  onCheck: () => void;
+}>) {
+  return (
+    <div className="space-y-3">
+      <Input
+        label="Voucher de convidado"
+        placeholder="Ex.: VERDE2026"
+        value={code}
+        onChange={(e) => onCodeChange(e.target.value)}
+        success={vState === "valid"}
+        error={vState === "invalid" ? "Voucher inválido ou esgotado." : undefined}
+        hint={vState === "idle" ? "Fornecido por um patrocinador/curador." : undefined}
+        rightSlot={<Tag className="h-4 w-4" />}
+      />
+      {vState === "valid" && voucher ? (
+        <div className="flex items-center gap-2 rounded-md bg-success-50 px-3 py-2 text-body-sm text-success-500">
+          <Gift className="h-4 w-4" />
+          {descricaoDoVoucher(voucher)} · {getCurator(voucher.ownerId)?.name ?? "Patrocinador"}
+        </div>
+      ) : (
+        <Button variant="outline" onClick={onCheck} loading={vState === "checking"} disabled={code.trim().length < 3}>
+          Aplicar voucher
+        </Button>
+      )}
+
+      {/* Sem voucher, o Presencial fica travado — abre a pré-inscrição. */}
+      {isGuest && vState !== "valid" && (
+        <PreInscricaoPresencial
+          nome={user.name}
+          email={user.email}
+          empresaInicial={company}
+          cargoInicial={jobTitle}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Resumo de valores do pedido. */
+function ResumoPedido({
+  type,
+  base,
+  discount,
+  total
+}: Readonly<{ type: TicketType; base: number; discount: number; total: number }>) {
+  return (
+    <div className="space-y-1 rounded-md bg-neutral-50 p-4">
+      <div className="flex justify-between text-body text-neutral-600">
+        <span>Ingresso {type === "online" ? "Online" : "Presencial"}</span>
+        <span>{brl(base)}</span>
+      </div>
+      {discount > 0 && (
+        <div className="flex justify-between text-body text-success-500">
+          <span>Desconto</span>
+          <span>- {brl(discount)}</span>
+        </div>
+      )}
+      <div className="flex justify-between border-t border-neutral-200 pt-2 text-h4 text-neutral-900">
+        <span>Total</span>
+        <span>{total === 0 ? "Grátis" : brl(total)}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function VoucherCheckout() {
   const { completeCheckout, user } = useAuth();
@@ -51,6 +212,11 @@ export default function VoucherCheckout() {
     }, 600);
   };
 
+  const aoDigitarCodigo = (valor: string) => {
+    setCode(valor);
+    setVState("idle");
+  };
+
   const baseOk = company.trim() && jobTitle.trim();
   const canSubmit = baseOk && (type === "online" || (type === "presencial" && vState === "valid"));
 
@@ -70,38 +236,7 @@ export default function VoucherCheckout() {
   // envia o pedido por e-mail.
   if (isCurator) return <SolicitarVouchers />;
 
-  if (done) {
-    const presencial = type === "presencial";
-    return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <Card>
-          <CardBody className="flex flex-col items-center gap-3 py-8 text-center">
-            <CheckCircle2 className="h-14 w-14 text-success-500" />
-            <h1 className="text-h2 text-neutral-900">
-              {presencial ? "Ingresso resgatado!" : "Pagamento confirmado!"}
-            </h1>
-            <p className="max-w-md text-body text-neutral-600">
-              {presencial ? (
-                <>
-                  Sua <strong>credencial</strong> já está disponível na aba <strong>Credencial</strong> e você
-                  tem <strong>acesso completo</strong> à plataforma.
-                </>
-              ) : (
-                <>
-                  Você agora tem <strong>acesso ilimitado</strong> a toda a plataforma (streaming, conteúdos e
-                  downloads). O ingresso Online é digital — não há credencial de entrada.
-                </>
-              )}
-            </p>
-            <div className="flex items-center gap-2 rounded-md bg-success-50 px-3 py-2 text-success-500">
-              {presencial ? <QrCode className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
-              Ingresso {presencial ? "Presencial" : "Online"} · {total === 0 ? "Grátis" : brl(total)}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-    );
-  }
+  if (done) return <TelaConfirmacao presencial={type === "presencial"} total={total} />;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -125,112 +260,49 @@ export default function VoucherCheckout() {
         </CardHeader>
         <CardBody className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            {/* Online */}
-            <button
-              onClick={() => setType("online")}
-              className={cn(
-                "rounded-lg border p-4 text-left transition-colors",
-                type === "online" ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-primary-300"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Monitor className="h-5 w-5 text-primary-600" />
-                  <span className="text-h4 text-neutral-900">Online</span>
-                </div>
-                <span className="text-h4 text-neutral-900">{brl(ONLINE_PRICE)}</span>
-              </div>
-              <p className="mt-1 inline-flex items-center gap-1 text-body-sm text-neutral-600">
-                <InfinityIcon className="h-4 w-4" /> Acesso ilimitado à plataforma
-              </p>
-            </button>
-
-            {/* Presencial */}
-            <button
-              onClick={() => setType("presencial")}
-              className={cn(
-                "rounded-lg border p-4 text-left transition-colors",
-                type === "presencial" ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-primary-300"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary-600" />
-                  <span className="text-h4 text-neutral-900">Presencial</span>
-                </div>
-                <Badge tone="primary">Voucher</Badge>
-              </div>
-              <p className="mt-1 text-body-sm text-neutral-600">Acesso completo + credencial de entrada</p>
-            </button>
+            <OpcaoIngresso
+              icon={Monitor}
+              titulo="Online"
+              selecionado={type === "online"}
+              onSelect={() => setType("online")}
+              destaque={<span className="text-h4 text-neutral-900">{brl(ONLINE_PRICE)}</span>}
+              descricao={
+                <span className="inline-flex items-center gap-1">
+                  <InfinityIcon className="h-4 w-4" /> Acesso ilimitado à plataforma
+                </span>
+              }
+            />
+            <OpcaoIngresso
+              icon={MapPin}
+              titulo="Presencial"
+              selecionado={type === "presencial"}
+              onSelect={() => setType("presencial")}
+              destaque={<Badge tone="primary">Voucher</Badge>}
+              descricao="Acesso completo + credencial de entrada"
+            />
           </div>
 
-          {/* Online → pagamento */}
+          {/* Online → pagamento; Presencial → voucher */}
           {type === "online" ? (
             <div className="flex items-start gap-2 rounded-md border border-neutral-200 p-4 text-body-sm text-neutral-600">
               <CreditCard className="mt-0.5 h-4 w-4 shrink-0" />
               <span>Pagamento via <strong>Asaas</strong> (Cartão de crédito ou Pix). Simulação de gateway neste protótipo.</span>
             </div>
           ) : (
-            /* Presencial → voucher */
-            <div className="space-y-3">
-              <Input
-                label="Voucher de convidado"
-                placeholder="Ex.: VERDE2026"
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value);
-                  setVState("idle");
-                }}
-                success={vState === "valid"}
-                error={vState === "invalid" ? "Voucher inválido ou esgotado." : undefined}
-                hint={vState === "idle" ? "Fornecido por um patrocinador/curador." : undefined}
-                rightSlot={<Tag className="h-4 w-4" />}
-              />
-              {vState === "valid" && voucher ? (
-                <div className="flex items-center gap-2 rounded-md bg-success-50 px-3 py-2 text-body-sm text-success-500">
-                  <Gift className="h-4 w-4" />
-                  {voucher.kind === "free"
-                    ? "Acesso gratuito"
-                    : voucher.kind === "percent"
-                    ? `${voucher.value}% de desconto`
-                    : `${brl(voucher.value)} de desconto`}{" "}
-                  · {getCurator(voucher.ownerId)?.name ?? "Patrocinador"}
-                </div>
-              ) : (
-                <Button variant="outline" onClick={checkVoucher} loading={vState === "checking"} disabled={code.trim().length < 3}>
-                  Aplicar voucher
-                </Button>
-              )}
-
-              {/* Sem voucher, o Presencial fica travado — abre a pré-inscrição. */}
-              {isGuest && vState !== "valid" && (
-                <PreInscricaoPresencial
-                  nome={user.name}
-                  email={user.email}
-                  empresaInicial={company}
-                  cargoInicial={jobTitle}
-                />
-              )}
-            </div>
+            <BlocoVoucher
+              code={code}
+              vState={vState}
+              voucher={voucher}
+              isGuest={isGuest}
+              user={user}
+              company={company}
+              jobTitle={jobTitle}
+              onCodeChange={aoDigitarCodigo}
+              onCheck={checkVoucher}
+            />
           )}
 
-          {/* Resumo do pedido */}
-          <div className="space-y-1 rounded-md bg-neutral-50 p-4">
-            <div className="flex justify-between text-body text-neutral-600">
-              <span>Ingresso {type === "online" ? "Online" : "Presencial"}</span>
-              <span>{brl(base)}</span>
-            </div>
-            {discount > 0 && (
-              <div className="flex justify-between text-body text-success-500">
-                <span>Desconto</span>
-                <span>- {brl(discount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between border-t border-neutral-200 pt-2 text-h4 text-neutral-900">
-              <span>Total</span>
-              <span>{total === 0 ? "Grátis" : brl(total)}</span>
-            </div>
-          </div>
+          <ResumoPedido type={type} base={base} discount={discount} total={total} />
 
           <Button fullWidth size="lg" disabled={!canSubmit} onClick={finish}>
             {total === 0 ? "Resgatar ingresso grátis" : `Pagar ${brl(total)}`}

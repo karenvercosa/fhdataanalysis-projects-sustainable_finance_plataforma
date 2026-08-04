@@ -16,11 +16,11 @@ export function LegalModal({
   open,
   onClose,
   docInicial = "termos"
-}: {
+}: Readonly<{
   open: boolean;
   onClose: () => void;
   docInicial?: LegalDocId;
-}) {
+}>) {
   const [atual, setAtual] = useState<LegalDocId>(docInicial);
   const { revisar } = useCookieConsent();
   const doc = LEGAL_DOCS[atual];
@@ -85,8 +85,8 @@ export function LegalModal({
           {doc.sections.map((s) => (
             <section key={s.heading} className="space-y-1.5">
               <h3 className="text-h5 text-neutral-900">{s.heading}</h3>
-              {s.body.map((p, i) => (
-                <p key={i} className="text-body-sm leading-relaxed text-neutral-700">
+              {s.body.map((p) => (
+                <p key={`${s.heading}:${p.slice(0, 48)}`} className="text-body-sm leading-relaxed text-neutral-700">
                   {p}
                 </p>
               ))}

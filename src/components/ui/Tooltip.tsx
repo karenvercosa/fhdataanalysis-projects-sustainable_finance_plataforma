@@ -13,12 +13,12 @@ export function Tooltip({
   children,
   side = "top",
   className
-}: {
+}: Readonly<{
   label: string;
   children: ReactNode;
   side?: "top" | "bottom";
   className?: string;
-}) {
+}>) {
   const isTop = side === "top";
 
   return (

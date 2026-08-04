@@ -37,9 +37,89 @@ export interface CrudConfig {
   searchKeys: string[];
 }
 
-const EMAIL_RE = /\S+@\S+\.\S+/;
+// Classes negadas + âncoras: sem sobreposição entre os quantificadores, a
+// checagem roda em tempo linear (SonarQube S8786 — backtracking catastrófico).
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
-export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; backTo?: string }) {
+/**
+ * Um campo do formulário conforme o tipo declarado na config. Era uma cadeia de
+ * ternários dentro do `.map` do modal (SonarQube S3358).
+ */
+function CampoDoFormulario({
+  field,
+  valor,
+  erro,
+  onChange,
+  onErro
+}: Readonly<{
+  field: CrudField;
+  valor: string;
+  erro?: string;
+  onChange: (v: string) => void;
+  onErro: (msg: string) => void;
+}>) {
+  if (field.type === "select")
+    return (
+      <div className="space-y-1.5">
+        <label htmlFor={`crud-${field.key}`} className="block text-h5 text-neutral-900">
+          {field.label}
+        </label>
+        <select
+          id={`crud-${field.key}`}
+          value={valor}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
+        >
+          {field.options?.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+
+  if (field.type === "image")
+    return (
+      <ImageField field={field} value={valor} error={erro} onChange={onChange} onError={onErro} />
+    );
+
+  return (
+    <Input
+      label={field.label}
+      type={field.type === "email" ? "email" : "text"}
+      placeholder={field.placeholder}
+      value={valor}
+      onChange={(e) => onChange(e.target.value)}
+      error={erro || undefined}
+      hint={field.hint}
+    />
+  );
+}
+
+/** Rótulo exibido de um valor: `select` mostra o label da opção; os demais, o valor cru. */
+const labelFor = (f: CrudField, value: string) =>
+  f.type === "select" ? f.options?.find((o) => o.value === value)?.label ?? value : value;
+
+/** Conteúdo de uma célula: imagem, badge com tom, ou o rótulo puro. */
+function CelulaDaTabela({ field, valor }: Readonly<{ field: CrudField; valor: string }>) {
+  if (field.type === "image") {
+    if (!valor) return <span className="text-body-sm text-neutral-400">—</span>;
+    return <img src={valor} alt="" className="h-10 w-16 rounded object-cover" />;
+  }
+  if (field.tones)
+    return <Badge tone={field.tones[valor] ?? "neutral"}>{labelFor(field, valor)}</Badge>;
+  return <>{labelFor(field, valor)}</>;
+}
+
+/** Erro ou dica abaixo do campo (nunca os dois). */
+function MensagemDoCampo({ error, hint }: Readonly<{ error?: string; hint?: string }>) {
+  if (error) return <p className="text-body-sm text-error-500">{error}</p>;
+  if (hint) return <p className="text-body-sm text-neutral-600">{hint}</p>;
+  return null;
+}
+
+export function AdminCrud({ config, backTo = "/admin" }: Readonly<{ config: CrudConfig; backTo?: string }>) {
   const { fields } = config;
   const [rows, setRows] = usePersistentState<CrudRow[]>(config.storageKey, config.seed);
   const [query, setQuery] = useState("");
@@ -64,9 +144,6 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
       fields.map((f) => [f.key, f.type === "select" ? f.options?.[0]?.value ?? "" : ""])
     );
 
-  const labelFor = (f: CrudField, value: string) =>
-    f.type === "select" ? f.options?.find((o) => o.value === value)?.label ?? value : value;
-
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
@@ -86,7 +163,7 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
     for (const f of fields) {
       const v = (form[f.key] ?? "").trim();
       if (f.required && !v) e[f.key] = "Campo obrigatório.";
-      else if (f.type === "email" && v && !EMAIL_RE.test(v)) e[f.key] = "E-mail inválido.";
+      else if (f.type === "email" && v && !EMAIL_RE.test(v.trim())) e[f.key] = "E-mail inválido.";
       else if (f.unique && v && rows.some((r) => r.id !== editing?.id && (r[f.key] ?? "").toLowerCase() === v.toLowerCase()))
         e[f.key] = "Valor já cadastrado.";
     }
@@ -194,17 +271,7 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
                 <tr key={row.id} className="border-b border-neutral-50 text-body">
                   {tableFields.map((f, idx) => (
                     <td key={f.key} className={idx === 0 ? "px-4 py-3 font-medium text-neutral-900" : "px-4 py-3 text-neutral-600"}>
-                      {f.type === "image" ? (
-                        row[f.key] ? (
-                          <img src={row[f.key]} alt="" className="h-10 w-16 rounded object-cover" />
-                        ) : (
-                          <span className="text-body-sm text-neutral-400">—</span>
-                        )
-                      ) : f.tones ? (
-                        <Badge tone={f.tones[row[f.key]] ?? "neutral"}>{labelFor(f, row[f.key])}</Badge>
-                      ) : (
-                        labelFor(f, row[f.key])
-                      )}
+                      <CelulaDaTabela field={f} valor={row[f.key]} />
                     </td>
                   ))}
                   <td className="px-4 py-3">
@@ -256,46 +323,16 @@ export function AdminCrud({ config, backTo = "/admin" }: { config: CrudConfig; b
         <div className="grid grid-cols-2 gap-3">
           {fields.map((f) => (
             <div key={f.key} className={f.colSpan === 1 ? "" : "col-span-2"}>
-              {f.type === "select" ? (
-                <div className="space-y-1.5">
-                  <label className="block text-h5 text-neutral-900">{f.label}</label>
-                  <select
-                    value={form[f.key] ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
-                    className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900"
-                  >
-                    {f.options?.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : f.type === "image" ? (
-                <ImageField
-                  field={f}
-                  value={form[f.key] ?? ""}
-                  error={errors[f.key]}
-                  onChange={(v) => {
-                    setForm((s) => ({ ...s, [f.key]: v }));
-                    setErrors((er) => ({ ...er, [f.key]: "" }));
-                  }}
-                  onError={(msg) => setErrors((er) => ({ ...er, [f.key]: msg }))}
-                />
-              ) : (
-                <Input
-                  label={f.label}
-                  type={f.type === "email" ? "email" : "text"}
-                  placeholder={f.placeholder}
-                  value={form[f.key] ?? ""}
-                  onChange={(e) => {
-                    setForm((s) => ({ ...s, [f.key]: e.target.value }));
-                    setErrors((er) => ({ ...er, [f.key]: "" }));
-                  }}
-                  error={errors[f.key] || undefined}
-                  hint={f.hint}
-                />
-              )}
+              <CampoDoFormulario
+                field={f}
+                valor={form[f.key] ?? ""}
+                erro={errors[f.key]}
+                onChange={(v) => {
+                  setForm((s) => ({ ...s, [f.key]: v }));
+                  setErrors((er) => ({ ...er, [f.key]: "" }));
+                }}
+                onErro={(msg) => setErrors((er) => ({ ...er, [f.key]: msg }))}
+              />
             </div>
           ))}
         </div>
@@ -340,13 +377,13 @@ function ImageField({
   error,
   onChange,
   onError
-}: {
+}: Readonly<{
   field: CrudField;
   value: string;
   error?: string;
   onChange: (v: string) => void;
   onError: (msg: string) => void;
-}) {
+}>) {
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // permite reenviar o mesmo arquivo
@@ -360,7 +397,12 @@ function ImageField({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => onChange(String(reader.result));
+    // `readAsDataURL` sempre devolve string, mas o tipo de `result` inclui
+    // ArrayBuffer e null — sem o typeof, o `String()` gravaria o literal
+    // "[object ArrayBuffer]" no campo (SonarQube S6551).
+    reader.onload = () => {
+      if (typeof reader.result === "string") onChange(reader.result);
+    };
     reader.onerror = () => onError("Não foi possível ler o arquivo.");
     reader.readAsDataURL(file);
   };
@@ -395,11 +437,7 @@ function ImageField({
         </label>
       )}
 
-      {error ? (
-        <p className="text-body-sm text-error-500">{error}</p>
-      ) : field.hint ? (
-        <p className="text-body-sm text-neutral-600">{field.hint}</p>
-      ) : null}
+      <MensagemDoCampo error={error} hint={field.hint} />
     </div>
   );
 }

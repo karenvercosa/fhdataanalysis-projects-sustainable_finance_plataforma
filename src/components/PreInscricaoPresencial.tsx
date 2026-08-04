@@ -39,6 +39,47 @@ interface Props {
   destaque?: boolean;
 }
 
+/** Chamada que abre o formulário — em versão discreta ou em destaque. */
+function Convite({ destaque, onAbrir }: Readonly<{ destaque: boolean; onAbrir: () => void }>) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3",
+        destaque
+          ? "rounded-md border border-secondary-500 bg-secondary-400/15 p-4"
+          : "rounded-md border border-dashed border-neutral-300 p-3"
+      )}
+    >
+      {destaque ? (
+        <div className="flex min-w-0 items-start gap-3">
+          <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-secondary-600" />
+          <div className="min-w-0">
+            <p className="text-h4 text-neutral-900">Garanta sua vaga presencial</p>
+            <p className="text-body-sm text-neutral-600">
+              Sem voucher corporativo? Faça sua pré-inscrição para que nossa organização entre
+              em contato e viabilize sua participação.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-body-sm text-neutral-600">
+          Quer ir presencialmente e não tem voucher?
+        </p>
+      )}
+      <Button
+        /* Destaque: verde claro sobre o fundo âmbar suave da chamada. */
+        variant={destaque ? "secondary" : "outline"}
+        size={destaque ? "md" : "sm"}
+        className="shrink-0"
+        leftIcon={<ClipboardList className="h-4 w-4" />}
+        onClick={onAbrir}
+      >
+        Não tenho voucher, preencha aqui
+      </Button>
+    </div>
+  );
+}
+
 /**
  * Saída para quem quer o ingresso Presencial mas não recebeu voucher: registra
  * o interesse para a organização acionar um curador/patrocinador depois.
@@ -49,7 +90,7 @@ export function PreInscricaoPresencial({
   empresaInicial = "",
   cargoInicial = "",
   destaque = false
-}: Props) {
+}: Readonly<Props>) {
   // "Já enviada" vale só para esta visita: o registro agora é o e-mail que
   // saiu, e a plataforma não guarda mais a lista.
   const [jaEnviada, setJaEnviada] = useState(false);
@@ -108,41 +149,7 @@ export function PreInscricaoPresencial({
           </div>
         </div>
       ) : (
-        <div
-          className={cn(
-            "flex flex-wrap items-center justify-between gap-3",
-            destaque
-              ? "rounded-md border border-secondary-500 bg-secondary-400/15 p-4"
-              : "rounded-md border border-dashed border-neutral-300 p-3"
-          )}
-        >
-          {destaque ? (
-            <div className="flex min-w-0 items-start gap-3">
-              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-secondary-600" />
-              <div className="min-w-0">
-                <p className="text-h4 text-neutral-900">Garanta sua vaga presencial</p>
-                <p className="text-body-sm text-neutral-600">
-                  Sem voucher corporativo? Faça sua pré-inscrição para que nossa organização entre
-                  em contato e viabilize sua participação.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-body-sm text-neutral-600">
-              Quer ir presencialmente e não tem voucher?
-            </p>
-          )}
-          <Button
-            /* Destaque: verde claro sobre o fundo âmbar suave da chamada. */
-            variant={destaque ? "secondary" : "outline"}
-            size={destaque ? "md" : "sm"}
-            className="shrink-0"
-            leftIcon={<ClipboardList className="h-4 w-4" />}
-            onClick={() => setAberto(true)}
-          >
-            Não tenho voucher, preencha aqui
-          </Button>
-        </div>
+        <Convite destaque={destaque} onAbrir={() => setAberto(true)} />
       )}
 
       <Modal

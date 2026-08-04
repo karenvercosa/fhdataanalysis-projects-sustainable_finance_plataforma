@@ -14,7 +14,7 @@ import { type PerfilUsuario, type Role, type UsuarioAdmin } from "@/types";
  * quebra o build.
  */
 
-const SELOS_VALIDOS = ["Ouro", "Prata", "Bronze"];
+const SELOS_VALIDOS = new Set(["Ouro", "Prata", "Bronze"]);
 
 export const SELECAO_USUARIO = {
   id: true,
@@ -61,7 +61,7 @@ export function lerFormularioUsuario(body: any) {
   if (nome.length < 2) throw new ErroDeEntrada("Informe o nome completo.");
   if (!EMAIL_REGEX.test(email)) throw new ErroDeEntrada("Informe um e-mail válido, contendo @.");
   if (!ROLE_PARA_PERFIL[role]) throw new ErroDeEntrada("Perfil inválido.");
-  if (selo && !SELOS_VALIDOS.includes(selo)) throw new ErroDeEntrada("Selo inválido.");
+  if (selo && !SELOS_VALIDOS.has(selo)) throw new ErroDeEntrada("Selo inválido.");
 
   return {
     nome,

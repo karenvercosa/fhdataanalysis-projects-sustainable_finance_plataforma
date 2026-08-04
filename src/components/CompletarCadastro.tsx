@@ -78,6 +78,8 @@ export function CompletarCadastro({
       </div>
 
       <div className="space-y-1.5">
+        {/* Sem `htmlFor`: o input real é montado pelo `PhoneField`, que associa
+            o rótulo pelo `ariaLabel` abaixo. */}
         <label className="block text-h5 text-white">{t("labelCelular")}</label>
         <PhoneField
           value={form.phone}
@@ -93,20 +95,42 @@ export function CompletarCadastro({
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-h5 text-white">{t("labelEmpresa")}</label>
-        <input value={form.empresa} onChange={set("empresa")} placeholder={t("placeholderEmpresa")} className={campo} />
+        <label htmlFor="completar-empresa" className="block text-h5 text-white">
+          {t("labelEmpresa")}
+        </label>
+        <input
+          id="completar-empresa"
+          value={form.empresa}
+          onChange={set("empresa")}
+          placeholder={t("placeholderEmpresa")}
+          className={campo}
+        />
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-h5 text-white">{t("labelCargo")}</label>
-        <input value={form.cargo} onChange={set("cargo")} placeholder={t("placeholderCargo")} className={campo} />
+        <label htmlFor="completar-cargo" className="block text-h5 text-white">
+          {t("labelCargo")}
+        </label>
+        <input
+          id="completar-cargo"
+          value={form.cargo}
+          onChange={set("cargo")}
+          placeholder={t("placeholderCargo")}
+          className={campo}
+        />
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-h5 text-white">
+        <label htmlFor="completar-voucher" className="block text-h5 text-white">
           {t("labelVoucher")} <em className="text-body-sm font-normal text-white/70">{t("opcional")}</em>
         </label>
-        <input value={form.voucher} onChange={set("voucher")} placeholder={t("placeholderVoucher")} className={campo} />
+        <input
+          id="completar-voucher"
+          value={form.voucher}
+          onChange={set("voucher")}
+          placeholder={t("placeholderVoucher")}
+          className={campo}
+        />
       </div>
 
       <p className="flex items-start gap-1.5 rounded-sm bg-white/5 p-3 text-body-sm text-white/80">

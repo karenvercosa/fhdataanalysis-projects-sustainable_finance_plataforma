@@ -10,11 +10,11 @@ export function RoleGuard({
   capability,
   children,
   redirectTo = "/conteudos"
-}: {
+}: Readonly<{
   capability: Capability;
   children: React.ReactNode;
   redirectTo?: string;
-}) {
+}>) {
   const { can } = useAuth();
   if (!can(capability)) return <Navigate to={redirectTo} replace />;
   return <>{children}</>;

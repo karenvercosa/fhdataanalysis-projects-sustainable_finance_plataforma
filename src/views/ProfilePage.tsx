@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, UserCircle, CheckCircle2, Award, Camera, Trash2, Link2, Sparkles, ImageIcon, Linkedin, Phone, Mail, Lock } from "lucide-react";
+import { AlertCircle, UserCircle, CheckCircle2, Award, Camera, Trash2, Link2, Sparkles, ImageIcon, Phone, Mail, Lock } from "lucide-react";
+import { LinkedinIcon } from "@/components/icons/LinkedinIcon";
 import { useAuth } from "@/context/AuthContext";
 import { useInterests } from "@/context/InterestsContext";
 import { useTierMatrix } from "@/context/TierMatrixContext";
@@ -14,7 +15,7 @@ import { ROLE_LABEL } from "@/lib/roles";
 import { api } from "@/lib/admin-api";
 import { type PerfilPublico } from "@/types";
 import { BRAND_KEY, BRAND_SEED, type BrandContent } from "@/data/brandContent";
-import { cn } from "@/lib/utils";
+import { alternarNaLista, cn } from "@/lib/utils";
 
 /**
  * Perfil vazio, usado enquanto a resposta do servidor não chega.
@@ -40,7 +41,7 @@ const PERFIL_VAZIO: PerfilPublico = {
  * Recurso não incluído na cota do patrocinador. Em vez de sumir da tela, fica
  * visível e explicado — e aponta a cota que o libera (caminho de upgrade).
  */
-function LockedFeature({ title, desc, tier }: { title: string; desc: string; tier?: string }) {
+function LockedFeature({ title, desc, tier }: Readonly<{ title: string; desc: string; tier?: string }>) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-neutral-300 bg-neutral-50 px-4 py-3">
       <Lock className="h-4 w-4 shrink-0 text-neutral-400" />
@@ -55,6 +56,12 @@ function LockedFeature({ title, desc, tier }: { title: string; desc: string; tie
       </Link>
     </div>
   );
+}
+
+/** Subtítulo do cabeçalho conforme o tipo de perfil (era ternário aninhado). */
+function subtituloDoPerfil(isSpeaker: boolean, isPublic: boolean): string {
+  if (isSpeaker) return "Bio, foto e selo de autoridade";
+  return isPublic ? "Bio e foto exibidas em Conexões" : "Seus dados básicos";
 }
 
 export default function ProfilePage() {
@@ -104,19 +111,22 @@ export default function ProfilePage() {
   // O vínculo é gravado por ID: renomear um tema no Admin não desfaz a escolha
   // de ninguém, e o relatório continua somando o mesmo interesse.
   const toggleInterest = (id: string) =>
-    setForm((f) => ({
-      ...f,
-      interesseIds: f.interesseIds.includes(id)
-        ? f.interesseIds.filter((i) => i !== id)
-        : [...f.interesseIds, id]
-    }));
+    setForm((f) => ({ ...f, interesseIds: alternarNaLista(f.interesseIds, id) }));
+
+  // `readAsDataURL` sempre devolve string, mas o tipo de `result` inclui
+  // ArrayBuffer e null — sem o typeof, o `String()` gravaria o literal
+  // "[object ArrayBuffer]" no campo (SonarQube S6551).
+  const aplicarImagem = (key: "foto" | "capa", resultado: FileReader["result"]) => {
+    if (typeof resultado !== "string") return;
+    setForm((f) => ({ ...f, [key]: resultado }));
+  };
 
   // Lê um arquivo de imagem para data URL e grava no campo indicado (foto/capa).
   const onImage = (key: "foto" | "capa") => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, [key]: String(reader.result) }));
+    reader.onload = () => aplicarImagem(key, reader.result);
     reader.readAsDataURL(file);
   };
   const onPhoto = onImage("foto");
@@ -141,7 +151,7 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader
         title={isPublic ? "Meu Perfil Público" : "Meu perfil"}
-        subtitle={isSpeaker ? "Bio, foto e selo de autoridade" : isPublic ? "Bio e foto exibidas em Conexões" : "Seus dados básicos"}
+        subtitle={subtituloDoPerfil(isSpeaker, isPublic)}
         icon={UserCircle}
       />
 
@@ -267,8 +277,9 @@ export default function ProfilePage() {
         <CardBody className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Cargo</label>
+              <label htmlFor="perfil-cargo" className="block text-h5 text-neutral-900">Cargo</label>
               <input
+                id="perfil-cargo"
                 value={form.cargo}
                 onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
                 placeholder="Ex.: Head de ESG"
@@ -276,8 +287,9 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Empresa</label>
+              <label htmlFor="perfil-empresa" className="block text-h5 text-neutral-900">Empresa</label>
               <input
+                id="perfil-empresa"
                 value={form.empresa}
                 onChange={(e) => setForm((f) => ({ ...f, empresa: e.target.value }))}
                 placeholder="Ex.: FundCo"
@@ -288,8 +300,9 @@ export default function ProfilePage() {
           {/* Campo "Sobre" — liberado (ou não) pela cota */}
           {feats.about ? (
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Sobre</label>
+              <label htmlFor="perfil-sobre" className="block text-h5 text-neutral-900">Sobre</label>
               <textarea
+                id="perfil-sobre"
                 value={form.bio}
                 onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
                 rows={4}
@@ -319,7 +332,7 @@ export default function ProfilePage() {
           <CardBody className="grid gap-3 sm:grid-cols-2">
             {feats.showLinkedin ? (
               <div className="space-y-1.5">
-                <label className="inline-flex items-center gap-1.5 text-h5 text-neutral-900"><Linkedin className="h-4 w-4 text-primary-600" /> LinkedIn</label>
+                <label className="inline-flex items-center gap-1.5 text-h5 text-neutral-900"><LinkedinIcon className="h-4 w-4 text-primary-600" /> LinkedIn</label>
                 <input
                   value={form.linkedin ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, linkedin: e.target.value }))}

@@ -388,8 +388,7 @@ export default function RegisterPage() {
                     {t("termos2")}{" "}
                     <button type="button" onClick={() => setLegalDoc("privacidade")} className="font-medium underline hover:text-white">
                       {t("privacidadeLink")}
-                    </button>
-                    .
+                    </button>.
                   </>
                 }
               />

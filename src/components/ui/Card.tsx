@@ -19,10 +19,10 @@ export function Card({
   );
 }
 
-export function CardHeader({ children, className }: React.HTMLAttributes<HTMLDivElement>) {
+export function CardHeader({ children, className }: Readonly<React.HTMLAttributes<HTMLDivElement>>) {
   return <div className={cn("p-4 border-b border-neutral-100", className)}>{children}</div>;
 }
 
-export function CardBody({ children, className }: React.HTMLAttributes<HTMLDivElement>) {
+export function CardBody({ children, className }: Readonly<React.HTMLAttributes<HTMLDivElement>>) {
   return <div className={cn("p-4", className)}>{children}</div>;
 }

@@ -29,6 +29,20 @@ const QUICK = [
   { to: "/networking", label: "Networking & Conexões", desc: "Participantes e empresas do evento", icon: Handshake, premium: true }
 ];
 
+/** Tipo exibido no card "Eu vou" — deriva do papel (era ternário aninhado). */
+function tipoDoParticipante(role: string): TipoParticipante {
+  if (role === "speaker") return "Palestrante";
+  return role === "curator" ? "Patrocinador" : "Premium";
+}
+
+/** Chamada do cabeçalho conforme o que a pessoa ainda pode adquirir. */
+function chamadaDoCabecalho(isGratuito: boolean, canBuy: boolean): string {
+  if (isGratuito)
+    return "Você está no Plano Gratuito. Aproveite o 'ao vivo'. Para networking, downloads e acesso presencial, explore as opções abaixo.";
+  if (canBuy) return "Adquira o ingresso Online e tenha acesso ilimitado à plataforma.";
+  return "Bem-vindo(a) ao Sustainable Finance 2026.";
+}
+
 export default function HomePage() {
   const { user, can } = useAuth();
   const canBuy = can("purchase:ticket");
@@ -40,8 +54,7 @@ export default function HomePage() {
   const podeDivulgar = !isGratuito;
   // Card "Eu vou": o tipo exibido vem do papel; curador/patrocinador viram
   // "Patrocinador" e os demais participantes, "Premium".
-  const tipoParticipante: TipoParticipante =
-    user.role === "speaker" ? "Palestrante" : user.role === "curator" ? "Patrocinador" : "Premium";
+  const tipoParticipante = tipoDoParticipante(user.role);
   // Cargo · empresa do próprio cadastro; sem isso, cai no rótulo do papel.
   const cargoEmpresa =
     [user.cargo, user.empresaNome].filter(Boolean).join(" · ") || ROLE_LABEL[user.role];
@@ -54,9 +67,8 @@ export default function HomePage() {
       {/* Voucher aguardando o curador — primeira coisa da tela, porque explica
           por que a conta ainda está no Plano Gratuito. */}
       {user.voucherPendente && (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-md border border-warning-500/40 bg-warning-50 px-4 py-3"
+        <output
+          className="flex w-full items-start gap-3 rounded-md border border-warning-500/40 bg-warning-50 px-4 py-3"
         >
           <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-warning-500" />
           <div className="min-w-0">
@@ -70,7 +82,7 @@ export default function HomePage() {
               Gratuito.
             </p>
           </div>
-        </div>
+        </output>
       )}
 
       {/* Boas-vindas — compacto e discreto (menos destaque que o banner) */}
@@ -80,11 +92,7 @@ export default function HomePage() {
             <p className="text-body-sm text-neutral-500">04 de Setembro, 2026 · Goiânia</p>
             <h1 className="text-h3 text-neutral-900">Olá, {user.name.split(" ")[0]}</h1>
             <p className="text-body-sm text-neutral-600">
-              {isGratuito
-                ? "Você está no Plano Gratuito. Aproveite o 'ao vivo'. Para networking, downloads e acesso presencial, explore as opções abaixo."
-                : canBuy
-                ? "Adquira o ingresso Online e tenha acesso ilimitado à plataforma."
-                : "Bem-vindo(a) ao Sustainable Finance 2026."}
+              {chamadaDoCabecalho(isGratuito, canBuy)}
             </p>
           </div>
           {canBuy && (
@@ -179,7 +187,7 @@ export default function HomePage() {
       </div>
 
       {/* Captação comercial — só faz sentido para quem ainda não é parceiro */}
-      {isGratuito && <PartnershipBanners nome={user.name} email={user.email} />}
+      {isGratuito && <PartnershipBanners nome={user.name} />}
 
       {/* Card "Eu vou" — divulgação da presença. Exclusivo de quem tem ingresso. */}
       {podeDivulgar && (

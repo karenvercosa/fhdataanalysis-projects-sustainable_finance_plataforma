@@ -192,8 +192,8 @@ export default function SessionsAdmin() {
             onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Trilha</label>
-              <select value={form.track} onChange={(e) => setForm((f) => ({ ...f, track: e.target.value as Session["track"] }))}
+              <label htmlFor="sessao-trilha" className="block text-h5 text-neutral-900">Trilha</label>
+              <select id="sessao-trilha" value={form.track} onChange={(e) => setForm((f) => ({ ...f, track: e.target.value as Session["track"] }))}
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-body text-neutral-900">
                 {TRACKS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -211,8 +211,8 @@ export default function SessionsAdmin() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Palestrante</label>
-              <input list="speakers-list" value={form.speaker}
+              <label htmlFor="sessao-palestrante" className="block text-h5 text-neutral-900">Palestrante</label>
+              <input id="sessao-palestrante" list="speakers-list" value={form.speaker}
                 onChange={(e) => setForm((f) => ({ ...f, speaker: e.target.value }))}
                 placeholder="Vincule um palestrante"
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
@@ -221,8 +221,8 @@ export default function SessionsAdmin() {
               </datalist>
             </div>
             <div className="space-y-1.5">
-              <label className="block text-h5 text-neutral-900">Empresa relacionada</label>
-              <input list="companies-list" value={form.company ?? ""}
+              <label htmlFor="sessao-empresa" className="block text-h5 text-neutral-900">Empresa relacionada</label>
+              <input id="sessao-empresa" list="companies-list" value={form.company ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                 placeholder="Vincule uma empresa"
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
@@ -232,8 +232,8 @@ export default function SessionsAdmin() {
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="block text-h5 text-neutral-900">Sobre</label>
-            <textarea value={form.description ?? ""}
+            <label htmlFor="sessao-sobre" className="block text-h5 text-neutral-900">Sobre</label>
+            <textarea id="sessao-sobre" value={form.description ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               rows={3} placeholder="Descreva sobre o que é a sessão…"
               className="w-full rounded-md border border-neutral-200 bg-white px-4 py-2.5 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />

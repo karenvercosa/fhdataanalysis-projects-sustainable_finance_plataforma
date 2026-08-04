@@ -68,6 +68,17 @@ export function statusOf(session: { start: string; end: string }, now: number): 
  *
  * Atualiza a cada 30s para o "há quanto tempo começou" não ficar velho.
  */
+/**
+ * Fase do evento no momento. Era uma cadeia de três ternários aninhados
+ * (SonarQube S3358); em early-returns a ordem de precedência fica explícita:
+ * sessão no ar vence tudo, depois "ainda não começou", depois intervalo.
+ */
+function faseDoEvento(temSessaoNoAr: boolean, antesDoInicio: boolean, temProxima: boolean): EventPhase {
+  if (temSessaoNoAr) return "live";
+  if (antesDoInicio) return "before";
+  return temProxima ? "break" : "after";
+}
+
 export function useEventNow(): EventNow {
   const { sessions } = useSessions();
   const now = useNowMinutes();
@@ -80,13 +91,7 @@ export function useEventNow(): EventNow {
   const current = sorted.filter((s) => toMinutes(s.start) <= now && now < toMinutes(s.end));
   const next = sorted.find((s) => toMinutes(s.start) > now) ?? null;
 
-  const phase: EventPhase = current.length
-    ? "live"
-    : now < toMinutes(sorted[0].start)
-    ? "before"
-    : next
-    ? "break"
-    : "after";
+  const phase = faseDoEvento(current.length > 0, now < toMinutes(sorted[0].start), next !== null);
 
   return {
     phase,

@@ -64,7 +64,7 @@ export default function OperatorPanel() {
   const exportCsv = () => {
     const head = ["Nome", "Empresa", "E-mail", "CPF", "Código", "Bipou"];
     const rows = list.map((a) => [a.name, a.company, a.email, a.cpf, a.code, a.status === "Credenciado" ? "Sim" : "Não"]);
-    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const esc = (v: string) => `"${v.replaceAll('"', '""')}"`;
     const csv = [head, ...rows].map((r) => r.map(esc).join(",")).join("\r\n");
     downloadBlob("participantes-sustainable-finance.csv", "﻿" + csv, "text/csv;charset=utf-8");
     flash("⬇️ Relatório CSV baixado.");

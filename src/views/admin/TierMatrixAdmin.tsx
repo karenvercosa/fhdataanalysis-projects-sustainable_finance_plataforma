@@ -180,12 +180,11 @@ export default function TierMatrixAdmin() {
 
       {/* Confirmação */}
       {toast && (
-        <div
-          role="status"
+        <output
           className="fixed bottom-20 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-md bg-success-50 px-4 py-3 text-body text-success-500 shadow-pop"
         >
           <CheckCircle2 className="h-5 w-5" /> {toast}
-        </div>
+        </output>
       )}
     </div>
   );

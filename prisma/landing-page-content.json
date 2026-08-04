@@ -1,0 +1,1085 @@
+{
+  "PT": {
+    "EVENT": {
+      "name": "Sustainable Finance 2026",
+      "date": "04 de Setembro, 2026",
+      "time": "08h30 às 21h00",
+      "venue": "Centro Cultural Oscar Niemeyer",
+      "city": "Goiânia · GO · Brasil",
+      "onboardingUrl": "#",
+      "platformReady": false,
+      "salesEmail": "comercial@sustainablefinance.com.br",
+      "whatsapp": "https://wa.me/5562000000000"
+    },
+    "METRICS": [
+      {
+        "value": "+30",
+        "label": "Palestrantes confirmados"
+      },
+      {
+        "value": "+40",
+        "label": "Líderes de mercado"
+      },
+      {
+        "value": "3+",
+        "label": "Trilhas de conteúdo"
+      },
+      {
+        "value": "300",
+        "label": "Vagas presenciais"
+      }
+    ],
+    "PILLARS": [
+      {
+        "icon": "trending",
+        "title": "Acesso a capital verde",
+        "text": "Conecte projetos a fundos, green bonds e investidores que buscam ativos com tese ESG sólida."
+      },
+      {
+        "icon": "layers",
+        "title": "Regras & compliance",
+        "text": "Domine taxonomia, CBAM, crédito de carbono e o que muda na regulação para não ficar para trás."
+      },
+      {
+        "icon": "cpu",
+        "title": "Dados & tecnologia",
+        "text": "MRV, sensoriamento e IA aplicada: as ferramentas que transformam impacto ambiental em métrica auditável."
+      },
+      {
+        "icon": "users",
+        "title": "Networking qualificado",
+        "text": "Encontros com decisores do agro, do mercado financeiro e do setor público num só lugar."
+      }
+    ],
+    "TRILHAS": [
+      {
+        "n": 1,
+        "title": "Mercado de Capitais & Regulação",
+        "topics": [
+          {
+            "title": "Finanças Sustentáveis & Mercado de Capitais",
+            "text": "Blended Finance, fundos temáticos, Bonds (Verdes/Sociais). Estruturas de funding e papel institucional na transição."
+          },
+          {
+            "title": "Europa ↔ Brasil: EUDR e Comércio Sustentável",
+            "text": "Implementação prática da EUDR (Regulação de Desmatamento da UE), rastreabilidade compulsória, compliance para exportadores e novas regras do Acordo Mercosul-UE."
+          },
+          {
+            "title": "Governança, Regulação & Política Pública",
+            "text": "Marcos regulatórios globais (ISSB, CVM), taxonomia verde brasileira, segurança jurídica para investimentos de longo prazo e integração público-privada em nível estadual."
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Inovação, Inteligência de Dados & Gestão de Riscos",
+        "topics": [
+          {
+            "title": "Adaptação Climática, Resiliência & Seguros",
+            "text": "Gestão de riscos extremos, Seguros Paramétricos e proteção da produtividade regional."
+          },
+          {
+            "title": "IA, Dados ESG & Transparência Digital",
+            "text": "IA aplicada ao reporting, blockchain para rastreabilidade e combate ao greenwashing."
+          },
+          {
+            "title": "Inovação, Startups & Universidades para o Mundo",
+            "text": "Vitrine do Hacka Impact, Climate Techs e conexão com fundos de Venture Capital globais."
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "title": "Descarbonização, Indústria Circular & Infraestrutura",
+        "topics": [
+          {
+            "title": "Cadeias de produção sustentáveis e descarbonização",
+            "text": "Mercado de carbono, Escopo 3, logística e energia. Metodologias de MRV e integridade."
+          },
+          {
+            "title": "Finanças Circulares e Gestão de Resíduos",
+            "text": "Reúso de recursos, crédito para logística reversa e economia circular como diferencial."
+          },
+          {
+            "title": "Indústria e Mineração Sustentável no Cerrado",
+            "text": "ESG na mineração e indústria: recuperação de áreas, uso de água e descarbonização."
+          },
+          {
+            "title": "Cidades Inteligentes (Smart Cities)",
+            "text": "Infraestrutura urbana sustentável, mobilidade e eficiência energética."
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "title": "Agro 5.0, Bioeconomia & Ativos de Natureza",
+        "topics": [
+          {
+            "title": "Financiamento da Transição e a Nova Economia do Campo",
+            "text": "Migração do crédito rural para Fiagros/CRAs. PSA e monetização da fazenda sustentável."
+          },
+          {
+            "title": "Bioeconomia do Cerrado & Ativos de Natureza",
+            "text": "Créditos de biodiversidade, biotecnologia aplicada e novos modelos baseados na conservação."
+          }
+        ]
+      }
+    ],
+    "SPEAKERS": [
+      {
+        "name": "Zhu Min",
+        "role": "Ex-Vice-Diretor Geral do FMI · Especialista em China e economia global",
+        "featured": true
+      },
+      {
+        "name": "Ilan Goldfajn",
+        "role": "Presidente do Banco Interamericano de Desenvolvimento (BID)",
+        "featured": true
+      },
+      {
+        "name": "Ronaldo Caiado",
+        "role": "Governador de Goiás",
+        "featured": true
+      },
+      {
+        "name": "Roberto Campos Neto",
+        "role": "Ex-Ministro · VP do Conselho de Administração e Chefe Global de Políticas Públicas do Nubank",
+        "featured": true
+      },
+      {
+        "name": "Mathias Cormann",
+        "role": "Secretário-Geral da OCDE",
+        "featured": false
+      },
+      {
+        "name": "Christiana Figueres",
+        "role": "Ex-Secretária Executiva da UNFCCC · Arquiteta do Acordo de Paris",
+        "featured": false
+      },
+      {
+        "name": "Roberto Rodrigues",
+        "role": "Ex-Ministro · Coordenador da FGV-EESP · Embaixador da FAO para o Cooperativismo",
+        "featured": false
+      },
+      {
+        "name": "Alexandre Baldy",
+        "role": "Ex-Ministro, político e empresário",
+        "featured": false
+      }
+    ],
+    "AUDIENCE": [
+      {
+        "icon": "briefcase",
+        "title": "Executivos e tomadores de decisão (C-Level)",
+        "text": "De grandes corporações e instituições financeiras."
+      },
+      {
+        "icon": "coins",
+        "title": "Investidores e fundos de Venture Capital",
+        "text": "Buscando oportunidades alinhadas a impacto e sustentabilidade."
+      },
+      {
+        "icon": "rocket",
+        "title": "Startups e empresas de tecnologia",
+        "text": "Trazendo inovação para o setor financeiro e corporativo."
+      },
+      {
+        "icon": "sprout",
+        "title": "Produtores rurais",
+        "text": "Interessados em novas formas de financiamento, participantes de programas ou que receberão reconhecimentos."
+      },
+      {
+        "icon": "bank",
+        "title": "Organizações governamentais e reguladores",
+        "text": "Essenciais para a criação de políticas e incentivos para o crescimento do setor."
+      },
+      {
+        "icon": "handshake",
+        "title": "ONGs e entidades do terceiro setor",
+        "text": "Com papel fundamental na conexão entre capital e impacto social."
+      }
+    ],
+    "CONSOLIDATION": {
+      "eyebrow": "2ª edição",
+      "title": "Consolidação do SFS como o mais importante evento sobre Finanças Sustentáveis do Centro-Oeste.",
+      "bullets": [
+        "Diversificação das trilhas de conteúdo",
+        "Ampliação das experiências",
+        "Novos keynote speakers",
+        "Módulo internacional"
+      ],
+      "highlights": [
+        "Palestras inspiradoras",
+        "Debates enriquecedores",
+        "Networking"
+      ],
+      "value": [
+        "Amplie seu networking e gere negócios conectando-se a um público altamente qualificado.",
+        "Aprenda, inspire-se e gere valor.",
+        "Viva a segunda edição do mais importante evento do setor no Centro-Oeste."
+      ]
+    },
+    "HOST": {
+      "name": "Vanessa Cochi",
+      "role": "Jornalista, apresentadora e mestre de cerimônias",
+      "bio": "O evento será conduzido pela jornalista, apresentadora e mestre de cerimônias Vanessa Cochi, que traz ampla experiência em eventos importantes, aliando a experiência nas mídias tradicionais à agilidade dos novos meios de comunicação."
+    },
+    "SUPPORT": [
+      {
+        "icon": "building",
+        "title": "Capital do Centro-Oeste",
+        "text": "Vivencie a capital do Centro-Oeste brasileiro, região do país com as maiores perspectivas econômico-financeiras."
+      },
+      {
+        "icon": "handshake",
+        "title": "Networking & novos negócios",
+        "text": "Ambiente desenhado estrategicamente para networking e geração de novos negócios."
+      },
+      {
+        "icon": "trending",
+        "title": "Alcance nacional",
+        "text": "O evento conta com parceiros de mídia que dão dimensão nacional à programação."
+      },
+      {
+        "icon": "layers",
+        "title": "Conhecimento",
+        "text": "Participe de uma agenda emergencial e multissetorial."
+      }
+    ],
+    "SPONSORS": [
+      "VerdeCapital",
+      "Banco Cerrado",
+      "CarbonIQ",
+      "AgroData",
+      "Atlântica Asset",
+      "EcoMercado"
+    ],
+    "PATHS": [
+      {
+        "key": "membro",
+        "icon": "users",
+        "name": "Plano Gratuito",
+        "price": "Acesso gratuito",
+        "badge": "Comece por aqui",
+        "description": "Cadastro imediato na plataforma. Dá acesso às transmissões ao vivo (streaming) no dia do evento.",
+        "note": "Já tem um voucher corporativo de um parceiro? Você o valida dentro da plataforma para ter acesso ilimitado à plataforma e acesso presencial ao evento.",
+        "features": [
+          "Transmissões ao vivo no dia do evento",
+          "Validação de voucher corporativo"
+        ],
+        "cta": "Cadastre-se Gratuitamente",
+        "status": "soon"
+      },
+      {
+        "key": "assinatura",
+        "icon": "layers",
+        "name": "Participante Premium",
+        "price": "Acesso ao Conhecimento",
+        "highlighted": true,
+        "description": "Liberação completa do Hub de Conhecimento, com permissão para baixar relatórios exclusivos, estudos de caso e materiais de mercado.",
+        "features": [
+          "Transmissões ao vivo no dia do evento",
+          "Hub de Conhecimento completo",
+          "Downloads de relatórios e estudos de caso",
+          "Participação em webinars",
+          "PDFs e materiais das palestras"
+        ],
+        "cta": "Assinar Plataforma",
+        "status": "soon"
+      },
+      {
+        "key": "curador",
+        "icon": "handshake",
+        "name": "Patrocinadores e Curadores",
+        "price": "Pessoa Física ou CNPJ",
+        "description": "Para marcas e players estratégicos que querem fechar negócios, posicionar a marca institucional em camadas ou liderar painéis. Cotas e vouchers corporativos são tratados fora da plataforma.",
+        "features": [
+          "Posicionamento institucional em camadas",
+          "Curadoria e liderança de painéis",
+          "Negociação de cotas e vouchers corporativos"
+        ],
+        "cta": "Quero ser Curador / Patrocinador",
+        "status": "contact"
+      }
+    ],
+    "FAQ": [
+      {
+        "q": "O acesso online é gratuito?",
+        "a": "Sim. Com o Plano Gratuito, você entra gratuitamente na plataforma e tem acesso às transmissões ao vivo no dia do evento. A plataforma está em construção — o cadastro será liberado em breve."
+      },
+      {
+        "q": "Como uso o meu voucher corporativo após me cadastrar?",
+        "a": "Se você recebeu um voucher de um parceiro, basta fazer o cadastro gratuito e validar o código dentro da plataforma. Ele libera automaticamente o seu acesso como Participante Geral, sem custo."
+      },
+      {
+        "q": "Como funciona a assinatura de relatórios?",
+        "a": "O Participante Premium (assinatura da plataforma) libera o Hub de Conhecimento completo: downloads de relatórios exclusivos, estudos de caso, participação em webinars e PDFs e materiais das palestras. A contratação será habilitada assim que a plataforma entrar no ar."
+      },
+      {
+        "q": "Quero patrocinar ou ser curador. Como faço?",
+        "a": "Cotas comerciais, patrocínio e vouchers corporativos são tratados fora da plataforma, diretamente com o nosso time. Clique em “Quero ser Curador / Patrocinador” para falar com o comercial e receber as condições."
+      },
+      {
+        "q": "O evento é online ou presencial?",
+        "a": "Os dois. O evento acontece presencialmente no Centro Cultural Oscar Niemeyer, em Goiânia (04/09/2026), e é transmitido ao vivo para os membros da plataforma."
+      }
+    ],
+    "Header": {
+      "sobre": "Sobre",
+      "conteudo": "Conteúdo",
+      "paraQuemE": "Para quem é",
+      "conducao": "Condução",
+      "comoParticipar": "Como participar",
+      "faq": "FAQ",
+      "cadastreSe": "Cadastre-se"
+    },
+    "Hero": {
+      "badge": "2ª edição • Goiânia 2026",
+      "tituloP1": "O maior evento de ",
+      "tituloDestaque": "finanças sustentáveis",
+      "tituloP2": " do Brasil",
+      "descricao": "Onde capital, agronegócio e inovação se encontram para construir a transição verde — com as ferramentas, os dados e as conexões certas para transformar negócios.",
+      "data": "Data",
+      "horario": "Horário",
+      "local": "Local",
+      "btnCadastrar": "Cadastre-se",
+      "btnPatrocinador": "Seja um patrocinador/curador"
+    },
+    "Opportunity": {
+      "badge": "O cenário",
+      "titulo": "Trilhões em capital esperam por ativos verdes — mas faltam dados, padrões e conexões para destravá-los.",
+      "descricao": "A transição verde não é mais uma escolha de pauta ambiental: é a maior realocação de capital da nossa geração. Quem entender as regras agora, lidera. O Sustainable Finance 2026 existe para resolver os gargalos que travam essa virada."
+    },
+    "Programacao": {
+      "badge": "Programação",
+      "titulo": "Trilhas de conteúdo",
+      "descricao": "Quatro trilhas temáticas cobrindo capital, regulação, inovação, descarbonização e bioeconomia. Toque para explorar os painéis de cada uma.",
+      "trilha": "Trilha"
+    },
+    "Speakers": {
+      "badge": "Quem você vai encontrar",
+      "titulo": "Keynote Speakers",
+      "descricao": "Líderes globais da economia, da regulação climática e do mercado financeiro confirmados para o palco principal.",
+      "mostrarMenos": "Mostrar menos",
+      "mostrarTodos": "Visualizar todos os palestrantes"
+    },
+    "Audience": {
+      "badge": "Para quem é",
+      "titulo": "Feito para quem decide a transição verde",
+      "descricao": "Se você toma decisões de capital, risco, regulação ou inovação, este é o evento — e o ingresso — certo para você."
+    },
+    "Host": {
+      "badge": "Condução",
+      "titulo": "Quem conduz o palco principal",
+      "mestreCerimonias": "Mestre de cerimônias"
+    },
+    "Matriz": {
+      "badge": "Como participar",
+      "titulo": "Escolha o seu caminho no ecossistema",
+      "descricao": "Tudo começa entrando na plataforma. Escolha o nível de acesso ideal para você — do gratuito ao estratégico.",
+      "emBreve": "Plataforma em construção, em breve"
+    },
+    "Sponsors": {
+      "titulo": "Apoio institucional & patrocinadores"
+    },
+    "Support": {
+      "badge": "Motivos",
+      "titulo": "Por que participar do",
+      "btnCadastrar": "Cadastre-se"
+    },
+    "Faq": {
+      "badge": "Dúvidas frequentes",
+      "titulo": "Tudo o que você precisa saber para entrar no ecossistema",
+      "ctaTitulo": "Entre no ecossistema do SFS 2026.",
+      "btnCadastrar": "Cadastre-se"
+    },
+    "Footer": {
+      "descricao": "O maior evento de finanças sustentáveis do Brasil. Goiânia, 04 de setembro de 2026.",
+      "colEvento": "Evento",
+      "colInstitucional": "Institucional",
+      "colContato": "Contato",
+      "linkPolitica": "Política de Privacidade",
+      "linkLgpd": "Conformidade LGPD",
+      "direitos": "© 2026 Sustainable Finance. Todos os direitos reservados.",
+      "lgpdTexto": "Tratamos seus dados em conformidade com a LGPD (Lei nº 13.709/2018)."
+    },
+    "SponsorContact": {
+      "titulo": "Seja patrocinador ou curador",
+      "quaseLa": "Quase lá!",
+      "sucessoTexto": "Abrimos seu e-mail com os dados já preenchidos — basta enviar. Se nada abriu, escreva para ",
+      "btnFechar": "Fechar",
+      "nome": "Nome:",
+      "email": "E-mail:",
+      "empresa": "Empresa:",
+      "cargo": "Cargo:",
+      "telefone": "Telefone:",
+      "btnEnviar": "Enviar",
+      "enviando": "Enviando...",
+      "popupEnviado": "E-mail enviado com sucesso!",
+      "sucessoTitulo": "Plataforma disponível em breve",
+      "sucessoDesc": "Recebemos seu interesse! Nossa equipe entrará em contato e a plataforma de usuários será liberada em breve.",
+      "erroEnvio": "Não foi possível enviar. Tente novamente.",
+      "observacao": "Observação:",
+      "observacaoPlaceholder": "Conte o que você procura: cota de patrocínio, curadoria de painel, parceria..."
+    },
+    "RegisterPage": {
+      "titulo": "Crie sua conta",
+      "subtitulo": "Acesso gratuito ao evento e networking",
+      "abaParticipante": "Como Participante",
+      "abaPatrocinador": "Como Patrocinador",
+      "patrocinadorTitulo": "Seja um Patrocinador",
+      "patrocinadorDesc": "Apresente sua marca para líderes em finanças sustentáveis, tenha destaque na plataforma e acesso a recursos exclusivos de networking.",
+      "btnCadastreGratis": "Cadastre-se Gratuitamente",
+      "btnQueroPatrocinar": "Quero ser Patrocinador / Curador",
+      "labelNome": "Nome",
+      "placeholderNome": "Seu nome",
+      "labelSobrenome": "Sobrenome",
+      "placeholderSobrenome": "Seu sobrenome",
+      "labelEmail": "E-mail",
+      "placeholderEmail": "seu@email.com",
+      "erroEmail": "Informe um e-mail válido, contendo @.",
+      "labelCelular": "Celular",
+      "placeholderCelular": "(00) 00000-0000",
+      "segurancaCelular": "Usamos seu celular exclusivamente para confirmação de segurança.",
+      "labelEmpresa": "Empresa",
+      "placeholderEmpresa": "Nome da sua empresa",
+      "labelCargo": "Cargo na empresa",
+      "placeholderCargo": "Ex.: Analista de Sustentabilidade",
+      "labelVoucher": "Voucher",
+      "placeholderVoucher": "Código do seu voucher",
+      "voucherAjuda": "Informe o código de voucher recebido do seu parceiro ou patrocinador.",
+      "avisoSenhaEmail": "Você não precisa criar uma senha: enviaremos uma senha provisória para o e-mail cadastrado, para o seu primeiro acesso à plataforma.",
+      "interessesTitulo": "Seus interesses",
+      "interessesDesc": "Selecione os temas que mais te interessam — usamos para sugestões e networking.",
+      "termos1": "Li e concordo com os",
+      "termosLink": "Termos de Uso",
+      "termos2": "e a",
+      "privacidadeLink": "Política de Privacidade",
+      "marketing": "Aceito receber comunicações sobre o evento e concordo com o compartilhamento do meu perfil corporativo com os patrocinadores oficiais.",
+      "opcional": "(opcional)",
+      "btnCriarConta": "Criar conta e acessar",
+      "btnEnviando": "Enviando...",
+      "erroCadastro": "Não foi possível concluir o cadastro. Tente novamente.",
+      "avisoTermos": "Aceite os Termos de Uso e a Política de Privacidade para continuar.",
+      "ou": "ou",
+      "btnGoogle": "Continuar com Google",
+      "btnVoltar": "Voltar para o site",
+      "sucessoTitulo": "Cadastro realizado com sucesso",
+      "sucessoDesc": "A plataforma será liberada em breve!",
+      "btnVoltarInicio": "Voltar para página inicial",
+      "avisoCamposObrigatorios": "Todos os campos são obrigatórios.",
+      "sucessoSenhaDesc": "Enviamos para {email} uma senha provisória. Use essa senha no seu primeiro acesso à plataforma de usuário.",
+      "sucessoEmailFalhou": "Sua conta foi criada, mas não conseguimos enviar a senha por e-mail. Fale com o nosso suporte para receber o seu acesso.",
+      "erroCelular": "Informe um celular válido para o país selecionado.",
+      "completarTitulo": "Falta pouco!",
+      "completarDesc": "Sua conta pelo Google foi criada. Complete os dados abaixo para concluir o cadastro.",
+      "btnConcluirCadastro": "Concluir cadastro"
+    },
+    "Assinatura": {
+      "titulo": "Assine a Plataforma",
+      "planoNome": "Participante Premium",
+      "planoDesc": "Acesso completo ao Hub de Conhecimento",
+      "valorMensal": "R$ 1.000",
+      "mes": "ano",
+      "metodoTitulo": "Forma de pagamento",
+      "metodoPix": "PIX",
+      "metodoCartao": "Cartão",
+      "metodoBoleto": "Boleto",
+      "cartaoInternacional": "Cartão internacional",
+      "dadosTitulo": "Seus dados para o cadastro",
+      "contaTitulo": "Sua conta",
+      "contaAtiva": "Cadastro ativo — você não precisa se cadastrar de novo.",
+      "placeholderNome": "Nome completo",
+      "placeholderEmail": "seu@email.com",
+      "erroEmail": "Informe um e-mail válido, contendo @.",
+      "placeholderCpf": "000.000.000-00",
+      "erroCpf": "Informe um CPF válido.",
+      "btnProximo": "Próximo",
+      "processando": "Processando...",
+      "pixTitulo": "Pague com PIX",
+      "pixCopiaCola": "PIX copia e cola",
+      "btnCopiar": "Copiar",
+      "btnCopiado": "Copiado!",
+      "copiado": "Copiado!",
+      "pixQr": "Ou escaneie o QR Code",
+      "pixAguardando": "Aguardando a confirmação do pagamento...",
+      "boletoTitulo": "Boleto gerado",
+      "boletoLinha": "Linha digitável",
+      "btnAbrirBoleto": "Abrir boleto (PDF)",
+      "boletoAguardando": "O acesso será liberado após a compensação do boleto.",
+      "cartaoTitulo": "Dados do cartão",
+      "labelTitular": "Nome no cartão",
+      "placeholderTitular": "Como está no cartão",
+      "labelNumero": "Número do cartão",
+      "labelMes": "Mês",
+      "labelAno": "Ano",
+      "labelCvv": "CVV",
+      "labelCpf": "CPF do titular",
+      "labelCep": "CEP",
+      "labelNumeroEndereco": "Número",
+      "btnRealizarPagamento": "Realizar pagamento",
+      "popupSucesso": "Pagamento realizado com sucesso!",
+      "sucessoTitulo": "Plataforma liberada em breve",
+      "sucessoDesc": "Seu pagamento foi confirmado. A plataforma de usuário será liberada em breve!",
+      "btnVoltarInicio": "Voltar para página inicial",
+      "btnVoltar": "Voltar para o site",
+      "erroGenerico": "Não foi possível iniciar a assinatura. Tente novamente.",
+      "erroPagamento": "Não foi possível processar o pagamento. Verifique os dados e tente novamente.",
+      "pagamentoNaoAprovado": "Pagamento não aprovado. Tente outro cartão ou método.",
+      "labelCelular": "Celular",
+      "erroCelular": "Informe um celular válido para o país selecionado.",
+      "metodoCartaoInternacional": "Cartão de crédito internacional",
+      "placeholderEmpresa": "Empresa",
+      "placeholderCargo": "Cargo na empresa",
+      "placeholderVoucher": "Código do voucher",
+      "voucherOpcional": "Voucher (opcional) — informe se recebeu um código de um parceiro.",
+      "avisoSenhaEmail": "Você não precisa criar uma senha: enviaremos uma senha provisória para o e-mail informado, para o seu primeiro acesso à plataforma.",
+      "avisoSenhaNaoEnviada": "Sua conta foi criada, mas não conseguimos enviar a senha por e-mail. Fale com o nosso suporte para receber o seu acesso."
+    },
+    "Metadata": {
+      "title": "Sustainable Finance",
+      "description": "Crie sua conta para acessar o evento"
+    }
+  },
+  "EN": {
+    "EVENT": {
+      "name": "Sustainable Finance 2026",
+      "date": "September 04, 2026",
+      "time": "08:30 AM to 09:00 PM",
+      "venue": "Oscar Niemeyer Cultural Center",
+      "city": "Goiânia · GO · Brazil",
+      "onboardingUrl": "#",
+      "platformReady": false,
+      "salesEmail": "comercial@sustainablefinance.com.br",
+      "whatsapp": "https://wa.me/5562000000000"
+    },
+    "METRICS": [
+      {
+        "value": "+30",
+        "label": "Confirmed Speakers"
+      },
+      {
+        "value": "+40",
+        "label": "Market Leaders"
+      },
+      {
+        "value": "3+",
+        "label": "Content Tracks"
+      },
+      {
+        "value": "300",
+        "label": "On-site Seats"
+      }
+    ],
+    "PILLARS": [
+      {
+        "icon": "trending",
+        "title": "Access to Green Capital",
+        "text": "Connect projects to funds, green bonds, and investors looking for solid ESG thesis assets."
+      },
+      {
+        "icon": "layers",
+        "title": "Rules & Compliance",
+        "text": "Master taxonomy, CBAM, carbon credits and regulatory changes so you don't get left behind."
+      },
+      {
+        "icon": "cpu",
+        "title": "Data & Technology",
+        "text": "MRV, remote sensing and applied AI: the tools that transform environmental impact into auditable metrics."
+      },
+      {
+        "icon": "users",
+        "title": "Qualified Networking",
+        "text": "Meetings with decision-makers from agribusiness, financial markets, and public sector in one place."
+      }
+    ],
+    "TRILHAS": [
+      {
+        "n": 1,
+        "title": "Capital Markets & Regulation",
+        "topics": [
+          {
+            "title": "Sustainable Finance & Capital Markets",
+            "text": "Blended Finance, thematic funds, Green/Social Bonds. Funding structures and institutional role."
+          },
+          {
+            "title": "Europe ↔ Brazil: EUDR and Sustainable Trade",
+            "text": "Practical implementation of EUDR, compulsory traceability, compliance for exporters."
+          },
+          {
+            "title": "Governance, Regulation & Public Policy",
+            "text": "Global regulatory frameworks (ISSB, CVM), Brazilian green taxonomy, legal security."
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Innovation, Data Intelligence & Risk Management",
+        "topics": [
+          {
+            "title": "Climate Adaptation, Resilience & Insurance",
+            "text": "Extreme risk management, Parametric Insurance, and protection of regional productivity."
+          },
+          {
+            "title": "AI, ESG Data & Digital Transparency",
+            "text": "AI applied to reporting, blockchain for traceability and combating greenwashing."
+          },
+          {
+            "title": "Innovation, Startups & Universities for the World",
+            "text": "Showcase of Hacka Impact, Climate Techs and connection with global Venture Capital."
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "title": "Decarbonization, Circular Industry & Infrastructure",
+        "topics": [
+          {
+            "title": "Sustainable supply chains and decarbonization",
+            "text": "Carbon market, Scope 3, logistics and energy. MRV methodologies and integrity."
+          },
+          {
+            "title": "Circular Finance and Waste Management",
+            "text": "Resource reuse, credit for reverse logistics and circular economy as a differential."
+          },
+          {
+            "title": "Sustainable Industry and Mining in the Cerrado",
+            "text": "ESG in mining and industry: area recovery, water use and decarbonization."
+          },
+          {
+            "title": "Smart Cities",
+            "text": "Sustainable urban infrastructure, mobility and energy efficiency."
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "title": "Agro 5.0, Bioeconomy & Nature Assets",
+        "topics": [
+          {
+            "title": "Transition Financing and the New Rural Economy",
+            "text": "Migration of rural credit to Fiagros/CRAs. PES and monetization of the sustainable farm."
+          },
+          {
+            "title": "Cerrado Bioeconomy & Nature Assets",
+            "text": "Biodiversity credits, applied biotechnology and new conservation-based models."
+          }
+        ]
+      }
+    ],
+    "SPEAKERS": [
+      {
+        "name": "Zhu Min",
+        "role": "Ex-Vice-Diretor Geral do FMI · Especialista em China e economia global",
+        "featured": true
+      },
+      {
+        "name": "Ilan Goldfajn",
+        "role": "Presidente do Banco Interamericano de Desenvolvimento (BID)",
+        "featured": true
+      },
+      {
+        "name": "Ronaldo Caiado",
+        "role": "Governador de Goiás",
+        "featured": true
+      },
+      {
+        "name": "Roberto Campos Neto",
+        "role": "Ex-Ministro · VP do Conselho de Administração e Chefe Global de Políticas Públicas do Nubank",
+        "featured": true
+      },
+      {
+        "name": "Mathias Cormann",
+        "role": "Secretário-Geral da OCDE",
+        "featured": false
+      },
+      {
+        "name": "Christiana Figueres",
+        "role": "Ex-Secretária Executiva da UNFCCC · Arquiteta do Acordo de Paris",
+        "featured": false
+      },
+      {
+        "name": "Roberto Rodrigues",
+        "role": "Ex-Ministro · Coordenador da FGV-EESP · Embaixador da FAO para o Cooperativismo",
+        "featured": false
+      },
+      {
+        "name": "Alexandre Baldy",
+        "role": "Ex-Ministro, político e empresário",
+        "featured": false
+      }
+    ],
+    "AUDIENCE": [
+      {
+        "icon": "briefcase",
+        "title": "Executives and Decision Makers (C-Level)",
+        "text": "From large corporations and financial institutions."
+      },
+      {
+        "icon": "coins",
+        "title": "Investors and Venture Capital Funds",
+        "text": "Seeking opportunities aligned with impact and sustainability."
+      },
+      {
+        "icon": "rocket",
+        "title": "Startups and Technology Companies",
+        "text": "Bringing innovation to the financial and corporate sector."
+      },
+      {
+        "icon": "sprout",
+        "title": "Rural Producers",
+        "text": "Interested in new forms of financing, program participants or award recipients."
+      },
+      {
+        "icon": "bank",
+        "title": "Government Organizations and Regulators",
+        "text": "Essential for creating policies and incentives for sector growth."
+      },
+      {
+        "icon": "handshake",
+        "title": "NGOs and Third Sector Entities",
+        "text": "With a fundamental role in connecting capital and social impact."
+      }
+    ],
+    "CONSOLIDATION": {
+      "eyebrow": "2nd edition",
+      "title": "Consolidation of SFS as the most important event on Sustainable Finance in the Midwest.",
+      "bullets": [
+        "Diversification of content tracks",
+        "Expansion of experiences",
+        "New keynote speakers",
+        "International module"
+      ],
+      "highlights": [
+        "Inspiring talks",
+        "Enriching debates",
+        "Networking"
+      ],
+      "value": [
+        "Expand your networking and generate business by connecting with a highly qualified audience.",
+        "Learn, get inspired and create value.",
+        "Experience the second edition of the most important event in the sector in the Midwest."
+      ]
+    },
+    "HOST": {
+      "name": "Vanessa Cochi",
+      "role": "Journalist, Presenter, and Master of Ceremonies",
+      "bio": "The event will be hosted by journalist, presenter, and master of ceremonies Vanessa Cochi, who brings extensive experience in major events."
+    },
+    "SUPPORT": [
+      {
+        "icon": "building",
+        "title": "Capital of the Midwest",
+        "text": "Experience the capital of the Brazilian Midwest, the region of the country with the greatest economic and financial prospects."
+      },
+      {
+        "icon": "handshake",
+        "title": "Networking & New Business",
+        "text": "Environment strategically designed for networking and generation of new business."
+      },
+      {
+        "icon": "trending",
+        "title": "National Reach",
+        "text": "The event has media partners that give a national dimension to the programming."
+      },
+      {
+        "icon": "layers",
+        "title": "Knowledge",
+        "text": "Participate in an emergency and multisectoral agenda."
+      }
+    ],
+    "SPONSORS": [
+      "VerdeCapital",
+      "Banco Cerrado",
+      "CarbonIQ",
+      "AgroData",
+      "Atlântica Asset",
+      "EcoMercado"
+    ],
+    "PATHS": [
+      {
+        "key": "membro",
+        "icon": "users",
+        "name": "Free Plan",
+        "price": "Free Access",
+        "badge": "Start here",
+        "description": "Immediate platform registration. Gives access to live broadcasts (streaming) on the day of the event.",
+        "note": "Already have a corporate voucher from a partner? Validate it inside the platform to get unlimited platform access and on-site event access.",
+        "features": [
+          "Live broadcasts on event day",
+          "Corporate voucher validation"
+        ],
+        "cta": "Register for Free",
+        "status": "soon"
+      },
+      {
+        "key": "assinatura",
+        "icon": "layers",
+        "name": "Premium Participant",
+        "price": "Access to Knowledge",
+        "highlighted": true,
+        "description": "Full unlock of the Knowledge Hub, with permission to download exclusive reports, case studies, and market materials.",
+        "features": [
+          "Live broadcasts on event day",
+          "Full Knowledge Hub",
+          "Downloads of reports and case studies",
+          "Webinar participation",
+          "Lecture PDFs and materials"
+        ],
+        "cta": "Subscribe to Platform",
+        "status": "soon"
+      },
+      {
+        "key": "curador",
+        "icon": "handshake",
+        "name": "Sponsors and Curators",
+        "price": "Individual or Corporate",
+        "description": "For brands and strategic players who want to close deals, position the institutional brand in layers or lead panels.",
+        "features": [
+          "Tiered institutional positioning",
+          "Panel curation and leadership",
+          "Negotiation of quotas and corporate vouchers"
+        ],
+        "cta": "I want to be a Curator / Sponsor",
+        "status": "contact"
+      }
+    ],
+    "FAQ": [
+      {
+        "q": "Is online access free?",
+        "a": "Yes. With the Free Plan, you enter the platform for free and have access to live broadcasts on the day of the event."
+      },
+      {
+        "q": "How do I use my corporate voucher after registering?",
+        "a": "If you received a voucher from a partner, simply register for free and validate the code inside the platform."
+      },
+      {
+        "q": "How does the report subscription work?",
+        "a": "The Premium Participant (platform subscription) unlocks the complete Knowledge Hub."
+      },
+      {
+        "q": "I want to sponsor or be a curator. How do I do it?",
+        "a": "Commercial quotas, sponsorship and corporate vouchers are handled outside the platform, directly with our team."
+      },
+      {
+        "q": "Is the event online or in-person?",
+        "a": "Both. The event takes place in-person in Goiânia and is broadcast live to platform members."
+      }
+    ],
+    "Header": {
+      "sobre": "About",
+      "conteudo": "Content",
+      "paraQuemE": "Who is it for",
+      "conducao": "Host",
+      "comoParticipar": "Participate",
+      "faq": "FAQ",
+      "cadastreSe": "Register"
+    },
+    "Hero": {
+      "badge": "2nd edition • Goiânia 2026",
+      "tituloP1": "The largest ",
+      "tituloDestaque": "sustainable finance",
+      "tituloP2": " event in Brazil",
+      "descricao": "Where capital, agribusiness, and innovation meet to build the green transition — with the right tools, data, and connections to transform business.",
+      "data": "Date",
+      "horario": "Time",
+      "local": "Venue",
+      "btnCadastrar": "Register",
+      "btnPatrocinador": "Become a sponsor"
+    },
+    "Opportunity": {
+      "badge": "The Landscape",
+      "titulo": "Trillions in capital wait for green assets — but data, standards, and connections are missing to unlock them.",
+      "descricao": "The green transition is no longer just an environmental choice: it is the largest capital reallocation of our generation. Those who understand the rules now will lead. Sustainable Finance 2026 exists to solve the bottlenecks holding back this shift."
+    },
+    "Programacao": {
+      "badge": "Schedule",
+      "titulo": "Content Tracks",
+      "descricao": "Four thematic tracks covering capital, regulation, innovation, decarbonization, and bioeconomy. Tap to explore each panel.",
+      "trilha": "Track"
+    },
+    "Speakers": {
+      "badge": "Who you will meet",
+      "titulo": "Keynote Speakers",
+      "descricao": "Global leaders in economics, climate regulation, and financial markets confirmed for the main stage.",
+      "mostrarMenos": "Show less",
+      "mostrarTodos": "View all speakers"
+    },
+    "Audience": {
+      "badge": "Who is it for",
+      "titulo": "Made for green transition decision-makers",
+      "descricao": "If you make decisions on capital, risk, regulation, or innovation, this is the right event — and the right ticket — for you."
+    },
+    "Host": {
+      "badge": "Host",
+      "titulo": "Who hosts the main stage",
+      "mestreCerimonias": "Master of Ceremonies"
+    },
+    "Matriz": {
+      "badge": "How to participate",
+      "titulo": "Choose your path in the ecosystem",
+      "descricao": "It all starts by joining the platform. Choose the ideal access level for you — from free to strategic.",
+      "emBreve": "Platform under construction, coming soon"
+    },
+    "Sponsors": {
+      "titulo": "Institutional support & sponsors"
+    },
+    "Support": {
+      "badge": "Reasons",
+      "titulo": "Why attend",
+      "btnCadastrar": "Register"
+    },
+    "Faq": {
+      "badge": "FAQ",
+      "titulo": "Everything you need to know to join the ecosystem",
+      "ctaTitulo": "Join the SFS 2026 ecosystem.",
+      "btnCadastrar": "Register"
+    },
+    "Footer": {
+      "descricao": "The largest sustainable finance event in Brazil. Goiânia, September 04, 2026.",
+      "colEvento": "Event",
+      "colInstitucional": "Institutional",
+      "colContato": "Contact",
+      "linkPolitica": "Privacy Policy",
+      "linkLgpd": "LGPD Compliance",
+      "direitos": "© 2026 Sustainable Finance. All rights reserved.",
+      "lgpdTexto": "We process your data in compliance with the LGPD (Law No. 13.709/2018)."
+    },
+    "SponsorContact": {
+      "titulo": "Become a sponsor or curator",
+      "quaseLa": "Almost there!",
+      "sucessoTexto": "We opened your email client with your data already filled in — just send it. If nothing opened, write to ",
+      "btnFechar": "Close",
+      "nome": "Name:",
+      "email": "E-mail:",
+      "empresa": "Company:",
+      "cargo": "Job Title:",
+      "telefone": "Phone:",
+      "btnEnviar": "Send",
+      "enviando": "Sending...",
+      "popupEnviado": "E-mail sent successfully!",
+      "sucessoTitulo": "Platform available soon",
+      "sucessoDesc": "We received your interest! Our team will get in touch and the user platform will be available soon.",
+      "erroEnvio": "Could not send. Please try again.",
+      "observacao": "Notes:",
+      "observacaoPlaceholder": "Tell us what you are looking for: sponsorship tier, panel curation, partnership..."
+    },
+    "RegisterPage": {
+      "titulo": "Create your account",
+      "subtitulo": "Free access to the event and networking",
+      "abaParticipante": "As an Attendee",
+      "abaPatrocinador": "As a Sponsor",
+      "patrocinadorTitulo": "Become a Sponsor",
+      "patrocinadorDesc": "Showcase your brand to sustainable finance leaders, be highlighted on the platform, and access exclusive networking features.",
+      "btnCadastreGratis": "Register for Free",
+      "btnQueroPatrocinar": "I want to be a Sponsor / Curator",
+      "labelNome": "First Name",
+      "placeholderNome": "Your first name",
+      "labelSobrenome": "Last Name",
+      "placeholderSobrenome": "Your last name",
+      "labelEmail": "E-mail",
+      "placeholderEmail": "your@email.com",
+      "erroEmail": "Enter a valid e-mail address, including @.",
+      "labelCelular": "Phone",
+      "placeholderCelular": "(00) 00000-0000",
+      "segurancaCelular": "We use your phone exclusively for security confirmation.",
+      "labelEmpresa": "Company",
+      "placeholderEmpresa": "Your company name",
+      "labelCargo": "Job title",
+      "placeholderCargo": "E.g.: Sustainability Analyst",
+      "labelVoucher": "Voucher",
+      "placeholderVoucher": "Your voucher code",
+      "voucherAjuda": "Enter the voucher code you received from your partner or sponsor.",
+      "avisoSenhaEmail": "You don't need to create a password: we'll send a temporary one to your registered e-mail for your first access to the platform.",
+      "interessesTitulo": "Your interests",
+      "interessesDesc": "Select the topics that interest you most — we use them for suggestions and networking.",
+      "termos1": "I have read and agree to the",
+      "termosLink": "Terms of Use",
+      "termos2": "and the",
+      "privacidadeLink": "Privacy Policy",
+      "marketing": "I agree to receive communications about the event and consent to sharing my corporate profile with official sponsors.",
+      "opcional": "(optional)",
+      "btnCriarConta": "Create account and access",
+      "btnEnviando": "Submitting...",
+      "erroCadastro": "We couldn't complete your registration. Please try again.",
+      "avisoTermos": "Accept the Terms of Use and Privacy Policy to continue.",
+      "ou": "or",
+      "btnGoogle": "Continue with Google",
+      "btnVoltar": "Return to website",
+      "sucessoTitulo": "Registration completed successfully",
+      "sucessoDesc": "The platform will be available soon!",
+      "btnVoltarInicio": "Back to home page",
+      "avisoCamposObrigatorios": "All fields are required.",
+      "sucessoSenhaDesc": "We sent a temporary password to {email}. Use it on your first access to the user platform.",
+      "sucessoEmailFalhou": "Your account was created, but we couldn't send the password by e-mail. Please contact our support to receive your access.",
+      "erroCelular": "Enter a valid phone number for the selected country.",
+      "completarTitulo": "Almost there!",
+      "completarDesc": "Your Google account was created. Fill in the details below to finish your registration.",
+      "btnConcluirCadastro": "Finish registration"
+    },
+    "Assinatura": {
+      "titulo": "Subscribe to the Platform",
+      "planoNome": "Premium Attendee",
+      "planoDesc": "Full access to the Knowledge Hub",
+      "valorMensal": "R$ 1,000",
+      "mes": "year",
+      "metodoTitulo": "Payment method",
+      "metodoPix": "PIX",
+      "metodoCartao": "Card",
+      "metodoBoleto": "Boleto",
+      "cartaoInternacional": "International card",
+      "dadosTitulo": "Your registration details",
+      "contaTitulo": "Your account",
+      "contaAtiva": "Active account — no need to register again.",
+      "placeholderNome": "Full name",
+      "placeholderEmail": "your@email.com",
+      "erroEmail": "Enter a valid e-mail address, including @.",
+      "placeholderCpf": "000.000.000-00",
+      "erroCpf": "Enter a valid CPF.",
+      "btnProximo": "Next",
+      "processando": "Processing...",
+      "pixTitulo": "Pay with PIX",
+      "pixCopiaCola": "PIX copy and paste",
+      "btnCopiar": "Copy",
+      "copiado": "Copied!",
+      "pixQr": "Or scan the QR Code",
+      "pixAguardando": "Waiting for payment confirmation...",
+      "boletoTitulo": "Boleto generated",
+      "boletoLinha": "Barcode line",
+      "btnAbrirBoleto": "Open boleto (PDF)",
+      "boletoAguardando": "Access will be granted after the boleto is cleared.",
+      "cartaoTitulo": "Card details",
+      "labelTitular": "Name on card",
+      "placeholderTitular": "As shown on the card",
+      "labelNumero": "Card number",
+      "labelMes": "Month",
+      "labelAno": "Year",
+      "labelCvv": "CVV",
+      "labelCpf": "Holder's CPF",
+      "labelCep": "ZIP code",
+      "labelNumeroEndereco": "Number",
+      "btnRealizarPagamento": "Make payment",
+      "popupSucesso": "Payment completed successfully!",
+      "sucessoTitulo": "Platform available soon",
+      "sucessoDesc": "Your payment has been confirmed. The user platform will be available soon!",
+      "btnVoltarInicio": "Back to home page",
+      "btnVoltar": "Return to website",
+      "erroGenerico": "We couldn't start the subscription. Please try again.",
+      "erroPagamento": "We couldn't process the payment. Check the details and try again.",
+      "pagamentoNaoAprovado": "Payment not approved. Try another card or method.",
+      "labelCelular": "Phone",
+      "erroCelular": "Enter a valid phone number for the selected country.",
+      "metodoCartaoInternacional": "International credit card",
+      "placeholderEmpresa": "Company",
+      "placeholderCargo": "Job title",
+      "placeholderVoucher": "Voucher code",
+      "voucherOpcional": "Voucher (optional) — enter it if you received a code from a partner.",
+      "avisoSenhaEmail": "You don't need to create a password: we'll send a temporary one to the e-mail you provide for your first access to the platform.",
+      "avisoSenhaNaoEnviada": "Your account was created, but we couldn't send the password by e-mail. Please contact our support to receive your access."
+    },
+    "Metadata": {
+      "title": "Sustainable Finance",
+      "description": "Create your account to access the event"
+    }
+  }
+}

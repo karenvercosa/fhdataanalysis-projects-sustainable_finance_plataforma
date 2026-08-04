@@ -12,11 +12,22 @@
 
 export const TAMANHO_MINIMO_SENHA = 8;
 
+/**
+ * As classes usam propriedades Unicode, e não `[a-z]`/`[A-Z]`.
+ *
+ * Com as classes ASCII, `á` não contava como minúscula, `Ç` não contava como
+ * maiúscula — e as duas passavam como "caractere especial". O efeito prático
+ * era perverso num produto em português: `SENHAÇÃO123` seria aceita como se
+ * tivesse símbolo, quando não tem nenhum.
+ *
+ * `\p{Ll}` e `\p{Lu}` cobrem qualquer alfabeto; especial é o que não é letra
+ * nem número.
+ */
 const REGRAS: ReadonlyArray<{ testa: RegExp; falta: string }> = [
-  { testa: /[a-z]/, falta: "uma letra minúscula" },
-  { testa: /[A-Z]/, falta: "uma letra maiúscula" },
-  { testa: /\d/, falta: "um número" },
-  { testa: /[^a-zA-Z0-9]/, falta: "um caractere especial" },
+  { testa: /\p{Ll}/u, falta: "uma letra minúscula" },
+  { testa: /\p{Lu}/u, falta: "uma letra maiúscula" },
+  { testa: /\p{N}/u, falta: "um número" },
+  { testa: /[^\p{L}\p{N}]/u, falta: "um caractere especial" },
 ];
 
 /**
@@ -37,5 +48,5 @@ export function validarSenha(senha: string): string | null {
 /** "a, b e c" — junta a lista do que falta em português. */
 function listar(itens: string[]): string {
   if (itens.length === 1) return itens[0];
-  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+  return `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`;
 }

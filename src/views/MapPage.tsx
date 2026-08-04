@@ -5,7 +5,7 @@ import { useSessions } from "@/context/SessionsContext";
 import { Badge, Card, CardBody } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { PreviewLock } from "@/components/PreviewLock";
-import { TRACK_TONE } from "@/data/mock";
+import { TRACK_TONE, type Session } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 type ZoneType = "palco" | "sala" | "stand" | "servico";
@@ -45,6 +45,39 @@ const TYPE_TONE = { palco: "success", sala: "info", stand: "warning", servico: "
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 3;
 const ZOOM_STEP = 0.5;
+
+/**
+ * Conteúdo do painel do local: a agenda quando é sala, a descrição quando não é.
+ * Era um ternário dentro de outro no JSX (SonarQube S3358).
+ */
+function DetalheDoLocal({
+  ehSala,
+  descricao,
+  sessoes
+}: Readonly<{ ehSala: boolean; descricao?: string; sessoes: Session[] }>) {
+  if (!ehSala) return <p className="text-body text-neutral-600">{descricao}</p>;
+  if (sessoes.length === 0)
+    return <p className="text-body-sm text-neutral-600">Nenhuma sessão programada para este local.</p>;
+  return (
+    <ul className="space-y-2">
+      {sessoes.map((s) => (
+        <li key={s.id} className="rounded-md border border-neutral-100 bg-neutral-50 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1 text-body-sm font-medium text-neutral-700">
+              <Clock className="h-3.5 w-3.5" /> {s.start}–{s.end}
+            </span>
+            <Badge tone={TRACK_TONE[s.track]}>{s.track}</Badge>
+          </div>
+          <p className="mt-1 text-body font-medium text-neutral-900">{s.title}</p>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body-sm text-neutral-600">
+            <span className="inline-flex items-center gap-1"><Mic className="h-3.5 w-3.5" /> {s.speaker}</span>
+            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {s.capacity} vagas</span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function MapPage() {
   const { can } = useAuth();
@@ -169,31 +202,11 @@ export default function MapPage() {
                   </button>
                 </div>
 
-                {selected.room ? (
-                  spotSessions.length > 0 ? (
-                    <ul className="space-y-2">
-                      {spotSessions.map((s) => (
-                        <li key={s.id} className="rounded-md border border-neutral-100 bg-neutral-50 p-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1 text-body-sm font-medium text-neutral-700">
-                              <Clock className="h-3.5 w-3.5" /> {s.start}–{s.end}
-                            </span>
-                            <Badge tone={TRACK_TONE[s.track]}>{s.track}</Badge>
-                          </div>
-                          <p className="mt-1 text-body font-medium text-neutral-900">{s.title}</p>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-body-sm text-neutral-600">
-                            <span className="inline-flex items-center gap-1"><Mic className="h-3.5 w-3.5" /> {s.speaker}</span>
-                            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {s.capacity} vagas</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-body-sm text-neutral-600">Nenhuma sessão programada para este local.</p>
-                  )
-                ) : (
-                  <p className="text-body text-neutral-600">{selected.desc}</p>
-                )}
+                <DetalheDoLocal
+                  ehSala={Boolean(selected.room)}
+                  descricao={selected.desc}
+                  sessoes={spotSessions}
+                />
               </>
             )}
           </CardBody>

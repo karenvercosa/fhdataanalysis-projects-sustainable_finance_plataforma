@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * rota de API refaz a checagem com `exigirCapacidade`.
  */
 export async function GET() {
-  const sessao = await getSessaoServidor(await headers());
+  const sessao = await getSessaoServidor(headers());
 
   if (!sessao) {
     return NextResponse.json({ user: null }, { status: 200 });

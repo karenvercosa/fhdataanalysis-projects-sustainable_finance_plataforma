@@ -12,12 +12,12 @@ export function Avatar({
   src,
   size = "md",
   className
-}: {
+}: Readonly<{
   name: string;
   src?: string;
   size?: Size;
   className?: string;
-}) {
+}>) {
   const initials = name
     .split(" ")
     .map((n) => n[0])

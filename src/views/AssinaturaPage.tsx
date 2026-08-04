@@ -53,6 +53,105 @@ type Etapa = "dados" | "pix" | "cartao" | "boleto" | "sucesso";
  * Em inglês só existe cartão de crédito: PIX e boleto são arranjos bancários
  * brasileiros e não atendem quem paga de fora.
  */
+/**
+ * Polling do PIX/boleto enquanto o Asaas não confirma. Em sandbox o webhook não
+ * chega, então esta é a única confirmação que existe. Fica como hook próprio
+ * para tirar do componente um bloco que sozinho respondia por boa parte da
+ * complexidade cognitiva (SonarQube S3776).
+ */
+function usePollingDeConfirmacao(etapa: Etapa, paymentId: string | null, aoConfirmar: () => void) {
+  const confirmarRef = useRef(aoConfirmar);
+  confirmarRef.current = aoConfirmar;
+
+  useEffect(() => {
+    if ((etapa !== "pix" && etapa !== "boleto") || !paymentId) return;
+
+    let ativo = true;
+    const id = window.setInterval(async () => {
+      try {
+        const { pago } = await api.get<{ pago: boolean }>(
+          `/api/assinatura/status?paymentId=${paymentId}`,
+        );
+        if (ativo && pago) {
+          window.clearInterval(id);
+          confirmarRef.current();
+        }
+      } catch {
+        /* rede instável — tenta de novo no próximo ciclo */
+      }
+    }, 4000);
+
+    return () => {
+      ativo = false;
+      window.clearInterval(id);
+    };
+  }, [etapa, paymentId]);
+}
+
+/**
+ * Passo 1 — escolha do produto. Sai do componente principal porque o `.map`
+ * com um ternário por linha respondia por boa parte da complexidade cognitiva
+ * da página (SonarQube S3776).
+ */
+function PassoProduto({
+  produto,
+  onEscolher,
+  t
+}: Readonly<{
+  produto: ProdutoId;
+  onEscolher: (id: ProdutoId) => void;
+  t: (chave: string) => string;
+}>) {
+  return (
+    <Card>
+      <CardHeader>
+        <p className="text-h4 text-neutral-900">1. {t("produtoTitulo")}</p>
+      </CardHeader>
+      <CardBody>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(["online", "presencial"] as const).map((id) => {
+            const ativo = produto === id;
+            const Icone = id === "online" ? Monitor : MapPin;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onEscolher(id)}
+                aria-pressed={ativo}
+                className={cn(
+                  "rounded-lg border p-4 text-left transition-colors",
+                  ativo
+                    ? "border-primary-500 bg-primary-50"
+                    : "border-neutral-200 hover:border-primary-300",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Icone className="h-5 w-5 text-primary-600" />
+                    <span className="text-h4 text-neutral-900">
+                      {id === "online" ? t("produtoOnlineNome") : t("produtoPresencialNome")}
+                    </span>
+                  </div>
+                  <span className="text-h4 text-neutral-900">
+                    {id === "online" ? t("produtoOnlineValor") : t("produtoPresencialValor")}
+                  </span>
+                </div>
+                <p className="mt-1 inline-flex items-center gap-1 text-body-sm text-neutral-600">
+                  {id === "online" && <InfinityIcon className="h-4 w-4" />}
+                  {id === "online" ? t("produtoOnlineDesc") : t("produtoPresencialDesc")}
+                </p>
+                <p className="mt-1 text-body-sm text-neutral-500">
+                  {id === "online" ? `/${t("produtoOnlinePeriodo")}` : t("produtoPresencialPeriodo")}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 export default function AssinaturaPage() {
   const t = useTranslations("Assinatura");
   const locale = useLocale();
@@ -128,6 +227,21 @@ export default function AssinaturaPage() {
   const setTit = (k: keyof TitularData) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setTitular((tt) => ({ ...tt, [k]: e.target.value }));
 
+  /** Direciona para a etapa do método escolhido, guardando o payload da cobrança. */
+  const aplicarCobranca = (cobranca: CobrancaIniciada) => {
+    if (billing === "PIX") {
+      setPix(cobranca.pix ?? null);
+      setEtapa("pix");
+      return;
+    }
+    if (billing === "BOLETO") {
+      setBoleto(cobranca.boleto ?? null);
+      setEtapa("boleto");
+      return;
+    }
+    setEtapa("cartao");
+  };
+
   /**
    * Confirma o pagamento: popup, recarrega a sessão (o papel virou Premium no
    * servidor) e mostra a tela de sucesso.
@@ -141,33 +255,7 @@ export default function AssinaturaPage() {
     }, 2200);
   }, [recarregarSessao]);
 
-  // Polling do PIX/boleto enquanto o Asaas não confirma. Em sandbox o webhook
-  // não chega, então esta é a única confirmação que existe.
-  const confirmarRef = useRef(confirmarPago);
-  confirmarRef.current = confirmarPago;
-  useEffect(() => {
-    if ((etapa !== "pix" && etapa !== "boleto") || !paymentId) return;
-
-    let ativo = true;
-    const id = window.setInterval(async () => {
-      try {
-        const { pago } = await api.get<{ pago: boolean }>(
-          `/api/assinatura/status?paymentId=${paymentId}`,
-        );
-        if (ativo && pago) {
-          window.clearInterval(id);
-          confirmarRef.current();
-        }
-      } catch {
-        /* rede instável — tenta de novo no próximo ciclo */
-      }
-    }, 4000);
-
-    return () => {
-      ativo = false;
-      window.clearInterval(id);
-    };
-  }, [etapa, paymentId]);
+  usePollingDeConfirmacao(etapa, paymentId, confirmarPago);
 
   const iniciar = async () => {
     if (!dadosValidos || submitting) return;
@@ -186,15 +274,7 @@ export default function AssinaturaPage() {
       });
 
       setPaymentId(cobranca.paymentId);
-      if (billing === "PIX") {
-        setPix(cobranca.pix ?? null);
-        setEtapa("pix");
-      } else if (billing === "BOLETO") {
-        setBoleto(cobranca.boleto ?? null);
-        setEtapa("boleto");
-      } else {
-        setEtapa("cartao");
-      }
+      aplicarCobranca(cobranca);
     } catch (err: any) {
       setErrorMsg(err?.message ?? t("erroGenerico"));
     } finally {
@@ -333,53 +413,7 @@ export default function AssinaturaPage() {
     <Wrapper showPopup={popup} popupText={popupText}>
       <PageHeader title={t("titulo")} subtitle={t("produtoTitulo")} icon={Ticket} />
 
-      {/* Passo 1 — Produto */}
-      <Card>
-        <CardHeader>
-          <p className="text-h4 text-neutral-900">1. {t("produtoTitulo")}</p>
-        </CardHeader>
-        <CardBody>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(["online", "presencial"] as const).map((id) => {
-              const ativo = produto === id;
-              const Icone = id === "online" ? Monitor : MapPin;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setProduto(id)}
-                  aria-pressed={ativo}
-                  className={cn(
-                    "rounded-lg border p-4 text-left transition-colors",
-                    ativo
-                      ? "border-primary-500 bg-primary-50"
-                      : "border-neutral-200 hover:border-primary-300",
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Icone className="h-5 w-5 text-primary-600" />
-                      <span className="text-h4 text-neutral-900">
-                        {id === "online" ? t("produtoOnlineNome") : t("produtoPresencialNome")}
-                      </span>
-                    </div>
-                    <span className="text-h4 text-neutral-900">
-                      {id === "online" ? t("produtoOnlineValor") : t("produtoPresencialValor")}
-                    </span>
-                  </div>
-                  <p className="mt-1 inline-flex items-center gap-1 text-body-sm text-neutral-600">
-                    {id === "online" && <InfinityIcon className="h-4 w-4" />}
-                    {id === "online" ? t("produtoOnlineDesc") : t("produtoPresencialDesc")}
-                  </p>
-                  <p className="mt-1 text-body-sm text-neutral-500">
-                    {id === "online" ? `/${t("produtoOnlinePeriodo")}` : t("produtoPresencialPeriodo")}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
+      <PassoProduto produto={produto} onEscolher={setProduto} t={t} />
 
       {/* Passo 2 — Forma de pagamento */}
       <Card>
