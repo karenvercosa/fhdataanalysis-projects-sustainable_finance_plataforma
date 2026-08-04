@@ -9,17 +9,19 @@ export const dynamic = "force-dynamic";
 /**
  * Catálogo de interesses.
  *
- * A leitura é aberta a qualquer pessoa autenticada — a nuvem de temas aparece
- * no cadastro e no perfil de todo mundo. Criar e remover exige
- * `manage:platform`, porque o catálogo é curadoria da organização.
+ * A leitura é PÚBLICA: a nuvem de temas aparece no formulário de cadastro, que
+ * por definição é usado por quem ainda não tem conta. Exigir sessão aqui fazia
+ * a tela pública receber 401 sem ter como resolver. Não há nada sensível — são
+ * os temas do evento, os mesmos que a landing page divulga.
+ *
+ * Criar e remover continuam exigindo `manage:platform`: o catálogo é curadoria
+ * da organização.
  *
  * Mora no banco (e não mais no `localStorage`) para que a escolha de cada
  * pessoa, em `usuario_interesse`, possa ser cruzada em relatórios depois.
  */
-export async function GET(req: Request) {
+export async function GET() {
   return rotaAdmin("api/interesses GET", async () => {
-    await exigirCapacidade(req.headers);
-
     const interesses = await prisma.interesse.findMany({
       where: { ativo: true },
       orderBy: [{ ordem: "asc" }, { nome: "asc" }],

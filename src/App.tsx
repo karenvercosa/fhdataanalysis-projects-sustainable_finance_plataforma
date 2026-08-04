@@ -13,6 +13,7 @@ import ParticipantDashboard from "@/views/ParticipantDashboard";
 import CredentialPage from "@/views/CredentialPage";
 import CertificatePage from "@/views/CertificatePage";
 import VoucherCheckout from "@/views/VoucherCheckout";
+import AssinaturaPage from "@/views/AssinaturaPage";
 import CuratorDashboard from "@/views/CuratorDashboard";
 import HomePage from "@/views/HomePage";
 import OperatorPanel from "@/views/OperatorPanel";
@@ -71,6 +72,18 @@ function AcquireGuard({ capability, children }: { capability: Parameters<ReturnT
   const { can, user } = useAuth();
   if (can(capability) || user.role === "guest") return <>{children}</>;
   return <Navigate to="/conteudos" replace />;
+}
+
+/**
+ * A aba "Ingressos" tem dois donos.
+ *
+ * Curador/patrocinador não compra acesso: ele PEDE mais convites ao comercial,
+ * e é o `VoucherCheckout` que cuida disso. Todos os outros caem no checkout do
+ * Asaas — assinatura anual ou ingresso presencial.
+ */
+function IngressosPorPapel() {
+  const { user } = useAuth();
+  return user.role === "curator" ? <VoucherCheckout /> : <AssinaturaPage />;
 }
 
 export default function App() {
@@ -142,12 +155,13 @@ export default function App() {
           }
         />
 
-        {/* Ingressos — aba independente do fluxo de compra/voucher */}
+        {/* Ingressos. Curador/patrocinador pede mais convites (VoucherCheckout);
+            os demais compram acesso pelo Asaas. */}
         <Route
           path="/ingressos"
           element={
             <RoleGuard capability="view:public-content">
-              <VoucherCheckout />
+              <IngressosPorPapel />
             </RoleGuard>
           }
         />

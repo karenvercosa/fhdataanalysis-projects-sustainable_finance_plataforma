@@ -9,3 +9,4 @@ export * from "./i18n";
 export * from "./auth";
 export * from "./voucher";
 export * from "./perfil";
+export * from "./assinatura";

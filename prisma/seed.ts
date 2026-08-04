@@ -4,10 +4,16 @@ import { hashPassword } from "better-auth/crypto";
 /**
  * Seed da PLATAFORMA.
  *
- * A landing page e a plataforma compartilham o mesmo banco, e cada seed cuida
- * do que é seu: o da landing page semeia o conteúdo do site
- * (`landing_page_content`), este aqui garante o usuário administrador — sem
- * ele não há como entrar nas telas de gestão depois de um banco novo.
+ * A landing page e a plataforma rodam no MESMO servidor, contra o MESMO banco
+ * e o mesmo Redis. Cada seed cuida da sua parte, sem se atropelar:
+ *
+ *  - a da landing page semeia o conteúdo do site (`landing_page_content`);
+ *  - esta garante o administrador, as cotas de patrocínio e o catálogo de
+ *    interesses — o que a plataforma precisa para abrir funcionando.
+ *
+ * Nenhuma das duas apaga o que é da outra. E todas as escritas daqui são
+ * `upsert` sem `update`: rodar a seed de novo (num deploy, por exemplo) não
+ * desfaz nada que o Admin tenha ajustado pelas telas.
  *
  * A senha é gravada do mesmo jeito que o Better Auth grava no cadastro: hash
  * scrypt na tabela `account` (provider `credential`), espelhado em
@@ -76,10 +82,83 @@ async function semearAdmin() {
   return usuario.id;
 }
 
+/**
+ * Cotas de patrocínio — o que cada uma libera no perfil público.
+ *
+ * A migração já semeia estas linhas, mas a seed as reafirma: um banco criado
+ * por `prisma db push` (que não roda migrações) subiria com a matriz vazia, e
+ * aí nenhum patrocinador teria recurso algum no perfil.
+ */
+const COTAS = [
+  {
+    nome: "Bronze",
+    ordem: 0,
+    recursos: {
+      topBanner: false, about: true, showPhone: false, showEmail: true,
+      showLinkedin: true, materialUpload: false, featuredVideo: false, scheduleMeeting: false,
+    },
+  },
+  {
+    nome: "Prata",
+    ordem: 1,
+    recursos: {
+      topBanner: true, about: true, showPhone: false, showEmail: true,
+      showLinkedin: true, materialUpload: true, featuredVideo: false, scheduleMeeting: true,
+    },
+  },
+  {
+    nome: "Ouro",
+    ordem: 2,
+    recursos: {
+      topBanner: true, about: true, showPhone: true, showEmail: true,
+      showLinkedin: true, materialUpload: true, featuredVideo: true, scheduleMeeting: true,
+    },
+  },
+];
+
+/** Nuvem de temas do cadastro e do perfil, base dos relatórios de audiência. */
+const INTERESSES = [
+  "ESG", "Crédito de carbono", "Green bonds", "Fintech", "Investimento de impacto",
+  "Energia renovável", "Agronegócio sustentável", "Governança", "Regulação",
+  "Net zero", "Biodiversidade", "Economia circular",
+];
+
+async function semearCotas() {
+  for (const cota of COTAS) {
+    await prisma.cotaPlataforma.upsert({
+      where: { nome: cota.nome },
+      create: cota,
+      // Sem `update`: o que o Admin marcou em `/admin/cotas` vale mais que o
+      // padrão, e rodar a seed de novo não pode desfazer o ajuste dele.
+      update: {},
+    });
+  }
+  return COTAS.length;
+}
+
+async function semearInteresses() {
+  for (const [ordem, nome] of INTERESSES.entries()) {
+    await prisma.interesse.upsert({
+      where: { nome },
+      create: { nome, ordem },
+      // Idem: tema removido pelo Admin não volta sozinho, e renomear não é
+      // trabalho da seed.
+      update: {},
+    });
+  }
+  return INTERESSES.length;
+}
+
 async function main() {
   console.log("🔄 Semeando o usuário administrador da plataforma...");
   const id = await semearAdmin();
   console.log(`✅ Admin pronto: ${ADMIN_EMAIL} (id ${id})`);
+
+  const cotas = await semearCotas();
+  console.log(`✅ Cotas de patrocínio prontas: ${cotas}`);
+
+  const interesses = await semearInteresses();
+  console.log(`✅ Catálogo de interesses pronto: ${interesses} temas`);
 }
 
 main()

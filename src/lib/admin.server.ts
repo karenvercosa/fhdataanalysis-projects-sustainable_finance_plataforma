@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import { ErroAutorizacao } from "@/lib/rbac.server";
+import { ErroAsaas } from "@/services/asaas.service";
 
 /**
  * Casca comum das rotas de administração.
@@ -22,7 +23,8 @@ export async function rotaAdmin<T>(
     if (erro instanceof ErroAutorizacao) {
       return NextResponse.json({ error: erro.message }, { status: erro.status });
     }
-    if (erro instanceof ErroDeEntrada) {
+    if (erro instanceof ErroDeEntrada || erro instanceof ErroAsaas) {
+      // Recusa do gateway é dado do formulário, não falha do servidor.
       return NextResponse.json({ error: erro.message }, { status: 400 });
     }
     console.error(`[${contexto}]`, erro);

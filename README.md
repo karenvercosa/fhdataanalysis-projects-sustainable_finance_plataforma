@@ -43,7 +43,12 @@ yarn install
 Crie um arquivo `.env` na raiz do projeto com base nas variáveis abaixo:
 
 ```env
-DATABASE_URL=postgresql://<USUARIO>:<SENHA>@localhost:5432/<BANCO>
+# Runtime da aplicação — role `sf_app`, sujeito ao RLS (não é dono das tabelas)
+DATABASE_URL=postgresql://sf_app:<APP_DB_PASSWORD>@localhost:5432/<BANCO>
+# Migrations, db push e criação do role — dono do banco
+DATABASE_URL_OWNER=postgresql://<USUARIO>:<SENHA>@localhost:5432/<BANCO>
+APP_DB_PASSWORD=<SENHA_DO_ROLE_DA_APLICACAO>
+
 REDIS_URL=redis_url
 POSTGRES_USER=<USUARIO>
 POSTGRES_PASSWORD=<SENHA>
@@ -51,6 +56,12 @@ POSTGRES_DB=<BANCO>
 ```
 
 > As credenciais reais são compartilhadas pela equipe fora do repositório.
+
+**Por que duas conexões?** No Postgres o dono das tabelas ignora as políticas
+de RLS. Enquanto a aplicação conectasse como dono, qualquer política seria
+decorativa. `DATABASE_URL` passa a usar o role `sf_app`, que não é dono e por
+isso é contido pelo RLS; `DATABASE_URL_OWNER` fica só para DDL. Veja
+[Banco de dados e RLS](#banco-de-dados-e-rls).
 
 ---
 
@@ -210,11 +221,79 @@ src/
 │  └─ ui/  Button Input Badge Avatar Card Modal Loader ProgressBar QRCode Charts
 └─ pages/
    ├─ LoginPage · RegisterPage
+   ├─ EsqueciSenhaPage · TrocarSenhaPage · PrimeiroAcessoPage
    ├─ ParticipantDashboard · CredentialPage · VoucherCheckout
    ├─ ProgrammingPage · Networking · ContentHub · ProfilePage
    ├─ CuratorDashboard · OperatorPanel
    └─ admin/  Dashboard · Users · Crud · Sessions · Interests · Reports · Permissions
 ```
+
+---
+
+## Banco de dados e RLS
+
+A aplicação conecta com **dois roles diferentes**, e é essa separação que faz o
+Row Level Security valer alguma coisa:
+
+| Role | Onde é usado | Pode |
+|---|---|---|
+| `sf_app` | runtime (`DATABASE_URL`) | ler/gravar só nas tabelas com política explícita |
+| dono (`sfuser`) | migrations, `db push` (`DATABASE_URL_OWNER`) | DDL, criar políticas, gerenciar roles |
+
+O modelo é **deny by default**: a migração
+`20260803180000_rls_role_de_aplicacao` lista as tabelas da aplicação, e só elas
+recebem `GRANT` e uma política. Tabela nova nasce **inacessível** ao `sf_app`
+até alguém conceder — inclusive `_prisma_migrations`, que a app nunca lê. Todas
+as tabelas usam `FORCE ROW LEVEL SECURITY`, então nem uma conexão que voltasse a
+usar o dono por engano escaparia das políticas.
+
+As políticas são `USING (true)`: a autorização por usuário continua no servidor
+(`exigirCapacidade` / `getSessaoServidor`). O que o RLS entrega aqui é
+**contenção** — uma consulta injetada ou um bug de query não alcançam nada além
+do que foi explicitamente concedido, e não conseguem DDL nem desligar o RLS.
+
+A senha do `sf_app` **não** está na migração (que vai para o Git). Ela é
+aplicada por `yarn db:role`, a partir de `APP_DB_PASSWORD`. Rodar de novo
+reaplica a senha, o que também serve para rotacioná-la.
+
+```bash
+yarn db:up   # generate → migrate → role → push → seed
+```
+
+> **Ao adicionar uma tabela nova:** inclua-a no array de tabelas da migração de
+> RLS (ou crie uma migração nova com o mesmo `GRANT` + `ENABLE/FORCE` +
+> `CREATE POLICY`), senão a aplicação recebe *permission denied* nela.
+
+---
+
+## Autenticação — entrada, senha e sessão
+
+**Toda conta nova nasce no Plano Gratuito.** O perfil `gratuito` é concedido no
+gancho `databaseHooks.user.create` (`src/lib/auth.ts`), que é o único ponto por
+onde passam tanto o cadastro por formulário quanto o login social.
+
+**Primeiro acesso.** O cadastro não pede senha: o servidor gera uma provisória,
+envia por e-mail e grava o hash em `usuario.senha_provisoria_hash`. Enquanto essa
+coluna estiver preenchida, a única tela que abre é `/primeiro-acesso` — o corte é
+feito no Server Component do catch-all, então não há URL que pule a etapa.
+
+**Troca de senha por confirmação de e-mail.** `/primeiro-acesso` e
+`/esqueci-senha` disparam o mesmo e-mail, com um botão que passa por
+`/api/auth/reset-password/:token` e devolve para `/trocar-senha?token=…` com o
+pop-up de e-mail confirmado. Essa rota **só** abre com um token válido: o
+servidor confere na tabela `verification` antes de entregar a página. Gravada a
+senha nova, ela vai para `usuario.senha_hash`, a provisória é apagada, o e-mail é
+marcado como verificado e as sessões antigas caem.
+
+**Login social.** O botão do Google volta para `/api/pos-login`, que decide no
+banco: cadastro incompleto → segunda etapa do cadastro; senha ainda provisória →
+`/primeiro-acesso`; senha definitiva → a home do tipo de conta (Plano Gratuito ou
+assinante).
+
+**Sessão.** "Lembrar de mim" é o `rememberMe` do Better Auth: marcado, o cookie é
+persistente e vale 30 dias; desmarcado, morre ao fechar o navegador. Expirado o
+cookie, é preciso entrar de novo. Quem já tem sessão não acessa `/login` — o
+middleware devolve para `/inicio`.
 
 ---
 

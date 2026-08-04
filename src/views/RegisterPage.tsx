@@ -32,7 +32,12 @@ export default function RegisterPage() {
   const t = useTranslations("RegisterPage");
   const paisPadrao = paisPadraoDoLocale(useLocale());
   const location = useLocation();
-  const { interests } = useInterests();
+  // A nuvem de temas é a única coisa que esta tela pública precisa do
+  // catálogo — o provider não busca sozinho fora do app.
+  const { interests, garantirCarregado } = useInterests();
+  useEffect(() => {
+    garantirCarregado();
+  }, [garantirCarregado]);
 
   const [form, setForm] = useState<DadosCadastro>({
     firstName: "",

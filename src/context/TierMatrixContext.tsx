@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from "react";
 import { api } from "@/lib/admin-api";
+import { useAuth } from "@/context/AuthContext";
 import {
   DEFAULT_TIER_MATRIX,
   UNRESTRICTED,
@@ -38,8 +39,14 @@ const TierMatrixContext = createContext<TierMatrixState | null>(null);
  * O padrão em código (`DEFAULT_TIER_MATRIX`) segue como estado inicial, para a
  * tela ter o que renderizar no primeiro quadro e não piscar sem cotas enquanto
  * a resposta não chega.
+ *
+ * A busca só acontece com sessão: a matriz decide o que aparece no perfil de
+ * quem está dentro do app, e não tem uso nas telas públicas. Sem essa condição
+ * o provider chamava `/api/cotas` já na tela de login, onde a resposta só podia
+ * ser 401.
  */
 export function TierMatrixProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [matrix, setMatrix] = useState<TierMatrix>(DEFAULT_TIER_MATRIX);
   const [carregada, setCarregada] = useState(false);
 
@@ -48,15 +55,15 @@ export function TierMatrixProvider({ children }: { children: ReactNode }) {
       const { matriz } = await api.get<{ matriz: TierMatrix }>("/api/cotas");
       if (matriz.length) setMatrix(matriz);
     } catch {
-      // Sem sessão (login/cadastro) ou rede fora: segue com o padrão em código.
+      // Rede fora: segue com o padrão em código.
     } finally {
       setCarregada(true);
     }
   }, []);
 
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
+    if (isAuthenticated) void carregar();
+  }, [isAuthenticated, carregar]);
 
   const value = useMemo<TierMatrixState>(
     () => ({

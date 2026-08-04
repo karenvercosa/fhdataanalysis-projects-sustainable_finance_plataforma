@@ -1,74 +1,86 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Settings, Users, Ticket, CalendarDays, Building2,
-  ChevronRight, Sparkles, Percent, Handshake, Megaphone, Layers
+  AlertCircle, Settings, Users, Ticket, CalendarDays, Percent,
+  ChevronRight, Sparkles, Handshake, Megaphone, Layers, Hourglass, Star
 } from "lucide-react";
-import { Badge, Card, CardBody, CardHeader, BarChart, type Segment } from "@/components/ui";
+import { Badge, Card, CardBody, CardHeader, Loader, BarChart, type Segment } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
-import { SponsorAdBanner } from "@/components/SponsorAdBanner";
-import { useVouchers } from "@/context/VouchersContext";
-import { SESSIONS } from "@/data/mock";
-import { CURATORS } from "@/data/catalog";
+import { api } from "@/lib/admin-api";
+import { type MetricasAdmin } from "@/types";
 
-const KPIS = [
-  { label: "Inscritos", value: "1.284", icon: Users },
-  { label: "Ingressos emitidos", value: "642", icon: Ticket },
-  { label: "Sessões", value: String(SESSIONS.length), icon: CalendarDays },
-  { label: "Patrocinadores", value: String(CURATORS.length), icon: Building2 }
-];
-
-// Matchmaking: maiores interesses dos participantes (agregado).
-const TOP_INTERESTS: Segment[] = [
-  { label: "ESG", value: 312, tone: "primary" },
-  { label: "Investimento de impacto", value: 268, tone: "success" },
-  { label: "Crédito de carbono", value: 221, tone: "info" },
-  { label: "Fintech", value: 187, tone: "secondary" },
-  { label: "Energia renovável", value: 156, tone: "primary" },
-  { label: "Net zero", value: 98, tone: "neutral" }
-];
-
-// Mascara o documento (CPF/CNPJ) — dado sensível: revela só o início e o fim.
-function maskDocument(doc: string) {
-  const digits = doc.replace(/\D/g, "").length;
-  let i = 0;
-  return doc.replace(/\d/g, (d) => {
-    i += 1;
-    return i <= 3 || i > digits - 2 ? d : "•";
-  });
-}
-
-// Módulos de gestão do painel central.
+/** Módulos de gestão do painel central. */
 const MODULES = [
-  { label: "Gestão de Usuários", desc: "Gerenciar contas, perfis e tags", icon: Users, to: "/admin/usuarios" },
-  { label: "Gestão de Vouchers", desc: "Free / desconto + nº de usos", icon: Percent, to: "/admin/vouchers" },
+  { label: "Gestão de Usuários", desc: "Contas, perfis e selos", icon: Users, to: "/admin/usuarios" },
+  { label: "Gestão de Vouchers", desc: "Convites corporativos e seus donos", icon: Percent, to: "/admin/vouchers" },
   { label: "Programação", desc: "Sessões, trilhas e salas", icon: CalendarDays, to: "/admin/programacao-admin" },
   { label: "Divulgações", desc: "Banner rotativo (Ouro/Prata)", icon: Megaphone, to: "/admin/divulgacoes" },
   { label: "Cotas de patrocínio", desc: "O que cada cota libera no perfil público", icon: Layers, to: "/admin/cotas" },
-  { label: "Interesses", desc: "Nuvem de temas do onboarding", icon: Sparkles, to: "/admin/interesses" }
+  { label: "Interesses", desc: "Nuvem de temas do cadastro e do perfil", icon: Sparkles, to: "/admin/interesses" }
 ];
 
+/** Cores do gráfico, em ciclo — a lista de interesses tem tamanho variável. */
+const TONS: Segment["tone"][] = ["primary", "success", "info", "secondary", "primary", "neutral"];
+
+/**
+ * Painel do Admin.
+ *
+ * Os números vinham escritos no código ("1.284 inscritos", "642 ingressos") e
+ * o gráfico de interesses era uma lista inventada — davam a impressão de uma
+ * plataforma cheia. Agora tudo é contado no banco por `/api/admin/metricas`:
+ * se há 3 contas, o painel mostra 3.
+ *
+ * O top de interesses é a primeira métrica de audiência de verdade, vinda da
+ * tabela `usuario_interesse`.
+ */
 export default function AdminDashboard() {
-  // Métricas por curador derivadas dos vouchers VIVOS (refletem resgates).
-  const { vouchers } = useVouchers();
-  const curatorRows = CURATORS.map((c) => {
-    const owned = vouchers.filter((v) => v.ownerType === "curator" && v.ownerId === c.id);
-    return {
-      ...c,
-      vouchers: owned.length,
-      leads: owned.reduce((acc, v) => acc + v.usedCount, 0)
-    };
-  });
+  const [metricas, setMetricas] = useState<MetricasAdmin | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    try {
+      const { metricas: m } = await api.get<{ metricas: MetricasAdmin }>("/api/admin/metricas");
+      setMetricas(m);
+    } catch (e: any) {
+      setErro(e?.message ?? "Não foi possível carregar as métricas.");
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const kpis = [
+    { label: "Contas cadastradas", value: metricas?.inscritos ?? 0, icon: Users },
+    { label: "Participantes Premium", value: metricas?.premium ?? 0, icon: Star },
+    { label: "Vouchers ativos", value: metricas?.vouchersAtivos ?? 0, icon: Percent },
+    { label: "Assinaturas ativas", value: metricas?.assinaturasAtivas ?? 0, icon: Ticket }
+  ];
+
+  const grafico: Segment[] = (metricas?.topInteresses ?? []).map((i, idx) => ({
+    label: i.nome,
+    value: i.total,
+    tone: TONS[idx % TONS.length]
+  }));
 
   return (
     <div className="space-y-6">
       <PageHeader title="Administração" subtitle="Painel central da plataforma" icon={Settings} />
 
-      {/* Banner rotativo de divulgações dos patrocinadores Ouro/Prata (2:1) */}
-      <SponsorAdBanner />
+      {erro && (
+        <div role="alert" className="flex items-center gap-2 rounded-md bg-error-50 px-4 py-3 text-body text-error-500">
+          <AlertCircle className="h-5 w-5 shrink-0" /> {erro}
+        </div>
+      )}
 
-      {/* KPIs gerais */}
+      {carregando && <Loader label="Carregando métricas…" />}
+
+      {/* KPIs contados no banco */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {KPIS.map(({ label, value, icon: Icon }) => (
+        {kpis.map(({ label, value, icon: Icon }) => (
           <Card key={label}>
             <CardBody className="space-y-1">
               <Icon className="h-5 w-5 text-primary-600" />
@@ -78,6 +90,16 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Resgates de voucher aguardando o curador — só aparece quando existem */}
+      {!!metricas?.resgatesPendentes && (
+        <div className="flex items-center gap-2 rounded-md bg-warning-50 px-4 py-3 text-body text-warning-500">
+          <Hourglass className="h-5 w-5 shrink-0" />
+          {metricas.resgatesPendentes === 1
+            ? "1 resgate de voucher aguarda a liberação do curador."
+            : `${metricas.resgatesPendentes} resgates de voucher aguardam a liberação dos curadores.`}
+        </div>
+      )}
 
       {/* Módulos de gestão */}
       <section className="space-y-3">
@@ -102,53 +124,72 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {/* Matchmaking — maiores interesses dos participantes */}
+      {/* Matchmaking — interesses realmente escolhidos pelos participantes */}
       <Card>
         <CardHeader className="flex items-center gap-2">
           <Handshake className="h-5 w-5 text-primary-600" />
           <div>
             <p className="text-h4 text-neutral-900">Matchmaking — Maiores interesses</p>
-            <p className="text-body-sm text-neutral-600">Mapeie conexões e facilite negócios</p>
+            <p className="text-body-sm text-neutral-600">
+              Temas escolhidos pelos participantes no cadastro e no perfil
+            </p>
           </div>
         </CardHeader>
         <CardBody>
-          <BarChart data={TOP_INTERESTS} />
+          {grafico.length ? (
+            <BarChart data={grafico} />
+          ) : (
+            <p className="text-body-sm text-neutral-600">
+              Ninguém escolheu interesses ainda. Assim que os participantes marcarem os temas, o
+              ranking aparece aqui.
+            </p>
+          )}
         </CardBody>
       </Card>
 
-      {/* Curadores — listagem e controle */}
+      {/* Curadores — vindos da tabela de usuários, com os vouchers deles */}
       <Card>
         <CardHeader>
-          <p className="text-h4 text-neutral-900">Curadores</p>
-          <p className="text-body-sm text-neutral-600">Donos de voucher (PF ou CNPJ)</p>
+          <p className="text-h4 text-neutral-900">Curadores e patrocinadores</p>
+          <p className="text-body-sm text-neutral-600">Donos de voucher na plataforma</p>
         </CardHeader>
         <CardBody className="overflow-x-auto p-0">
           <table className="w-full min-w-[640px] text-left">
             <thead>
               <tr className="border-b border-neutral-100 text-body-sm text-neutral-600">
                 <th className="px-4 py-2 font-medium">Curador</th>
-                <th className="px-4 py-2 font-medium">Tipo</th>
-                <th className="px-4 py-2 font-medium">Documento</th>
+                <th className="px-4 py-2 font-medium">Empresa</th>
                 <th className="px-4 py-2 font-medium">Vouchers</th>
-                <th className="px-4 py-2 font-medium">Leads</th>
+                <th className="px-4 py-2 font-medium">Convites usados</th>
                 <th className="px-4 py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {curatorRows.map((c) => (
+              {(metricas?.curadores ?? []).map((c) => (
                 <tr key={c.id} className="border-b border-neutral-50 text-body">
-                  <td className="px-4 py-3 font-medium text-neutral-900">{c.name}</td>
                   <td className="px-4 py-3">
-                    <Badge tone={c.personType === "CNPJ" ? "info" : "neutral"}>{c.personType}</Badge>
+                    <p className="font-medium text-neutral-900">{c.nome}</p>
+                    <p className="text-body-sm text-neutral-600">{c.email}</p>
                   </td>
-                  <td className="px-4 py-3 font-mono text-body-sm text-neutral-600" title="Documento parcialmente oculto (dado sensível)">{maskDocument(c.document)}</td>
+                  <td className="px-4 py-3 text-neutral-600">
+                    {c.empresa ?? <span className="text-neutral-400">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-neutral-600">{c.vouchers}</td>
-                  <td className="px-4 py-3 text-neutral-600">{c.leads}</td>
+                  <td className="px-4 py-3 text-neutral-600">{c.convitesUsados}</td>
                   <td className="px-4 py-3">
-                    <Badge tone={c.active ? "success" : "neutral"}>{c.active ? "Ativo" : "Inativo"}</Badge>
+                    <Badge tone={c.ativo ? "success" : "neutral"}>
+                      {c.ativo ? "Ativo" : "Inativo"}
+                    </Badge>
                   </td>
                 </tr>
               ))}
+              {!carregando && !metricas?.curadores.length && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-body text-neutral-600">
+                    Nenhum curador cadastrado. Crie um em <strong>Gestão de Usuários</strong>.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </CardBody>

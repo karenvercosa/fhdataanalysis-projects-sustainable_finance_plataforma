@@ -72,3 +72,24 @@ export interface UsuarioAdmin {
   /** Código do voucher resgatado no cadastro, quando houve. */
   voucher: string | null;
 }
+
+/** Números do painel do Admin, todos contados no banco. */
+export interface MetricasAdmin {
+  inscritos: number;
+  premium: number;
+  vouchersAtivos: number;
+  resgatesAprovados: number;
+  resgatesPendentes: number;
+  assinaturasAtivas: number;
+  /** Temas mais escolhidos — a métrica de audiência de `usuario_interesse`. */
+  topInteresses: { nome: string; total: number }[];
+  curadores: {
+    id: string;
+    nome: string;
+    email: string;
+    empresa: string | null;
+    ativo: boolean;
+    vouchers: number;
+    convitesUsados: number;
+  }[];
+}
