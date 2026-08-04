@@ -1,31 +1,40 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { UserCircle, CheckCircle2, Award, Camera, Trash2, Link2, Sparkles, ImageIcon, Linkedin, Phone, Mail, Lock } from "lucide-react";
+import { AlertCircle, UserCircle, CheckCircle2, Award, Camera, Trash2, Link2, Sparkles, ImageIcon, Linkedin, Phone, Mail, Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useInterests } from "@/context/InterestsContext";
 import { useTierMatrix } from "@/context/TierMatrixContext";
 import { usePersistentState } from "@/hooks/usePersistentState";
-import { Badge, Button, Card, CardBody, CardHeader } from "@/components/ui";
+import { Badge, Button, Card, CardBody, CardHeader, Loader } from "@/components/ui";
 import { SealAvatar, SealBadge } from "@/components/Seal";
 import { DeleteAccount } from "@/components/DeleteAccount";
 import { sealForRole } from "@/lib/seals";
 import { PageHeader } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/roles";
+import { api } from "@/lib/admin-api";
+import { type PerfilPublico } from "@/types";
 import { BRAND_KEY, BRAND_SEED, type BrandContent } from "@/data/brandContent";
 import { cn } from "@/lib/utils";
 
-interface Profile {
-  headline: string; // cargo
-  company: string; // empresa
-  bio: string; // "sobre"
-  photo?: string; // data URL da foto de perfil
-  cover?: string; // data URL da foto de capa (banner horizontal do perfil público)
-  linkedin?: string;
-  phone?: string; // contato (celular)
-  email?: string;
-  interests: string[];
-}
-const DEFAULT: Profile = { headline: "", company: "", bio: "", interests: [] };
+/**
+ * Perfil vazio, usado enquanto a resposta do servidor não chega.
+ *
+ * O perfil deixou de morar no `localStorage`: ele é público, então precisa
+ * existir no banco para que outras pessoas possam vê-lo. A leitura e a escrita
+ * passam por `/api/perfil`.
+ */
+const PERFIL_VAZIO: PerfilPublico = {
+  nome: "",
+  email: "",
+  cargo: "",
+  empresa: "",
+  telefone: "",
+  bio: "",
+  linkedin: "",
+  foto: "",
+  capa: "",
+  interesseIds: []
+};
 
 /**
  * Recurso não incluído na cota do patrocinador. Em vez de sumir da tela, fica
@@ -53,9 +62,26 @@ export default function ProfilePage() {
   const isSpeaker = user.role === "speaker";
   const isPublic = isSpeaker || user.role === "curator"; // perfil público (aparece em Conexões)
   const mySeal = sealForRole(user.role, user.sponsorKind);
-  const [stored, setStored] = usePersistentState<Profile>("sf_profile", DEFAULT);
-  const [form, setForm] = useState<Profile>(stored);
+  const [form, setForm] = useState<PerfilPublico>(PERFIL_VAZIO);
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
+
+  const carregar = useCallback(async () => {
+    try {
+      const { perfil } = await api.get<{ perfil: PerfilPublico }>("/api/perfil");
+      setForm(perfil);
+    } catch (e: any) {
+      setErro(e?.message ?? "Não foi possível carregar seu perfil.");
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   // Selo concedido pelo Admin. Vem da sessão — o servidor lê `usuario.selo`,
   // a mesma coluna que o CRUD de usuários grava.
@@ -74,27 +100,41 @@ export default function ProfilePage() {
   const tierOffering = (key: keyof typeof feats) => matrix.find((t) => t.features[key])?.name;
 
   // Nuvem de interesses (mesma do cadastro) — escolhida no perfil público.
-  const { interests: interestCatalog } = useInterests();
-  const toggleInterest = (tag: string) =>
+  const { catalogo: interestCatalog } = useInterests();
+  // O vínculo é gravado por ID: renomear um tema no Admin não desfaz a escolha
+  // de ninguém, e o relatório continua somando o mesmo interesse.
+  const toggleInterest = (id: string) =>
     setForm((f) => ({
       ...f,
-      interests: f.interests.includes(tag) ? f.interests.filter((t) => t !== tag) : [...f.interests, tag]
+      interesseIds: f.interesseIds.includes(id)
+        ? f.interesseIds.filter((i) => i !== id)
+        : [...f.interesseIds, id]
     }));
 
   // Lê um arquivo de imagem para data URL e grava no campo indicado (foto/capa).
-  const onImage = (key: "photo" | "cover") => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onImage = (key: "foto" | "capa") => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => setForm((f) => ({ ...f, [key]: String(reader.result) }));
     reader.readAsDataURL(file);
   };
-  const onPhoto = onImage("photo");
+  const onPhoto = onImage("foto");
 
-  const save = () => {
-    setStored(form); // mantém os interesses já definidos no cadastro
-    setToast(true);
-    window.setTimeout(() => setToast(false), 2500);
+  const save = async () => {
+    if (salvando) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      const { perfil } = await api.put<{ perfil: PerfilPublico }>("/api/perfil", form);
+      setForm(perfil);
+      setToast(true);
+      window.setTimeout(() => setToast(false), 2500);
+    } catch (e: any) {
+      setErro(e?.message ?? "Não foi possível salvar o perfil.");
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -110,6 +150,14 @@ export default function ProfilePage() {
           <CheckCircle2 className="h-5 w-5" /> Perfil salvo com sucesso.
         </div>
       )}
+
+      {erro && (
+        <div role="alert" className="flex items-center gap-2 rounded-md bg-error-50 px-4 py-3 text-body text-error-500">
+          <AlertCircle className="h-5 w-5 shrink-0" /> {erro}
+        </div>
+      )}
+
+      {carregando && <Loader label="Carregando seu perfil…" />}
 
       {/* Cota do patrocinador: o que ela libera aqui é definido na Matriz do Admin */}
       {isPublic && user.tier && (
@@ -134,8 +182,8 @@ export default function ProfilePage() {
       {isPublic && feats.topBanner && (
         <Card className="overflow-hidden">
           <div className="relative">
-            {form.cover ? (
-              <img src={form.cover} alt="Foto de capa do perfil" className="h-36 w-full object-cover sm:h-44" />
+            {form.capa ? (
+              <img src={form.capa} alt="Foto de capa do perfil" className="h-36 w-full object-cover sm:h-44" />
             ) : (
               <div className="flex h-36 w-full items-center justify-center bg-gradient-to-r from-primary-500 to-primary-700 text-white sm:h-44">
                 <div className="px-4 text-center">
@@ -147,12 +195,12 @@ export default function ProfilePage() {
             )}
             <div className="absolute bottom-2 right-2 flex flex-wrap gap-2">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-white/90 px-3 py-1.5 text-body-sm text-neutral-800 shadow hover:bg-white">
-                <Camera className="h-4 w-4" /> {form.cover ? "Trocar capa" : "Adicionar capa"}
-                <input type="file" accept="image/*" className="hidden" onChange={onImage("cover")} />
+                <Camera className="h-4 w-4" /> {form.capa ? "Trocar capa" : "Adicionar capa"}
+                <input type="file" accept="image/*" className="hidden" onChange={onImage("capa")} />
               </label>
-              {form.cover && (
+              {form.capa && (
                 <button
-                  onClick={() => setForm((f) => ({ ...f, cover: undefined }))}
+                  onClick={() => setForm((f) => ({ ...f, capa: "" }))}
                   className="inline-flex items-center gap-2 rounded-md bg-white/90 px-3 py-1.5 text-body-sm text-neutral-700 shadow hover:bg-white hover:text-error-500"
                 >
                   <Trash2 className="h-4 w-4" /> Remover
@@ -166,7 +214,7 @@ export default function ProfilePage() {
       {/* Identidade + foto + selo */}
       <Card>
         <CardBody className="flex flex-wrap items-center gap-4">
-          <SealAvatar name={user.name} src={form.photo || user.avatarUrl} seal={mySeal} size="lg" className="h-20 w-20 text-h2" />
+          <SealAvatar name={user.name} src={form.foto || user.avatarUrl} seal={mySeal} size="lg" className="h-20 w-20 text-h2" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-h3 text-neutral-900">{user.name}</p>
@@ -179,9 +227,9 @@ export default function ProfilePage() {
                 <Camera className="h-4 w-4" /> Alterar foto
                 <input type="file" accept="image/*" className="hidden" onChange={onPhoto} />
               </label>
-              {form.photo && (
+              {form.foto && (
                 <button
-                  onClick={() => setForm((f) => ({ ...f, photo: undefined }))}
+                  onClick={() => setForm((f) => ({ ...f, foto: "" }))}
                   className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-body-sm text-neutral-600 hover:bg-neutral-100 hover:text-error-500"
                 >
                   <Trash2 className="h-4 w-4" /> Remover
@@ -221,8 +269,8 @@ export default function ProfilePage() {
             <div className="space-y-1.5">
               <label className="block text-h5 text-neutral-900">Cargo</label>
               <input
-                value={form.headline}
-                onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
+                value={form.cargo}
+                onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
                 placeholder="Ex.: Head de ESG"
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
@@ -230,8 +278,8 @@ export default function ProfilePage() {
             <div className="space-y-1.5">
               <label className="block text-h5 text-neutral-900">Empresa</label>
               <input
-                value={form.company}
-                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                value={form.empresa}
+                onChange={(e) => setForm((f) => ({ ...f, empresa: e.target.value }))}
                 placeholder="Ex.: FundCo"
                 className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
@@ -287,8 +335,8 @@ export default function ProfilePage() {
               <div className="space-y-1.5">
                 <label className="inline-flex items-center gap-1.5 text-h5 text-neutral-900"><Phone className="h-4 w-4 text-primary-600" /> Telefone / WhatsApp</label>
                 <input
-                  value={form.phone ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  value={form.telefone ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
                   placeholder="+55 62 99999-0000"
                   className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                 />
@@ -305,13 +353,18 @@ export default function ProfilePage() {
               {feats.showEmail ? (
                 <div className="space-y-1.5">
                   <label className="inline-flex items-center gap-1.5 text-h5 text-neutral-900"><Mail className="h-4 w-4 text-primary-600" /> E-mail corporativo</label>
+                  {/* Só leitura: o e-mail é a chave de login, e trocá-lo por
+                      aqui deixaria a conta inacessível sem confirmação. */}
                   <input
                     type="email"
-                    value={form.email ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder={user.email}
-                    className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    value={form.email || user.email}
+                    readOnly
+                    aria-readonly
+                    className="h-10 w-full rounded-md border border-neutral-200 bg-neutral-50 px-4 text-body text-neutral-600 outline-none"
                   />
+                  <p className="text-body-sm text-neutral-500">
+                    É o e-mail do seu cadastro, usado para entrar na plataforma.
+                  </p>
                 </div>
               ) : (
                 <LockedFeature title="E-mail corporativo" desc="Não incluído na sua cota." tier={tierOffering("showEmail")} />
@@ -385,13 +438,13 @@ export default function ProfilePage() {
           </CardHeader>
           <CardBody className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              {interestCatalog.map((tag) => {
-                const active = form.interests.includes(tag);
+              {interestCatalog.map((tema) => {
+                const active = form.interesseIds.includes(tema.id);
                 return (
                   <button
-                    key={tag}
+                    key={tema.id}
                     type="button"
-                    onClick={() => toggleInterest(tag)}
+                    onClick={() => toggleInterest(tema.id)}
                     aria-pressed={active}
                     className={cn(
                       "rounded-full border px-3 py-1 text-body-sm transition-colors",
@@ -400,14 +453,14 @@ export default function ProfilePage() {
                         : "border-neutral-200 text-neutral-700 hover:border-primary-300"
                     )}
                   >
-                    {tag}
+                    {tema.nome}
                   </button>
                 );
               })}
             </div>
             <p className="text-body-sm text-neutral-500">
-              {form.interests.length > 0
-                ? `${form.interests.length} interesse(s) selecionado(s).`
+              {form.interesseIds.length > 0
+                ? `${form.interesseIds.length} interesse(s) selecionado(s).`
                 : "Nenhum interesse selecionado ainda."}
             </p>
           </CardBody>
@@ -466,8 +519,8 @@ export default function ProfilePage() {
       )}
 
       <div className="flex justify-end">
-        <Button size="lg" onClick={save}>
-          Salvar perfil
+        <Button size="lg" onClick={save} disabled={salvando || carregando}>
+          {salvando ? "Salvando…" : "Salvar perfil"}
         </Button>
       </div>
 

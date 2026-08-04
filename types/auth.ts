@@ -22,6 +22,14 @@ export interface CurrentUser {
   tipoConta?: TipoConta;
   /** Selo/cota concedido pelo Admin (Ouro, Prata, Bronze). */
   selo?: string | null;
+  /** Vínculo corporativo do cadastro. */
+  cargo?: string | null;
+  empresaNome?: string | null;
+  /**
+   * Voucher resgatado no cadastro aguardando a liberação do curador. É o que
+   * alimenta o aviso no topo da tela inicial.
+   */
+  voucherPendente?: { codigo: string; empresaNome: string } | null;
 }
 
 /** Retorno do login por e-mail/senha. */

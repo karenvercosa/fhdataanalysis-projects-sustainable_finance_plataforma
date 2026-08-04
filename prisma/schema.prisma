@@ -260,6 +260,11 @@ model Usuario {
   voucherUsado    Voucher?   @relation("VoucherResgatado", fields: [voucherId], references: [id])
   // Selo/cota exibido pelo Admin (Ouro, Prata, Bronze). Nulo = sem selo.
   selo            String?    @db.VarChar(10)
+  // Perfil público (curador/patrocinador/palestrante). `avatarUrl` e `bio`
+  // acima completam o conjunto; as imagens são guardadas como data URL, do
+  // mesmo jeito que o formulário as produz.
+  linkedinUrl     String?    @map("linkedin_url")
+  capaUrl         String?    @map("capa_url")
   ativo           Boolean    @default(true)
   emailVerified   Boolean    @default(false) @map("email_verified")
   // ID do cliente no Asaas (cus_...), para não recadastrar a cada cobrança.
@@ -288,8 +293,58 @@ model Usuario {
   notificacoes           Notificacao[]
   vouchersDoCurador      Voucher[]               @relation("VouchersDoCurador")
   resgatesDeVoucher      VoucherResgate[]
+  interesses             UsuarioInteresse[]
 
   @@map("usuario")
+}
+
+// Catálogo de interesses, gerido pelo Admin.
+//
+// Mora no banco (e não no `localStorage`) porque é o que liga uma pessoa aos
+// temas que ela escolheu — a matéria-prima dos dashboards de audiência.
+model Interesse {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome     String   @unique @db.VarChar(80)
+  ativo    Boolean  @default(true)
+  // Posição na nuvem de interesses do cadastro e do perfil.
+  ordem    Int      @default(0)
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz
+
+  usuarios UsuarioInteresse[]
+
+  @@map("interesse")
+}
+
+// Quais temas cada pessoa escolheu. É esta tabela que responde "quantos
+// participantes se interessam por crédito de carbono?".
+model UsuarioInteresse {
+  usuarioId   String   @map("usuario_id") @db.Uuid
+  interesseId String   @map("interesse_id") @db.Uuid
+  criadoEm    DateTime @default(now()) @map("criado_em") @db.Timestamptz
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  interesse Interesse @relation(fields: [interesseId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, interesseId])
+  @@index([interesseId])
+  @@map("usuario_interesse")
+}
+
+// Matriz de cotas de patrocínio — o que cada cota libera no perfil público.
+//
+// Antes vivia só no navegador de quem editava, então o que o Admin marcava não
+// alcançava ninguém. Aqui é uma linha por cota, com os recursos em JSON: a
+// lista de recursos muda com o produto, e colunas fixas exigiriam migração a
+// cada recurso novo.
+model CotaPlataforma {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome         String   @unique @db.VarChar(40)
+  // Ordem crescente de valor: a última é a cota mais alta.
+  ordem        Int      @default(0)
+  recursos     Json
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  @@map("cota_plataforma")
 }
 
 // Voucher corporativo — o convite que uma empresa distribui.

@@ -80,6 +80,14 @@ export interface SessaoServidor {
   perfis: PerfilUsuario[];
   /** Selo/cota concedido pelo Admin (Ouro, Prata, Bronze) ou `null`. */
   selo: string | null;
+  /** Vínculo corporativo do cadastro — usado no cabeçalho e no perfil. */
+  cargo: string | null;
+  empresaNome: string | null;
+  /**
+   * Voucher resgatado no cadastro que ainda aguarda a liberação do
+   * curador/patrocinador. Enquanto existir, a conta segue no Plano Gratuito.
+   */
+  voucherPendente: { codigo: string; empresaNome: string } | null;
   /** Plano Gratuito ou assinante — decide o destino depois do login. */
   tipoConta: TipoConta;
   /**

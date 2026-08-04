@@ -6,6 +6,7 @@ import { ErroDeEntrada } from "@/lib/admin.server";
 import { texto } from "@/lib/cadastro";
 import { apenasCnpj, cnpjCompleto, formatarCnpj } from "@/lib/cnpj";
 import {
+  PerfilUsuario,
   TipoVoucher,
   type StatusResgateVoucher,
   type VoucherAdmin,
@@ -223,6 +224,75 @@ export async function resgatarVoucher(
   });
 }
 
+/** Cliente do Prisma ou o handle de uma transação — os dois servem. */
+type ClienteResgate = Pick<typeof prisma, "usuarioPerfil" | "voucherResgate">;
+
+/**
+ * Promove a conta a Participante Premium ao aprovar o resgate.
+ *
+ * Só mexe em quem está no Plano Gratuito: um palestrante, curador ou admin que
+ * por acaso resgate um voucher não pode ser rebaixado ao perfil de
+ * participante. A troca é feita perfil a perfil porque `roleEfetivo` vale o
+ * perfil mais poderoso — deixar `gratuito` para trás é o que muda o papel.
+ */
+async function promoverParaPremium(tx: ClienteResgate, usuarioId: string) {
+  const perfis = await tx.usuarioPerfil.findMany({
+    where: { usuarioId },
+    select: { perfil: true },
+  });
+
+  const somenteGratuito =
+    perfis.length === 0 ||
+    perfis.every((p) => p.perfil === PerfilUsuario.gratuito);
+
+  if (!somenteGratuito) return;
+
+  await tx.usuarioPerfil.deleteMany({ where: { usuarioId, perfil: PerfilUsuario.gratuito } });
+  await tx.usuarioPerfil.upsert({
+    where: { usuarioId_perfil: { usuarioId, perfil: PerfilUsuario.participante } },
+    create: { usuarioId, perfil: PerfilUsuario.participante },
+    update: {},
+  });
+}
+
+/**
+ * Devolve a conta ao Plano Gratuito quando o resgate é negado ou desativado.
+ *
+ * O rebaixamento só acontece se o acesso Premium tiver vindo DESTE voucher: se
+ * a pessoa ainda tem OUTRO resgate aprovado, ou um perfil concedido pela
+ * organização, ela continua onde está.
+ *
+ * `resgateId` é excluído da busca de propósito: esta função roda antes de a
+ * negação ser gravada, então o próprio resgate ainda consta como aprovado no
+ * banco — sem o `not`, ele se contaria como "outro" e ninguém seria rebaixado.
+ */
+async function rebaixarParaGratuito(
+  tx: ClienteResgate,
+  usuarioId: string,
+  resgateId: string,
+) {
+  const outroAprovado = await tx.voucherResgate.findFirst({
+    where: { usuarioId, status: "aprovado", id: { not: resgateId } },
+    select: { id: true },
+  });
+  if (outroAprovado) return;
+
+  const perfis = await tx.usuarioPerfil.findMany({
+    where: { usuarioId },
+    select: { perfil: true },
+  });
+
+  const somenteParticipante = perfis.every((p) => p.perfil === PerfilUsuario.participante);
+  if (!somenteParticipante) return;
+
+  await tx.usuarioPerfil.deleteMany({ where: { usuarioId, perfil: PerfilUsuario.participante } });
+  await tx.usuarioPerfil.upsert({
+    where: { usuarioId_perfil: { usuarioId, perfil: PerfilUsuario.gratuito } },
+    create: { usuarioId, perfil: PerfilUsuario.gratuito },
+    update: {},
+  });
+}
+
 /**
  * Aplica a decisão do curador sobre um resgate.
  *
@@ -278,6 +348,10 @@ export async function decidirResgate(
         where: { id: resgate.usuarioId },
         data: { voucherId: voucher.id, empresaNome: voucher.empresaNome },
       });
+
+      // É a aprovação que transforma o convite em acesso: a conta sai do Plano
+      // Gratuito e vira Participante Premium.
+      await promoverParaPremium(tx, resgate.usuarioId);
     } else {
       // Negar devolve o convite para a cota — o uso deixa de existir.
       await tx.voucher.update({
@@ -289,6 +363,8 @@ export async function decidirResgate(
         where: { id: resgate.usuarioId },
         data: { voucherId: null },
       });
+
+      await rebaixarParaGratuito(tx, resgate.usuarioId, resgate.id);
     }
 
     await tx.voucherResgate.update({

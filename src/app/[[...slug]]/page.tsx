@@ -109,9 +109,12 @@ export default async function CatchAllPage({
       ticketCode: sessao.ticketCode,
       tipoConta: sessao.tipoConta,
       selo: sessao.selo,
+      cargo: sessao.cargo,
+      empresaNome: sessao.empresaNome,
       // A cota de patrocínio É o selo concedido pelo Admin. Sem esta
       // linha o curador chega sem cota e a plataforma o trata como Bronze.
       tier: cotaDoSelo(sessao.selo),
+      voucherPendente: sessao.voucherPendente,
     },
     capabilities: sessao.capabilities,
     senhaProvisoria: sessao.senhaProvisoria,

@@ -23,7 +23,6 @@ import ModuleCrud from "@/views/admin/ModuleCrud";
 import InterestsAdmin from "@/views/admin/InterestsAdmin";
 import ReportsAdmin from "@/views/admin/ReportsAdmin";
 import TierMatrixAdmin from "@/views/admin/TierMatrixAdmin";
-import SessionsAdmin from "@/views/admin/SessionsAdmin";
 import ProfilePage from "@/views/ProfilePage";
 
 /**
@@ -31,7 +30,7 @@ import ProfilePage from "@/views/ProfilePage";
  *
  * As telas correspondentes continuam no repositório e prontas para voltar —
  * `ContentHub`, `StreamingPage`, `MapPage`, `Networking`, `NetworkingProfile`,
- * `ProgrammingPage` e o CRUD de Divulgações não foram removidos, apenas
+ * `ProgrammingPage`, `SessionsAdmin` e o CRUD de Divulgações não foram removidos, apenas
  * deixaram de ser renderizados. Para reativar uma delas, basta importar a view
  * de novo e trocar o `element` da rota.
  *
@@ -276,7 +275,7 @@ export default function App() {
           path="/admin/programacao-admin"
           element={
             <RoleGuard capability="manage:platform">
-              <SessionsAdmin />
+              <AbaEmConstrucao titulo="Programação" />
             </RoleGuard>
           }
         />

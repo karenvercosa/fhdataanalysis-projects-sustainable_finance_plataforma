@@ -14,6 +14,11 @@ import {
   solicitacaoVouchersEmail,
   type SolicitacaoVouchersEmailProps,
 } from "@/emails/solicitacao-vouchers";
+import {
+  assuntoLead,
+  leadPlataformaEmail,
+  type LeadPlataformaEmailProps,
+} from "@/emails/lead-plataforma";
 
 // O transporter é criado sob demanda, e não no escopo do módulo: assim o
 // `next build` roda sem nenhuma credencial de SMTP dentro da imagem Docker.
@@ -126,6 +131,34 @@ export async function sendSolicitacaoVouchersEmail(dados: SolicitacaoVouchersEma
     return { success: true, id: info.messageId };
   } catch (error: any) {
     console.error("[email.service] Erro SMTP (solicitação de vouchers):", error);
+    return { success: false, error: error?.message || "Erro ao enviar e-mail." };
+  }
+}
+
+/**
+ * Envia um lead dos formulários da tela inicial (pré-inscrição no presencial,
+ * curadoria e patrocínio) para a caixa comercial.
+ *
+ * Mesmo padrão do pedido de vouchers: remetente é a conta autenticada no SMTP
+ * e `replyTo` é quem preencheu — usar o e-mail da pessoa como remetente faria
+ * a mensagem ser barrada por SPF/DKIM.
+ */
+export async function sendLeadPlataformaEmail(dados: LeadPlataformaEmailProps) {
+  try {
+    const { html, text } = leadPlataformaEmail(dados);
+
+    const info = await getTransporter().sendMail({
+      from: `Sustainable Finance <${EMAIL_FROM}>`,
+      to: process.env.EMAIL_TO || EMAIL_FROM,
+      replyTo: dados.email,
+      subject: assuntoLead(dados.tipo),
+      html,
+      text,
+    });
+
+    return { success: true, id: info.messageId };
+  } catch (error: any) {
+    console.error("[email.service] Erro SMTP (lead da plataforma):", error);
     return { success: false, error: error?.message || "Erro ao enviar e-mail." };
   }
 }

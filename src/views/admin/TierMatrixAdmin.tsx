@@ -1,15 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, Layers, RotateCcw, Save, CheckCircle2, Info } from "lucide-react";
 import { Button, Card, CardBody, Switch } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
 import { useTierMatrix } from "@/context/TierMatrixContext";
-import {
-  DEFAULT_TIER_MATRIX,
-  TIER_FEATURE_ROWS,
-  type TierFeatures,
-  type TierMatrix
-} from "@/data/tierMatrix";
+import { TIER_FEATURE_ROWS, type TierFeatures, type TierMatrix } from "@/data/tierMatrix";
 import { CONNECTIONS } from "@/data/networking";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +14,19 @@ function companiesInTier(tierName: string) {
 }
 
 export default function TierMatrixAdmin() {
-  const { matrix, save, reset } = useTierMatrix();
+  const { matrix, carregada, save, reset } = useTierMatrix();
   // Rascunho local: nada é aplicado até o Admin salvar.
   const [draft, setDraft] = useState<TierMatrix>(matrix);
   const [toast, setToast] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
 
+  // A matriz chega do servidor depois do primeiro quadro; o rascunho só é
+  // sincronizado enquanto não há edição pendente, para não descartar o que o
+  // Admin já estava mexendo.
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(matrix), [draft, matrix]);
+  useEffect(() => {
+    if (carregada) setDraft(matrix);
+  }, [carregada, matrix]);
 
   const notify = (m: string) => {
     setToast(m);
@@ -39,15 +41,28 @@ export default function TierMatrixAdmin() {
   const rename = (tierId: string, name: string) =>
     setDraft((prev) => prev.map((t) => (t.id === tierId ? { ...t, name } : t)));
 
-  const onSave = () => {
-    save(draft);
-    notify("Matriz de cotas salva. Todas as empresas herdaram as novas regras.");
+  const onSave = async () => {
+    setSalvando(true);
+    try {
+      await save(draft);
+      notify("Matriz de cotas salva. Todas as empresas herdaram as novas regras.");
+    } catch (e: any) {
+      notify(`⚠️ ${e?.message ?? "Não foi possível salvar a matriz."}`);
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const onReset = () => {
-    reset();
-    setDraft(DEFAULT_TIER_MATRIX);
-    notify("Matriz restaurada para o padrão.");
+  const onReset = async () => {
+    setSalvando(true);
+    try {
+      await reset();
+      notify("Matriz restaurada para o padrão.");
+    } catch (e: any) {
+      notify(`⚠️ ${e?.message ?? "Não foi possível restaurar a matriz."}`);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -63,7 +78,12 @@ export default function TierMatrixAdmin() {
           icon={Layers}
         />
         <div className="flex gap-2">
-          <Button variant="outline" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={onReset}>
+          <Button
+            variant="outline"
+            leftIcon={<RotateCcw className="h-4 w-4" />}
+            onClick={onReset}
+            disabled={salvando}
+          >
             Restaurar padrão
           </Button>
         </div>
@@ -151,8 +171,8 @@ export default function TierMatrixAdmin() {
                 Descartar
               </Button>
             )}
-            <Button disabled={!dirty} leftIcon={<Save className="h-4 w-4" />} onClick={onSave}>
-              Salvar alterações
+            <Button disabled={!dirty || salvando} leftIcon={<Save className="h-4 w-4" />} onClick={onSave}>
+              {salvando ? "Salvando…" : "Salvar alterações"}
             </Button>
           </div>
         </div>

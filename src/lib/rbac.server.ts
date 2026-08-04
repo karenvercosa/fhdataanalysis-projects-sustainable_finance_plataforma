@@ -88,6 +88,8 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
       avatarUrl: true,
       ativo: true,
       selo: true,
+      cargo: true,
+      empresaNome: true,
       senhaProvisoriaHash: true,
       perfis: { select: { perfil: true } },
       ingressos: {
@@ -98,6 +100,12 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
       assinaturas: {
         where: { status: "ativa" },
         select: { id: true },
+        take: 1,
+      },
+      // Resgate aguardando o curador — vira o aviso no topo da home.
+      resgatesDeVoucher: {
+        where: { status: "pendente" },
+        select: { voucher: { select: { codigo: true, empresaNome: true } } },
         take: 1,
       },
     },
@@ -120,6 +128,14 @@ export async function getSessaoServidor(headers: Headers): Promise<SessaoServido
     capabilities: DEFAULT_MATRIX[role] ?? [],
     perfis,
     selo: usuario.selo,
+    cargo: usuario.cargo,
+    empresaNome: usuario.empresaNome,
+    voucherPendente: usuario.resgatesDeVoucher[0]
+      ? {
+          codigo: usuario.resgatesDeVoucher[0].voucher.codigo,
+          empresaNome: usuario.resgatesDeVoucher[0].voucher.empresaNome,
+        }
+      : null,
     tipoConta: tipoDeConta(role, isPaid, usuario.assinaturas.length > 0),
     senhaProvisoria: Boolean(usuario.senhaProvisoriaHash),
     isPaid,
