@@ -13,14 +13,14 @@ export function SponsorShareNotice({
   onConfirm,
   patrocinador,
   material
-}: {
+}: Readonly<{
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
   /** Autor do conteúdo — quem recebe os dados. */
   patrocinador: string;
   material?: string;
-}) {
+}>) {
   const { user } = useAuth();
 
   return (

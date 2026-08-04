@@ -2,7 +2,8 @@
 CREATE TYPE "tipo_pessoa" AS ENUM ('PF', 'PJ');
 
 -- CreateEnum
-CREATE TYPE "perfil_usuario" AS ENUM ('admin', 'operador_credenciamento', 'curador', 'startup', 'investidor', 'patrocinador', 'palestrante', 'participante');
+CREATE TYPE "perfil_usuario" AS ENUM ('admin', 'operador_credenciamento', 'curador', 'startup', 'investidor', 'patrocinador', 'palestrante', 'participante', 'gratuito');
+CREATE TYPE "tipo_voucher" AS ENUM ('gratuito', 'desconto_percentual', 'desconto_valor');
 
 -- CreateEnum
 CREATE TYPE "status_ingresso" AS ENUM ('reservado', 'pago', 'cancelado', 'estornado');
@@ -50,6 +51,17 @@ CREATE TABLE "site_content" (
     "rodape_texto" TEXT NOT NULL,
 
     CONSTRAINT "site_content_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "landing_page_content" (
+    "id" SERIAL NOT NULL,
+    "lang" VARCHAR(5) NOT NULL,
+    "data" JSONB NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "landing_page_content_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -138,25 +150,50 @@ CREATE TABLE "committee_members" (
 -- CreateTable
 CREATE TABLE "usuario" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "tipo_pessoa" "tipo_pessoa" NOT NULL,
+    "tipo_pessoa" "tipo_pessoa" NOT NULL DEFAULT 'PF',
     "nome_completo" VARCHAR(180),
     "cpf" VARCHAR(14),
     "razao_social" VARCHAR(180),
     "nome_fantasia" VARCHAR(180),
     "cnpj" VARCHAR(18),
     "email" VARCHAR(180) NOT NULL,
-    "senha_hash" TEXT NOT NULL,
+    "senha_hash" TEXT,
+    "senha_provisoria_hash" TEXT,
+    "voucher_id" UUID,
+    "selo" VARCHAR(10),
     "telefone" VARCHAR(20),
     "cargo" VARCHAR(120),
     "empresa_nome" VARCHAR(180),
     "avatar_url" TEXT,
     "bio" TEXT,
     "ativo" BOOLEAN NOT NULL DEFAULT true,
+    "email_verified" BOOLEAN NOT NULL DEFAULT false,
+    "asaas_customer_id" VARCHAR(50),
     "criado_em" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "atualizado_em" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "usuario_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateTable
+CREATE TABLE "voucher" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "codigo" VARCHAR(60) NOT NULL,
+    "tipo" "tipo_voucher" NOT NULL DEFAULT 'gratuito',
+    "valor" DECIMAL(10,2),
+    "usos_maximos" INTEGER NOT NULL,
+    "usos_feitos" INTEGER NOT NULL DEFAULT 0,
+    "empresa_nome" VARCHAR(180) NOT NULL,
+    "empresa_cnpj" VARCHAR(18),
+    "ativo" BOOLEAN NOT NULL DEFAULT true,
+    "criado_em" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "atualizado_em" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "voucher_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "voucher_codigo_key" ON "voucher"("codigo");
 
 -- CreateTable
 CREATE TABLE "usuario_perfil" (
@@ -400,8 +437,69 @@ CREATE TABLE "notificacao" (
     CONSTRAINT "notificacao_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "account" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "accountId" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "accessToken" TEXT,
+    "refreshToken" TEXT,
+    "idToken" TEXT,
+    "accessTokenExpiresAt" TIMESTAMP(3),
+    "refreshTokenExpiresAt" TIMESTAMP(3),
+    "scope" TEXT,
+    "password" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "session" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "token" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "userId" UUID NOT NULL,
+
+    CONSTRAINT "session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "verification" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "identifier" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "assinatura_plataforma" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "usuario_id" UUID NOT NULL,
+    "asaas_subscription_id" VARCHAR(50),
+    "asaas_payment_id" VARCHAR(50),
+    "billing_type" VARCHAR(20) NOT NULL,
+    "internacional" BOOLEAN NOT NULL DEFAULT false,
+    "valor" DECIMAL(10,2) NOT NULL,
+    "status" VARCHAR(20) NOT NULL DEFAULT 'pendente',
+    "criado_em" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "atualizado_em" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "assinatura_plataforma_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
-CREATE UNIQUE INDEX "usuario_cpf_key" ON "usuario"("cpf");
+CREATE UNIQUE INDEX "landing_page_content_lang_key" ON "landing_page_content"("lang");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "usuario_cnpj_key" ON "usuario"("cnpj");
@@ -442,7 +540,17 @@ CREATE UNIQUE INDEX "certificado_codigo_validacao_key" ON "certificado"("codigo_
 -- CreateIndex
 CREATE INDEX "notificacao_usuario_id_lida_idx" ON "notificacao"("usuario_id", "lida");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
+
+-- CreateIndex
+CREATE INDEX "assinatura_plataforma_asaas_payment_id_idx" ON "assinatura_plataforma"("asaas_payment_id");
+
+-- CreateIndex
+CREATE INDEX "assinatura_plataforma_asaas_subscription_id_idx" ON "assinatura_plataforma"("asaas_subscription_id");
+
 -- AddForeignKey
+ALTER TABLE "usuario" ADD CONSTRAINT "usuario_voucher_id_fkey" FOREIGN KEY ("voucher_id") REFERENCES "voucher"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "usuario_perfil" ADD CONSTRAINT "usuario_perfil_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -540,4 +648,13 @@ ALTER TABLE "certificado" ADD CONSTRAINT "certificado_evento_id_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "notificacao" ADD CONSTRAINT "notificacao_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "usuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "usuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "assinatura_plataforma" ADD CONSTRAINT "assinatura_plataforma_usuario_id_fkey" FOREIGN KEY ("usuario_id") REFERENCES "usuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

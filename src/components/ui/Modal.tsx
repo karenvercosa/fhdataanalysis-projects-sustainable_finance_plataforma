@@ -13,14 +13,14 @@ export function Modal({
   children,
   footer,
   className
-}: {
+}: Readonly<{
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
-}) {
+}>) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

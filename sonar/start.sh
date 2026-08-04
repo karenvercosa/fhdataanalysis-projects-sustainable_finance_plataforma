@@ -17,7 +17,7 @@ TOKEN_NAME="local-scanner-$(whoami)"
 
 # ── 1. Sobe SonarQube ────────────────────────────────────────────────────────
 echo "🐳 Subindo SonarQube..."
-docker compose -f "$SCRIPT_DIR/docker-compose.prod.yml" up -d
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d
 
 echo "⏳ Aguardando SonarQube iniciar (pode levar até 2min)..."
 until curl -sf "$SONAR_URL/api/system/status" 2>/dev/null | grep -q '"status":"UP"'; do
@@ -54,8 +54,12 @@ echo "🔍 Verificando app em $APP_URL..."
 APP_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$APP_URL" 2>/dev/null || echo "000")
 
 if [ "$APP_STATUS" != "200" ]; then
-  echo "⚠️  App offline. Subindo com infra:up..."
-  docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d --build
+  # A stack completa (app + db + redis + migrator) está no compose de
+  # PRODUÇÃO. O `docker-compose.yml` de desenvolvimento sobe só Postgres e
+  # Redis — o Next roda no host por `yarn dev` —, então esperar pelo :3000
+  # depois dele travava o script para sempre.
+  echo "⚠️  App offline. Subindo a stack de produção..."
+  docker compose -f "$PROJECT_ROOT/docker-compose.prod.yml" up -d --build
   until curl -sf -o /dev/null "$APP_URL" 2>/dev/null; do
     printf "."
     sleep 5
@@ -82,4 +86,4 @@ docker run --rm \
   -Dsonar.token="$SONAR_TOKEN"
 
 echo ""
-echo "✅ Análise concluída! Acesse: $SONAR_URL/dashboard?id=sustainable_finance"
+echo "✅ Análise concluída! Acesse: $SONAR_URL/dashboard?id=sustainable_finance_plataforma"

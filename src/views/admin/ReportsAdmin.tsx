@@ -1,52 +1,67 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, BarChart3, Download, Users, Ticket, UserCheck, Percent } from "lucide-react";
-import { Card, CardBody, CardHeader, Donut, BarChart, type Segment, type ChartTone } from "@/components/ui";
+import { AlertCircle, ChevronLeft, BarChart3, Users, Ticket, Percent, Star } from "lucide-react";
+import { Card, CardBody, CardHeader, Loader, BarChart, type Segment, type ChartTone } from "@/components/ui";
 import { PageHeader } from "@/components/layout/AppShell";
-import { useCheckin } from "@/context/CheckinContext";
-import { useVouchers } from "@/context/VouchersContext";
-import { getCurator } from "@/data/catalog";
+import { api } from "@/lib/admin-api";
+import { type MetricasAdmin } from "@/types";
 
-const TICKETS_BY_LOT: Segment[] = [
-  { label: "Lote Ouro", value: 320, tone: "primary" },
-  { label: "Cortesia Curadores", value: 180, tone: "info" },
-  { label: "VIP", value: 92, tone: "secondary" },
-  { label: "Imprensa", value: 50, tone: "neutral" }
-];
+const TONS: ChartTone[] = ["primary", "info", "success", "secondary", "neutral"];
 
-// Empresas (donas de voucher) — rótulos para o relatório.
-const COMPANY_NAMES: Record<string, string> = {
-  cmp_1: "AgroVerde",
-  cmp_2: "BankCo",
-  cmp_3: "Fintech Verde"
-};
-const TONES: ChartTone[] = ["primary", "info", "success", "secondary", "neutral"];
-
+/**
+ * Relatórios do Admin.
+ *
+ * Os KPIs eram texto fixo ("1.284 inscritos") e os gráficos vinham de listas
+ * inventadas — "Ingressos por lote" descrevia lotes que não existem, e os
+ * cupons por patrocinador liam empresas de `src/data/catalog.ts`. Tudo aqui
+ * agora sai de `/api/admin/metricas`, contado no banco.
+ *
+ * Os gráficos de credenciamento e de lotes saíram: dependem de `ingresso` e
+ * `credencial`, que ainda não têm fluxo que os alimente. Um gráfico sem fonte
+ * é pior do que gráfico nenhum.
+ */
 export default function ReportsAdmin() {
-  const { stats } = useCheckin(); // check-in REAL do Operador
-  const { vouchers } = useVouchers(); // cupons VIVOS
+  const [metricas, setMetricas] = useState<MetricasAdmin | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const checkin: Segment[] = [
-    { label: "Credenciados", value: stats.credentialed, tone: "primary" },
-    { label: "Pendentes", value: stats.pending, tone: "warning" }
-  ];
+  const carregar = useCallback(async () => {
+    try {
+      const { metricas: m } = await api.get<{ metricas: MetricasAdmin }>("/api/admin/metricas");
+      setMetricas(m);
+    } catch (e: any) {
+      setErro(e?.message ?? "Não foi possível carregar os relatórios.");
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
 
-  // Cupons ativados por patrocinador (soma de usos por dono do voucher).
-  const bySponsor = new Map<string, number>();
-  for (const v of vouchers) {
-    const name = v.ownerType === "curator" ? getCurator(v.ownerId)?.name ?? v.ownerId : COMPANY_NAMES[v.ownerId] ?? v.ownerId;
-    bySponsor.set(name, (bySponsor.get(name) ?? 0) + v.usedCount);
-  }
-  const coupons: Segment[] = [...bySponsor.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, value], i) => ({ label, value, tone: TONES[i % TONES.length] }));
-  const totalCoupons = coupons.reduce((acc, c) => acc + c.value, 0);
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   const kpis = [
-    { label: "Inscritos", value: "1.284", icon: Users },
-    { label: "Ingressos emitidos", value: "642", icon: Ticket },
-    { label: "Taxa de check-in", value: `${stats.rate}%`, icon: UserCheck },
-    { label: "Cupons ativados", value: String(totalCoupons), icon: Percent }
+    { label: "Contas cadastradas", value: metricas?.inscritos ?? 0, icon: Users },
+    { label: "Participantes Premium", value: metricas?.premium ?? 0, icon: Star },
+    { label: "Assinaturas ativas", value: metricas?.assinaturasAtivas ?? 0, icon: Ticket },
+    { label: "Convites resgatados", value: metricas?.resgatesAprovados ?? 0, icon: Percent }
   ];
+
+  const interesses: Segment[] = (metricas?.topInteresses ?? []).map((i, idx) => ({
+    label: i.nome,
+    value: i.total,
+    tone: TONS[idx % TONS.length]
+  }));
+
+  // Convites usados por curador — o relatório comercial que tem lastro real.
+  const porCurador: Segment[] = (metricas?.curadores ?? [])
+    .filter((c) => c.convitesUsados > 0)
+    .sort((a, b) => b.convitesUsados - a.convitesUsados)
+    .map((c, idx) => ({
+      label: c.empresa || c.nome,
+      value: c.convitesUsados,
+      tone: TONS[idx % TONS.length]
+    }));
 
   return (
     <div className="space-y-4">
@@ -54,14 +69,16 @@ export default function ReportsAdmin() {
         <ChevronLeft className="h-4 w-4" /> Voltar ao painel
       </Link>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageHeader title="Relatórios" subtitle="Visão operacional e comercial" icon={BarChart3} />
-        <button className="inline-flex h-10 items-center gap-2 rounded-md border border-primary-500 px-4 text-button text-primary-600 hover:bg-primary-50">
-          <Download className="h-4 w-4" /> Exportar CSV
-        </button>
-      </div>
+      <PageHeader title="Relatórios" subtitle="Números da plataforma, contados no banco" icon={BarChart3} />
 
-      {/* KPIs */}
+      {erro && (
+        <div role="alert" className="flex items-center gap-2 rounded-md bg-error-50 px-4 py-3 text-body text-error-500">
+          <AlertCircle className="h-5 w-5 shrink-0" /> {erro}
+        </div>
+      )}
+
+      {carregando && <Loader label="Carregando relatórios…" />}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map(({ label, value, icon: Icon }) => (
           <Card key={label}>
@@ -74,39 +91,35 @@ export default function ReportsAdmin() {
         ))}
       </div>
 
-      {/* Gráficos */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <p className="text-h4 text-neutral-900">Credenciamento</p>
-            <p className="text-body-sm text-neutral-600">Status real (check-in do Operador)</p>
+            <p className="text-h4 text-neutral-900">Maiores interesses</p>
+            <p className="text-body-sm text-neutral-600">Temas escolhidos pelos participantes</p>
           </CardHeader>
           <CardBody>
-            <Donut segments={checkin} centerValue={`${stats.rate}%`} centerLabel="check-in" />
+            {interesses.length ? (
+              <BarChart data={interesses} />
+            ) : (
+              <p className="text-body-sm text-neutral-600">Ninguém escolheu interesses ainda.</p>
+            )}
           </CardBody>
         </Card>
 
         <Card>
           <CardHeader>
-            <p className="text-h4 text-neutral-900">Ingressos por lote</p>
-            <p className="text-body-sm text-neutral-600">Distribuição de emissão</p>
+            <p className="text-h4 text-neutral-900">Convites usados por curador</p>
+            <p className="text-body-sm text-neutral-600">Resgates dos vouchers de cada patrocinador</p>
           </CardHeader>
           <CardBody>
-            <BarChart data={TICKETS_BY_LOT} />
+            {porCurador.length ? (
+              <BarChart data={porCurador} />
+            ) : (
+              <p className="text-body-sm text-neutral-600">Nenhum convite resgatado ainda.</p>
+            )}
           </CardBody>
         </Card>
       </div>
-
-      {/* Relatório comercial de cupons por patrocinador */}
-      <Card>
-        <CardHeader>
-          <p className="text-h4 text-neutral-900">Cupons ativados por patrocinador</p>
-          <p className="text-body-sm text-neutral-600">Relatório comercial (vouchers em tempo real)</p>
-        </CardHeader>
-        <CardBody>
-          <BarChart data={coupons} />
-        </CardBody>
-      </Card>
     </div>
   );
 }

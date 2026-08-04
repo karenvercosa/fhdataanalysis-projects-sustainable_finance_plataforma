@@ -1,35 +1,87 @@
+"use client";
+
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, LogIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/context/AuthContext";
 import { Checkbox } from "@/components/ui";
-import { HOME_BY_ROLE } from "@/lib/roles";
+import { CampoSenha } from "@/components/auth/CampoSenha";
+import { destinoPorTipoConta } from "@/lib/roles";
+import { ROTA_PRIMEIRO_ACESSO } from "@/lib/rotas";
+import { caminhoInternoSeguro } from "@/lib/safe-redirect";
+import { type LoginResult } from "@/types";
 
 /**
  * Tela de Login — réplica fiel do template do Figma "Tela de Login" (node 4023:664).
  * Fundo: imagem do próprio design system (public/login-bg.png).
  * Card translúcido (primary/header-bg rgba(25,48,43,.9)), inputs neutros,
  * botão "Entrar" em primary/subtle (#8DD596).
+ *
+ * A autenticação é a do Better Auth, contra a mesma base da landing page: quem
+ * se cadastrou lá entra aqui com a senha provisória recebida por e-mail.
  */
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const t = useTranslations("RegisterPage");
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    mensagemDeErro(new URLSearchParams(location.search).get("erro")),
+  );
+  const [submitting, setSubmitting] = useState(false);
   const [lembrar, setLembrar] = useState(false);
 
-  // Já autenticado? Não faz sentido ver a tela de login.
-  if (isAuthenticated) return <Navigate to="/app" replace />;
+  /** `?next=` do middleware, já saneado contra open redirect. */
+  const proximoDestino = () =>
+    caminhoInternoSeguro(new URLSearchParams(location.search).get("next"), "");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /**
+   * Para onde ir depois de entrar.
+   *
+   * A ordem é a mesma da triagem do login social (`/api/pos-login`): senha
+   * ainda provisória manda para o primeiro acesso; caso contrário vale o
+   * `?next=` que o middleware guardou, ou a home do tipo de conta.
+   */
+  const destinoAposLogin = (result: LoginResult) => {
+    if (result.precisaTrocarSenha) return ROTA_PRIMEIRO_ACESSO;
+    return (
+      proximoDestino() ||
+      destinoPorTipoConta(result.role ?? "guest", result.tipoConta ?? "gratuito")
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = login(email, password);
+    if (submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    const result = await login(email, password, lembrar);
+    setSubmitting(false);
+
     if (result.ok && result.role) {
-      navigate(HOME_BY_ROLE[result.role]);
+      navigate(destinoAposLogin(result));
     } else {
       setError(result.error ?? "Não foi possível entrar.");
     }
+  };
+
+  const handleGoogle = async () => {
+    // O OAuth não volta para uma tela: volta para `/api/pos-login`, que
+    // confere no banco se a conta existe, se a senha ainda é a provisória e
+    // qual é o tipo de conta antes de decidir o destino. O `?next=` viaja
+    // junto, já normalizado — o Better Auth só aceita caminhos dentro de
+    // `trustedOrigins`, e aqui garantimos que nem chega a sair uma URL
+    // absoluta.
+    const next = proximoDestino();
+    const triagem = next
+      ? `/api/pos-login?next=${encodeURIComponent(next)}`
+      : "/api/pos-login";
+    await loginWithGoogle(triagem);
   };
 
   return (
@@ -48,7 +100,7 @@ export default function LoginPage() {
             <img
               src="/sf-logo.svg"
               alt="Sustainable Finance"
-              className="h-[84px] w-auto"
+              className="h-14 max-w-[150px] w-auto"
             />
 
             {/* Título + subtítulo */}
@@ -88,46 +140,37 @@ export default function LoginPage() {
             </div>
 
             {/* Senha */}
-            <div className="w-full space-y-2">
-              <label htmlFor="password" className="block text-h5 text-white">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-10 w-full rounded-md border border-neutral-200 bg-neutral-100 px-4 text-body text-neutral-900 placeholder:text-neutral-400 outline-none transition-colors focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
+            <CampoSenha
+              id="password"
+              label="Senha"
+              autoComplete="current-password"
+              value={password}
+              onChange={setPassword}
+            />
 
             {/* Botão Entrar */}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#8DD596] px-6 py-3 font-body text-button text-[#102823] shadow-card transition hover:brightness-95 active:brightness-90"
+              disabled={submitting}
+              className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#8DD596] px-6 py-3 font-body text-button text-[#102823] shadow-card transition hover:brightness-95 active:brightness-90 disabled:opacity-60"
             >
               <LogIn className="h-5 w-5" />
-              Entrar
+              {submitting ? "Entrando..." : "Entrar"}
             </button>
 
             {/* Divisor */}
             <div className="flex items-center gap-3 text-body-sm text-white/60">
-              <span className="h-px flex-1 bg-white/20" /> ou <span className="h-px flex-1 bg-white/20" />
+              <span className="h-px flex-1 bg-white/20" /> {t("ou")} <span className="h-px flex-1 bg-white/20" />
             </div>
 
             {/* Login social (Google) */}
             <button
               type="button"
-              onClick={() => {
-                loginWithGoogle();
-                navigate(HOME_BY_ROLE.guest);
-              }}
+              onClick={handleGoogle}
               className="flex w-full items-center justify-center gap-2 rounded-sm bg-white px-6 py-3 font-body text-button text-neutral-900 shadow-card transition hover:bg-neutral-50"
             >
               <GoogleIcon />
-              Continuar com Google
+              {t("btnGoogle")}
             </button>
           </form>
 
@@ -139,12 +182,12 @@ export default function LoginPage() {
               label="Lembrar de mim"
               labelClassName="text-body text-white"
             />
-            <button type="button" className="text-body underline hover:text-primary-200">
+            <Link to="/esqueci-senha" className="text-body underline hover:text-primary-200">
               Esqueceu a senha?
-            </button>
+            </Link>
           </div>
 
-          {/* Cadastro (onboarding Fase 1) */}
+          {/* Cadastro */}
           <p className="w-full text-center text-body-sm text-white/80">
             Não tem conta?{" "}
             <Link to="/cadastro" className="font-medium text-white underline">
@@ -155,6 +198,22 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Traduz o `?erro=` com que o servidor devolve alguém para o login.
+ *
+ * Só existem os códigos que o próprio servidor emite; qualquer outro valor
+ * (inclusive um forjado na URL) não vira mensagem nenhuma.
+ */
+function mensagemDeErro(codigo: string | null): string | null {
+  if (codigo === "login-social") {
+    return "Não foi possível entrar com o Google. Tente novamente.";
+  }
+  if (codigo === "token-invalido") {
+    return "O link de troca de senha expirou ou já foi usado. Peça um novo e-mail.";
+  }
+  return null;
 }
 
 function GoogleIcon() {

@@ -25,8 +25,7 @@ export function CookieBanner() {
 
   return (
     <>
-      <div
-        role="region"
+      <section
         aria-label="Aviso de cookies"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-primary-ink/95 px-4 py-4 text-white backdrop-blur"
       >
@@ -50,7 +49,7 @@ export function CookieBanner() {
             <Button onClick={aceitarTodos}>Aceitar todos</Button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Preferências por categoria */}
       <Modal
@@ -111,13 +110,13 @@ function Categoria({
   checked,
   onChange,
   travado
-}: {
+}: Readonly<{
   titulo: string;
   desc: string;
   checked: boolean;
   onChange?: (v: boolean) => void;
   travado?: boolean;
-}) {
+}>) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-md border border-neutral-200 p-3">
       <div className="min-w-0">

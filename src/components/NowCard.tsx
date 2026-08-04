@@ -2,14 +2,97 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CalendarClock, Clock, MapPin, Radio } from "lucide-react";
 import { Badge, Card, CardBody } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
-import { useEventNow, formatCountdown, formatElapsed } from "@/hooks/useEventNow";
-import { TRACK_TONE } from "@/data/mock";
+import { useEventNow, formatCountdown, formatElapsed, type EventPhase } from "@/hooks/useEventNow";
+import { TRACK_TONE, type Session } from "@/data/mock";
 
 /**
  * Card personalizado do participante (Plano Gratuito, Premium e Palestrante):
  * o que está acontecendo agora, onde, há quanto tempo começou e qual a próxima
  * pauta. É a primeira leitura de quem abre a plataforma durante o evento.
  */
+/**
+ * Bloco principal do card conforme a fase do evento. Era uma cadeia de três
+ * ternários aninhados no JSX (SonarQube S3358); em early-returns cada fase
+ * fica isolada e legível.
+ */
+function EstadoAtual({
+  phase,
+  live,
+  elapsed,
+  parallel,
+  minutesToNext,
+  primeiroNome
+}: Readonly<{
+  phase: EventPhase;
+  live?: Session;
+  elapsed: number;
+  parallel: number;
+  minutesToNext: number;
+  primeiroNome: string;
+}>) {
+  if (phase === "live" && live)
+    return (
+      <>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="error">
+            <span className="inline-flex items-center gap-1">
+              <Radio className="h-3 w-3" /> Acontecendo agora
+            </span>
+          </Badge>
+          <Badge tone={TRACK_TONE[live.track]}>{live.track}</Badge>
+        </div>
+        <div>
+          <p className="text-h3 text-neutral-900">{live.title}</p>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-neutral-600">
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" /> {live.room}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-4 w-4" /> {live.start}–{live.end} · {formatElapsed(elapsed)}
+            </span>
+          </div>
+          {parallel > 0 && (
+            <p className="mt-1 text-body-sm text-neutral-500">
+              +{parallel} {parallel === 1 ? "sessão em paralelo" : "sessões em paralelo"}
+            </p>
+          )}
+        </div>
+      </>
+    );
+
+  if (phase === "before")
+    return (
+      <div>
+        <Badge tone="info">Em breve</Badge>
+        <p className="mt-2 text-h3 text-neutral-900">
+          Olá, {primeiroNome} — o evento começa {formatCountdown(minutesToNext)}
+        </p>
+        <p className="text-body-sm text-neutral-600">
+          Confira a programação do dia 04/09 e monte sua agenda.
+        </p>
+      </div>
+    );
+
+  if (phase === "break")
+    return (
+      <div>
+        <Badge tone="neutral">Intervalo</Badge>
+        <p className="mt-2 text-h3 text-neutral-900">Nenhuma sessão em andamento</p>
+        <p className="text-body-sm text-neutral-600">A programação retoma em instantes.</p>
+      </div>
+    );
+
+  return (
+    <div>
+      <Badge tone="neutral">Encerrado</Badge>
+      <p className="mt-2 text-h3 text-neutral-900">Programação encerrada por hoje</p>
+      <p className="text-body-sm text-neutral-600">
+        Os conteúdos das sessões seguem disponíveis na plataforma.
+      </p>
+    </div>
+  );
+}
+
 export function NowCard() {
   const { user } = useAuth();
   const { phase, current, elapsed, next, minutesToNext } = useEventNow();
@@ -20,58 +103,14 @@ export function NowCard() {
     <Card className="border-neutral-200">
       <CardBody className="space-y-3">
         {/* ---- Acontecendo agora ---- */}
-        {phase === "live" && live ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="error">
-                <span className="inline-flex items-center gap-1">
-                  <Radio className="h-3 w-3" /> Acontecendo agora
-                </span>
-              </Badge>
-              <Badge tone={TRACK_TONE[live.track]}>{live.track}</Badge>
-            </div>
-            <div>
-              <p className="text-h3 text-neutral-900">{live.title}</p>
-              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-neutral-600">
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4" /> {live.room}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" /> {live.start}–{live.end} · {formatElapsed(elapsed)}
-                </span>
-              </div>
-              {parallel > 0 && (
-                <p className="mt-1 text-body-sm text-neutral-500">
-                  +{parallel} {parallel === 1 ? "sessão em paralelo" : "sessões em paralelo"}
-                </p>
-              )}
-            </div>
-          </>
-        ) : phase === "before" ? (
-          <div>
-            <Badge tone="info">Em breve</Badge>
-            <p className="mt-2 text-h3 text-neutral-900">
-              Olá, {user.name.split(" ")[0]} — o evento começa {formatCountdown(minutesToNext)}
-            </p>
-            <p className="text-body-sm text-neutral-600">
-              Confira a programação do dia 04/09 e monte sua agenda.
-            </p>
-          </div>
-        ) : phase === "break" ? (
-          <div>
-            <Badge tone="neutral">Intervalo</Badge>
-            <p className="mt-2 text-h3 text-neutral-900">Nenhuma sessão em andamento</p>
-            <p className="text-body-sm text-neutral-600">A programação retoma em instantes.</p>
-          </div>
-        ) : (
-          <div>
-            <Badge tone="neutral">Encerrado</Badge>
-            <p className="mt-2 text-h3 text-neutral-900">Programação encerrada por hoje</p>
-            <p className="text-body-sm text-neutral-600">
-              Os conteúdos das sessões seguem disponíveis na plataforma.
-            </p>
-          </div>
-        )}
+        <EstadoAtual
+          phase={phase}
+          live={live}
+          elapsed={elapsed}
+          parallel={parallel}
+          minutesToNext={minutesToNext}
+          primeiroNome={user.name.split(" ")[0]}
+        />
 
         {/* ---- Próxima pauta ---- */}
         {next && (

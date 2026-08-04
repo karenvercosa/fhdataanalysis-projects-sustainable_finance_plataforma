@@ -1,5 +1,18 @@
 FROM postgres:16-alpine
 
-# Copia o script de inicialização do banco gerado pelo Prisma
-# para que o schema seja criado automaticamente ao iniciar o container
-COPY prisma/init.sql /docker-entrypoint-initdb.d/01-schema.sql
+USER root
+# Remove o gosu (tem várias vulnerabilidades reportadas pelo Trivy)
+# Como rodamos o container já com USER postgres, o entrypoint não precisa do gosu
+RUN rm -f /usr/local/bin/gosu
+
+# O banco sobe VAZIO de propósito: quem cria o schema é o serviço `migrator`,
+# via `prisma migrate deploy`. Semear aqui um dump em
+# /docker-entrypoint-initdb.d/ fazia o `migrate deploy` encontrar um schema já
+# populado e sem histórico de migrações, abortando com P3005 — e o dump ainda
+# por cima não continha o RLS nem o role `sf_app`, que só existem nas migrações.
+
+# Executa como o usuário `postgres` (uid 999) em vez de root (SonarQube
+# docker:S6471). O entrypoint oficial detecta que já não é root e pula o
+# gosu/chown; o volume nomeado herda o dono de /var/lib/postgresql/data da
+# imagem (postgres:postgres), então a inicialização funciona normalmente.
+USER postgres

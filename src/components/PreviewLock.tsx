@@ -20,11 +20,11 @@ export function PreviewLock({
   children,
   message,
   blur = false
-}: {
+}: Readonly<{
   children: React.ReactNode;
   message?: string;
   blur?: boolean;
-}) {
+}>) {
   const [open, setOpen] = useState(false);
 
   return (

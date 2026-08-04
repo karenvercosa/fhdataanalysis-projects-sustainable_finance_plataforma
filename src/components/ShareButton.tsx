@@ -17,11 +17,11 @@ export function ShareButton({
   sessionId,
   variant = "button",
   className
-}: {
+}: Readonly<{
   sessionId: string;
   variant?: "button" | "icon";
   className?: string;
-}) {
+}>) {
   const [copied, setCopied] = useState(false);
 
   const copy = (e: React.MouseEvent) => {

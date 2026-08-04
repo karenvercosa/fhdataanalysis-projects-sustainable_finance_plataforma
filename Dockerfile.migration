@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:22-alpine AS builder
 
 # Instala dependências do sistema necessárias para o Prisma
 RUN apk add --no-cache libc6-compat openssl
@@ -8,8 +8,11 @@ WORKDIR /app
 # Copia os arquivos de configuração do projeto
 COPY package.json yarn.lock* tsconfig.json ./
 
-# Copia a pasta do Prisma (contém o schema e o seed.ts)
+# Copia a pasta do Prisma, o código fonte necessário para o seed e os scripts
+# de banco (a senha do role de aplicação é aplicada por um deles).
 COPY prisma ./prisma
+COPY src ./src
+COPY scripts ./scripts
 
 # Instala todas as dependências (necessário para o ts-node e typescript rodarem o seed)
 RUN yarn install --frozen-lockfile
@@ -17,8 +20,30 @@ RUN yarn install --frozen-lockfile
 # Gera o cliente do Prisma
 RUN npx prisma generate
 
-# Copia o código fonte necessário para o seed (o seed.ts importa dados de src/lib/data)
-COPY src ./src
+FROM node:22-alpine
+RUN apk add --no-cache openssl
 
-# Comando padrão que será executado quando o container do Job iniciar
-CMD ["sh", "-c", "npx prisma db push && yarn db:seed"]
+WORKDIR /app
+
+# Copia apenas o necessário do builder para a imagem final, já com o dono
+# `node` (uid 1000) — o usuário não-root que a imagem oficial do Node fornece.
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json ./
+COPY --from=builder --chown=node:node /app/tsconfig.json ./
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+COPY --from=builder --chown=node:node /app/src ./src
+COPY --from=builder --chown=node:node /app/scripts ./scripts
+
+# Roda o Job como não-root (SonarQube docker:S6471). HOME precisa apontar para
+# um diretório gravável porque o `npx` grava cache lá.
+ENV HOME=/home/node
+USER node
+
+# Comando padrão que será executado quando o container do Job iniciar.
+#
+# `migrate deploy` passou a ser obrigatório: é ele que aplica as políticas de
+# RLS e cria o role `sf_app` — `db push` só sincroniza tabelas e colunas, e
+# sozinho deixaria o banco sem nenhuma proteção de linha. Em seguida
+# `db:role` define a senha do role, e só então o seed (que já conecta como
+# `sf_app`) consegue gravar.
+CMD ["sh", "-c", "npx prisma migrate deploy && yarn db:role && npx prisma db push && yarn db:seed"]

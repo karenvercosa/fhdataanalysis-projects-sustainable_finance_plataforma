@@ -13,7 +13,17 @@ interface SessionsState {
 
 const SessionsContext = createContext<SessionsState | null>(null);
 
-export function SessionsProvider({ children }: { children: ReactNode }) {
+// Atualizadores puros fora do componente: como arrows aninhadas no `useMemo`
+// chegavam a cinco níveis de closure (SonarQube S2004).
+function atualizarSessao(prev: Session[], id: string, data: SessionInput): Session[] {
+  return prev.map((s) => (s.id === id ? { ...s, ...data } : s));
+}
+
+function removerSessao(prev: Session[], id: string): Session[] {
+  return prev.filter((s) => s.id !== id);
+}
+
+export function SessionsProvider({ children }: Readonly<{ children: ReactNode }>) {
   // Agenda compartilhada e persistente: o que o Admin edita reflete no app.
   // Chave versionada: o modelo ganhou empresa relacionada e link ao vivo.
   const [sessions, setSessions] = usePersistentState<Session[]>("sf_sessions_v6", SESSIONS);
@@ -22,8 +32,8 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
     () => ({
       sessions,
       add: (data) => setSessions((prev) => [...prev, { id: crypto.randomUUID(), favorite: false, ...data }]),
-      update: (id, data) => setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s))),
-      remove: (id) => setSessions((prev) => prev.filter((s) => s.id !== id))
+      update: (id, data) => setSessions((prev) => atualizarSessao(prev, id, data)),
+      remove: (id) => setSessions((prev) => removerSessao(prev, id))
     }),
     [sessions, setSessions]
   );

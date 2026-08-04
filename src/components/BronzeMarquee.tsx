@@ -6,7 +6,7 @@ function monogram(name: string) {
 }
 
 // Logo pequena (monograma) — cor neutra: a cota (Bronze) não fica aparente.
-function BronzeLogo({ name }: { name: string }) {
+function BronzeLogo({ name }: Readonly<{ name: string }>) {
   return (
     <span className="inline-flex shrink-0 items-center gap-2 px-2">
       <span className="grid h-8 w-8 place-items-center rounded-md bg-neutral-400 text-[11px] font-bold text-white ring-1 ring-black/5">

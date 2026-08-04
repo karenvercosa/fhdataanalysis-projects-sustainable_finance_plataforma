@@ -17,7 +17,7 @@ function monogram(name: string) {
  * Logo do patrocinador na programação — exibida apenas para empresas
  * Ouro ou Prata. Sem asset de imagem, usa um monograma tintado pela cota.
  */
-export function SponsorLogo({ name, size = "sm" }: { name?: string; size?: "sm" | "md" }) {
+export function SponsorLogo({ name, size = "sm" }: Readonly<{ name?: string; size?: "sm" | "md" }>) {
   const tier = companyTier(name);
   if (!name || (tier !== "Ouro" && tier !== "Prata")) return null;
   const dim = size === "md" ? "h-8 w-8 text-[11px]" : "h-7 w-7 text-[10px]";
@@ -41,7 +41,7 @@ export function SponsorLogo({ name, size = "sm" }: { name?: string; size?: "sm" 
  * Diferente da `SponsorLogo`, aparece para QUALQUER empresa — a cota apenas
  * tinge a marca quando existe (Ouro/Prata).
  */
-export function CompanyMark({ name, className }: { name: string; className?: string }) {
+export function CompanyMark({ name, className }: Readonly<{ name: string; className?: string }>) {
   const tier = companyTier(name);
   const style =
     tier === "Ouro" || tier === "Prata" ? TIER_STYLE[tier] : "bg-neutral-600 text-white ring-neutral-900";

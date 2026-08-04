@@ -1,6 +1,18 @@
 import { type Role } from "@/lib/roles";
 import { type UserTag } from "@/data/schema";
 
+/**
+ * ⚠️ NÃO ESTÁ EM USO.
+ *
+ * Semente de usuários do protótipo, quando o CRUD do Admin vivia em
+ * `localStorage`. Desde que `UsersAdmin` passou a ler e gravar na tabela
+ * `usuario` do Postgres (`/api/admin/usuarios`), nada aqui é carregado — a
+ * lista de contas vem do banco.
+ *
+ * Mantido como referência do formato antigo. Se voltar a ser usado, lembre-se
+ * de que `AdminUser.tag` virou a coluna `usuario.selo`.
+ */
+
 export type UserStatus = "Ativo" | "Inativo";
 
 export interface AdminUser {

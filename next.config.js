@@ -1,4 +1,10 @@
 import withPWAInit from "@ducanh2912/next-pwa";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// Traduções: o arquivo aponta o next-intl para `src/i18n/request.ts`, que lê
+// o idioma do cookie `NEXT_LOCALE` (a plataforma não usa prefixo de locale na
+// URL — ver o comentário em `src/i18n/routing.ts`).
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // PWA nativo do Next.js (App Router) — @ducanh2912/next-pwa.
 // A "blindagem" anti-cache vem das opções do Workbox: skipWaiting + clientsClaim
@@ -22,8 +28,12 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Build enxuto para o Docker: gera `.next/standalone` com o server.js e apenas
+  // as dependências realmente usadas (output file tracing). O Dockerfile copia
+  // essa pasta — sem esta opção o build não a cria e o COPY quebra.
+  output: "standalone",
   // O type-check roda no build; o lint fica separado.
   eslint: { ignoreDuringBuilds: true },
 };
 
-export default withPWA(nextConfig);
+export default withNextIntl(withPWA(nextConfig));

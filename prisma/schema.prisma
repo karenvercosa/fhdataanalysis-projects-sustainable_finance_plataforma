@@ -4,7 +4,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Conexão de RUNTIME: o role `sf_app`, que não é dono das tabelas e por
+  // isso está sujeito às políticas de RLS (ver a migração
+  // `20260803180000_rls_role_de_aplicacao`).
+  url = env("DATABASE_URL")
+  // Conexão de MIGRAÇÃO: o dono do banco. Prisma Migrate, `db push` e
+  // introspecção usam esta URL — DDL exige privilégios que `sf_app` não tem,
+  // e é justamente essa separação que dá sentido ao RLS.
+  directUrl = env("DATABASE_URL_OWNER")
 }
 
 // -----------------------------------------------------------------------------
@@ -13,6 +20,7 @@ datasource db {
 enum TipoPessoa {
   PF
   PJ
+
   @@map("tipo_pessoa")
 }
 
@@ -25,7 +33,32 @@ enum PerfilUsuario {
   patrocinador
   palestrante
   participante
+  // Perfil de entrada: toda conta nova nasce `gratuito`. Não concede nada além
+  // do Plano Gratuito (`guest` no RBAC) — o upgrade é que troca o perfil.
+  gratuito
+
   @@map("perfil_usuario")
+}
+
+enum TipoVoucher {
+  // 100% de desconto — o convite corporativo clássico.
+  gratuito
+  desconto_percentual
+  desconto_valor
+
+  @@map("tipo_voucher")
+}
+
+// Situação do resgate de um voucher que pertence a um curador/patrocinador.
+//
+// `pendente` é o estado inicial: o convite foi usado no cadastro, mas o dono
+// do voucher ainda não liberou. Só a aprovação vincula a pessoa à empresa.
+enum StatusResgateVoucher {
+  pendente
+  aprovado
+  negado
+
+  @@map("status_resgate_voucher")
 }
 
 enum StatusIngresso {
@@ -33,12 +66,14 @@ enum StatusIngresso {
   pago
   cancelado
   estornado
+
   @@map("status_ingresso")
 }
 
 enum MetodoCheckin {
   qr_code
   busca_manual
+
   @@map("metodo_checkin")
 }
 
@@ -46,6 +81,7 @@ enum TipoCota {
   ouro
   prata
   bronze
+
   @@map("tipo_cota")
 }
 
@@ -55,6 +91,7 @@ enum StatusReuniao {
   recusada
   reagendada
   realizada
+
   @@map("status_reuniao")
 }
 
@@ -67,12 +104,12 @@ model SponsorContact {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  nome      String
-  email     String
-  empresa   String
-  cargo     String
-  telefone  String?
-  status    String   @default("unread") 
+  nome     String
+  email    String
+  empresa  String
+  cargo    String
+  telefone String?
+  status   String  @default("unread")
 
   @@map("sponsor_contacts")
 }
@@ -80,13 +117,13 @@ model SponsorContact {
 model SiteContent {
   id Int @id @default(1)
 
-  heroTexto           String @map("hero_texto")
-  heroBotaoLabel      String @map("hero_botao_label")
-  heroBotaoHref       String @map("hero_botao_href")
-  dia                 String
-  data                String
-  cidade              String
-  endereco            String
+  heroTexto      String @map("hero_texto")
+  heroBotaoLabel String @map("hero_botao_label")
+  heroBotaoHref  String @map("hero_botao_href")
+  dia            String
+  data           String
+  cidade         String
+  endereco       String
 
   subtituloIngressos  String @map("subtitulo_ingressos")
   eventoTextoEsquerda String @map("evento_texto_esquerda")
@@ -110,14 +147,14 @@ model LandingPageContent {
 }
 
 model Speaker {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   nome        String
   cargo       String
-  fotoUrl     String?  @map("foto_url")
+  fotoUrl     String? @map("foto_url")
   bio         String?
-  linkedinUrl String?  @map("linkedin_url")
-  orderIndex  Int      @default(0) @map("order_index")
-  isActive    Boolean  @default(true) @map("is_active")
+  linkedinUrl String? @map("linkedin_url")
+  orderIndex  Int     @default(0) @map("order_index")
+  isActive    Boolean @default(true) @map("is_active")
 
   @@map("speakers")
 }
@@ -161,17 +198,17 @@ model Motivo {
 }
 
 model Apoiador {
-  id         Int      @id @default(autoincrement())
-  grupo      String   @default("INSTITUCIONAL")
-  kind       String   @default("image")
+  id         Int     @id @default(autoincrement())
+  grupo      String  @default("INSTITUCIONAL")
+  kind       String  @default("image")
   nome       String
-  logoUrl    String?  @map("logo_url")
-  websiteUrl String?  @map("website_url")
+  logoUrl    String? @map("logo_url")
+  websiteUrl String? @map("website_url")
   strong     String?
   texto      String?
   width      Int?
-  orderIndex Int      @default(0) @map("order_index")
-  isActive   Boolean  @default(true) @map("is_active")
+  orderIndex Int     @default(0) @map("order_index")
+  isActive   Boolean @default(true) @map("is_active")
 
   @@map("apoiadores")
 }
@@ -191,23 +228,55 @@ model CommitteeMember {
 // -----------------------------------------------------------------------------
 
 model Usuario {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tipoPessoa          TipoPessoa @map("tipo_pessoa")
-  nomeCompleto        String?    @map("nome_completo") @db.VarChar(180)
-  cpf                 String?    @unique @db.VarChar(14)
-  razaoSocial         String?    @map("razao_social") @db.VarChar(180)
-  nomeFantasia        String?    @map("nome_fantasia") @db.VarChar(180)
-  cnpj                String?    @unique @db.VarChar(18)
-  email               String     @unique @db.VarChar(180)
-  senhaHash           String     @map("senha_hash")
-  telefone            String?    @db.VarChar(20)
-  cargo               String?    @db.VarChar(120)
-  empresaNome         String?    @map("empresa_nome") @db.VarChar(180)
-  avatarUrl           String?    @map("avatar_url")
-  bio                 String?
-  ativo               Boolean    @default(true)
-  criadoEm            DateTime   @default(now()) @db.Timestamptz @map("criado_em")
-  atualizadoEm        DateTime   @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoPessoa      TipoPessoa @default(PF) @map("tipo_pessoa")
+  nomeCompleto    String?    @map("nome_completo") @db.VarChar(180)
+  // Armazenado mascarado por privacidade: apenas os 3 primeiros dígitos (ex.: 139.***.***-**).
+  cpf             String?    @db.VarChar(14)
+  razaoSocial     String?    @map("razao_social") @db.VarChar(180)
+  nomeFantasia    String?    @map("nome_fantasia") @db.VarChar(180)
+  cnpj            String?    @unique @db.VarChar(18)
+  email           String     @unique @db.VarChar(180)
+  // O hash da senha do cadastro via Better Auth fica na tabela `account`.
+  // Espelhamos o mesmo hash aqui para a plataforma de usuário, que lê esta
+  // tabela — nunca a senha em texto puro.
+  senhaHash       String?    @map("senha_hash")
+  // Hash da senha PROVISÓRIA enviada por e-mail no cadastro. Enquanto estiver
+  // preenchido, a conta ainda está no primeiro acesso: a plataforma obriga a
+  // troca antes de liberar qualquer tela. Quando a senha definitiva é criada,
+  // este campo é apagado e o novo hash vai para `senhaHash`.
+  senhaProvisoriaHash String? @map("senha_provisoria_hash")
+  telefone        String?    @db.VarChar(20)
+  cargo           String?    @db.VarChar(120)
+  empresaNome     String?    @map("empresa_nome") @db.VarChar(180)
+  avatarUrl       String?    @map("avatar_url")
+  bio             String?
+  // Código do voucher corporativo informado no cadastro — o que a pessoa
+  // digitou, guardado como está. O vínculo de verdade é o `voucherId` abaixo.
+  voucher         String?    @db.VarChar(60)
+  // Voucher efetivamente resgatado no cadastro. É por ele que a conta fica
+  // ligada à empresa dona do convite (`empresaNome` é copiado do voucher).
+  voucherId       String?    @map("voucher_id") @db.Uuid
+  voucherUsado    Voucher?   @relation("VoucherResgatado", fields: [voucherId], references: [id])
+  // Selo/cota exibido pelo Admin (Ouro, Prata, Bronze). Nulo = sem selo.
+  selo            String?    @db.VarChar(10)
+  // Perfil público (curador/patrocinador/palestrante). `avatarUrl` e `bio`
+  // acima completam o conjunto; as imagens são guardadas como data URL, do
+  // mesmo jeito que o formulário as produz.
+  linkedinUrl     String?    @map("linkedin_url")
+  capaUrl         String?    @map("capa_url")
+  ativo           Boolean    @default(true)
+  emailVerified   Boolean    @default(false) @map("email_verified")
+  // ID do cliente no Asaas (cus_...), para não recadastrar a cada cobrança.
+  asaasCustomerId String?    @map("asaas_customer_id") @db.VarChar(50)
+  criadoEm        DateTime   @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm    DateTime   @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  // Relações exigidas pelo Better Auth (sessões e login social)
+  accounts Account[]
+  sessions Session[]
+
+  assinaturas AssinaturaPlataforma[]
 
   perfis                 UsuarioPerfil[]
   palestras              PalestraPalestrante[]
@@ -222,8 +291,115 @@ model Usuario {
   solicitacoesRecebidas  SolicitacaoReuniao[]    @relation("DestinatarioReuniao")
   certificados           Certificado[]
   notificacoes           Notificacao[]
+  vouchersDoCurador      Voucher[]               @relation("VouchersDoCurador")
+  resgatesDeVoucher      VoucherResgate[]
+  interesses             UsuarioInteresse[]
 
   @@map("usuario")
+}
+
+// Catálogo de interesses, gerido pelo Admin.
+//
+// Mora no banco (e não no `localStorage`) porque é o que liga uma pessoa aos
+// temas que ela escolheu — a matéria-prima dos dashboards de audiência.
+model Interesse {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome     String   @unique @db.VarChar(80)
+  ativo    Boolean  @default(true)
+  // Posição na nuvem de interesses do cadastro e do perfil.
+  ordem    Int      @default(0)
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz
+
+  usuarios UsuarioInteresse[]
+
+  @@map("interesse")
+}
+
+// Quais temas cada pessoa escolheu. É esta tabela que responde "quantos
+// participantes se interessam por crédito de carbono?".
+model UsuarioInteresse {
+  usuarioId   String   @map("usuario_id") @db.Uuid
+  interesseId String   @map("interesse_id") @db.Uuid
+  criadoEm    DateTime @default(now()) @map("criado_em") @db.Timestamptz
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  interesse Interesse @relation(fields: [interesseId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, interesseId])
+  @@index([interesseId])
+  @@map("usuario_interesse")
+}
+
+// Matriz de cotas de patrocínio — o que cada cota libera no perfil público.
+//
+// Antes vivia só no navegador de quem editava, então o que o Admin marcava não
+// alcançava ninguém. Aqui é uma linha por cota, com os recursos em JSON: a
+// lista de recursos muda com o produto, e colunas fixas exigiriam migração a
+// cada recurso novo.
+model CotaPlataforma {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome         String   @unique @db.VarChar(40)
+  // Ordem crescente de valor: a última é a cota mais alta.
+  ordem        Int      @default(0)
+  recursos     Json
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  @@map("cota_plataforma")
+}
+
+// Voucher corporativo — o convite que uma empresa distribui.
+//
+// A empresa dona mora aqui mesmo (nome e CNPJ), e não numa tabela separada,
+// porque é assim que ela é usada: quem se cadastra com o código passa a
+// pertencer a essa empresa. O cadastro copia `empresaNome` para o usuário e
+// guarda o vínculo em `usuario.voucher_id`.
+model Voucher {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo       String      @unique @db.VarChar(60)
+  tipo         TipoVoucher @default(gratuito)
+  // Percentual (0–100) ou valor em reais. Ignorado quando o tipo é `gratuito`.
+  valor        Decimal?    @db.Decimal(10, 2)
+  usosMaximos  Int         @map("usos_maximos")
+  usosFeitos   Int         @default(0) @map("usos_feitos")
+  empresaNome  String      @map("empresa_nome") @db.VarChar(180)
+  // CNPJ alfanumérico (12 posições alfanuméricas + 2 dígitos), já formatado.
+  empresaCnpj  String?     @map("empresa_cnpj") @db.VarChar(18)
+  // Curador/patrocinador responsável. Quando preenchido, cada resgate nasce
+  // `pendente` e passa pela aprovação dele; sem curador o voucher é
+  // institucional e o resgate é liberado na hora.
+  curadorId    String?     @map("curador_id") @db.Uuid
+  curador      Usuario?    @relation("VouchersDoCurador", fields: [curadorId], references: [id], onDelete: SetNull)
+  ativo        Boolean     @default(true)
+  criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm DateTime    @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  usuarios Usuario[]        @relation("VoucherResgatado")
+  resgates VoucherResgate[]
+
+  @@index([curadorId])
+  @@map("voucher")
+}
+
+// Registro de quem usou qual voucher, e em que pé está a autorização.
+//
+// Existe separado de `usuario.voucher_id` porque são coisas diferentes: aqui
+// fica o PEDIDO (com histórico e decisão do curador); lá fica o vínculo em
+// vigor, que só é gravado quando o resgate é aprovado.
+model VoucherResgate {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  voucherId  String               @map("voucher_id") @db.Uuid
+  usuarioId  String               @map("usuario_id") @db.Uuid
+  status     StatusResgateVoucher @default(pendente)
+  criadoEm   DateTime             @default(now()) @map("criado_em") @db.Timestamptz
+  decididoEm DateTime?            @map("decidido_em") @db.Timestamptz
+
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  // Uma pessoa resgata cada voucher uma única vez.
+  @@unique([voucherId, usuarioId])
+  @@index([status])
+  @@map("voucher_resgate")
 }
 
 model UsuarioPerfil {
@@ -243,7 +419,7 @@ model Evento {
   dataInicio DateTime @map("data_inicio") @db.Date
   dataFim    DateTime @map("data_fim") @db.Date
   descricao  String?
-  criadoEm   DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz
 
   tags                Tag[]
   trilhas             Trilha[]
@@ -260,10 +436,10 @@ model Evento {
 }
 
 model Tag {
-  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventoId String   @map("evento_id") @db.Uuid
-  nome     String   @db.VarChar(60)
-  evento   Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId String @map("evento_id") @db.Uuid
+  nome     String @db.VarChar(60)
+  evento   Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
 
   palestras PalestraTag[]
 
@@ -272,10 +448,10 @@ model Tag {
 }
 
 model Trilha {
-  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventoId String   @map("evento_id") @db.Uuid
-  nome     String   @db.VarChar(120)
-  evento   Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId String @map("evento_id") @db.Uuid
+  nome     String @db.VarChar(120)
+  evento   Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
 
   palestras Palestra[]
 
@@ -294,12 +470,12 @@ model Palestra {
   palcoSala   String?  @map("palco_sala") @db.VarChar(80)
   youtubeUrl  String?  @map("youtube_url")
   limiteVagas Int?     @map("limite_vagas")
-  criadoEm    DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  criadoEm    DateTime @default(now()) @map("criado_em") @db.Timestamptz
 
-  evento       Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  trilha       Trilha?               @relation(fields: [trilhaId], references: [id])
-  tags         PalestraTag[]
-  palestrantes PalestraPalestrante[]
+  evento        Evento                @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  trilha        Trilha?               @relation(fields: [trilhaId], references: [id])
+  tags          PalestraTag[]
+  palestrantes  PalestraPalestrante[]
   agendaPessoal AgendaPessoal[]
 
   @@index([eventoId, dia])
@@ -329,7 +505,7 @@ model PalestraPalestrante {
 model AgendaPessoal {
   usuarioId  String   @map("usuario_id") @db.Uuid
   palestraId String   @map("palestra_id") @db.Uuid
-  criadoEm   DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz
 
   usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   palestra Palestra @relation(fields: [palestraId], references: [id], onDelete: Cascade)
@@ -363,8 +539,8 @@ model Ingresso {
   statusIngresso StatusIngresso @default(reservado) @map("status_ingresso")
   valorPago      Decimal?       @map("valor_pago") @db.Decimal(10, 2)
   asaasPaymentId String?        @map("asaas_payment_id") @db.VarChar(80)
-  dataCompra     DateTime       @default(now()) @db.Timestamptz @map("data_compra")
-  dataPagamento  DateTime?      @db.Timestamptz @map("data_pagamento")
+  dataCompra     DateTime       @default(now()) @map("data_compra") @db.Timestamptz
+  dataPagamento  DateTime?      @map("data_pagamento") @db.Timestamptz
 
   tipoIngresso TipoIngresso @relation(fields: [tipoIngressoId], references: [id])
   usuario      Usuario      @relation(fields: [usuarioId], references: [id])
@@ -380,7 +556,7 @@ model Credencial {
   ingressoId      String        @unique @map("ingresso_id") @db.Uuid
   operadorId      String?       @map("operador_id") @db.Uuid
   metodo          MetodoCheckin
-  dataHoraCheckin DateTime      @default(now()) @db.Timestamptz @map("data_hora_checkin")
+  dataHoraCheckin DateTime      @default(now()) @map("data_hora_checkin") @db.Timestamptz
 
   ingresso Ingresso @relation(fields: [ingressoId], references: [id])
   operador Usuario? @relation("OperadorCredencial", fields: [operadorId], references: [id])
@@ -403,14 +579,14 @@ model Cota {
 }
 
 model Patrocinador {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuarioId       String   @map("usuario_id") @db.Uuid
-  eventoId        String   @map("evento_id") @db.Uuid
-  cotaId          String   @map("cota_id") @db.Uuid
-  logoUrl         String?  @map("logo_url")
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId       String  @map("usuario_id") @db.Uuid
+  eventoId        String  @map("evento_id") @db.Uuid
+  cotaId          String  @map("cota_id") @db.Uuid
+  logoUrl         String? @map("logo_url")
   descricao       String?
-  contatoEmail    String?  @map("contato_email") @db.VarChar(180)
-  contatoTelefone String?  @map("contato_telefone") @db.VarChar(20)
+  contatoEmail    String? @map("contato_email") @db.VarChar(180)
+  contatoTelefone String? @map("contato_telefone") @db.VarChar(20)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -429,7 +605,7 @@ model PatrocinadorMaterial {
   nomeArquivo    String   @map("nome_arquivo") @db.VarChar(200)
   tipoMime       String   @map("tipo_mime") @db.VarChar(100)
   arquivo        Bytes
-  criadoEm       DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz
 
   patrocinador Patrocinador @relation(fields: [patrocinadorId], references: [id], onDelete: Cascade)
 
@@ -441,7 +617,7 @@ model PatrocinadorInteracao {
   patrocinadorId String   @map("patrocinador_id") @db.Uuid
   usuarioId      String   @map("usuario_id") @db.Uuid
   tipo           String   @db.VarChar(40)
-  criadoEm       DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz
 
   patrocinador Patrocinador @relation(fields: [patrocinadorId], references: [id], onDelete: Cascade)
   usuario      Usuario      @relation(fields: [usuarioId], references: [id])
@@ -487,10 +663,10 @@ model SolicitacaoReuniao {
   solicitanteId    String        @map("solicitante_id") @db.Uuid
   destinatarioId   String        @map("destinatario_id") @db.Uuid
   status           StatusReuniao @default(solicitada)
-  dataHoraSugerida DateTime?     @db.Timestamptz @map("data_hora_sugerida")
+  dataHoraSugerida DateTime?     @map("data_hora_sugerida") @db.Timestamptz
   local            String?       @db.VarChar(80)
-  criadoEm         DateTime      @default(now()) @db.Timestamptz @map("criado_em")
-  atualizadoEm     DateTime      @default(now()) @updatedAt @db.Timestamptz @map("atualizado_em")
+  criadoEm         DateTime      @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm     DateTime      @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
 
   evento       Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   solicitante  Usuario @relation("SolicitanteReuniao", fields: [solicitanteId], references: [id])
@@ -507,7 +683,7 @@ model Certificado {
   tipo            String   @db.VarChar(40)
   cargaHoraria    Decimal? @map("carga_horaria") @db.Decimal(5, 2)
   codigoValidacao String   @unique @map("codigo_validacao") @db.VarChar(40)
-  dataEmissao     DateTime @default(now()) @db.Timestamptz @map("data_emissao")
+  dataEmissao     DateTime @default(now()) @map("data_emissao") @db.Timestamptz
   arquivo         Bytes?
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
@@ -523,10 +699,81 @@ model Notificacao {
   titulo    String   @db.VarChar(150)
   mensagem  String?
   lida      Boolean  @default(false)
-  criadoEm  DateTime @default(now()) @db.Timestamptz @map("criado_em")
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId, lida])
   @@map("notificacao")
+}
+
+// -----------------------------------------------------------------------------
+// MODELS - BETTER AUTH (sessões, contas e verificação)
+// -----------------------------------------------------------------------------
+
+model Account {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Session {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Verification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL - ASSINATURA DA PLATAFORMA (Asaas)
+// -----------------------------------------------------------------------------
+
+model AssinaturaPlataforma {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId           String   @map("usuario_id") @db.Uuid
+  usuario             Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  asaasSubscriptionId String?  @map("asaas_subscription_id") @db.VarChar(50)
+  asaasPaymentId      String?  @map("asaas_payment_id") @db.VarChar(50)
+  billingType         String   @map("billing_type") @db.VarChar(20)
+  internacional       Boolean  @default(false)
+  valor               Decimal  @db.Decimal(10, 2)
+  // pendente | ativa | cancelada
+  status              String   @default("pendente") @db.VarChar(20)
+  criadoEm            DateTime @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm        DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  @@index([asaasPaymentId])
+  @@index([asaasSubscriptionId])
+  @@map("assinatura_plataforma")
 }

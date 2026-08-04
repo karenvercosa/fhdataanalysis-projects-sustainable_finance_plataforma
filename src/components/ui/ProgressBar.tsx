@@ -5,12 +5,12 @@ export function ProgressBar({
   max = 100,
   className,
   tone = "primary"
-}: {
+}: Readonly<{
   value: number;
   max?: number;
   className?: string;
   tone?: "primary" | "warning";
-}) {
+}>) {
   const pct = Math.min(100, Math.round((value / max) * 100));
   return (
     <div

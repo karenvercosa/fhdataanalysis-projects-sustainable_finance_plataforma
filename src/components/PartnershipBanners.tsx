@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Handshake, Mail, Mic2, Phone, User } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Handshake, Mail, Mic2, Phone, User } from "lucide-react";
 import { Button, Input, Modal } from "@/components/ui";
-import { usePersistentState } from "@/hooks/usePersistentState";
+import { api } from "@/lib/admin-api";
 import { COMMERCIAL_CONTACT } from "@/data/sponsorTiers";
 import { AVISO_FORMULARIO_B2B } from "@/data/legal";
 import { cn } from "@/lib/utils";
 
+/**
+ * ⚠️ NÃO ESTÁ MAIS EM USO — os leads viraram e-mail.
+ *
+ * A lista ficava no `localStorage` de quem preenchia: o lead comercial morria
+ * no navegador da pessoa. Hoje o formulário envia para a caixa comercial por
+ * `POST /api/leads`.
+ */
 export const LEADS_PARCERIA_KEY = "sf_leads_parceria";
 
 export type TipoParceria = "curador" | "patrocinador";
@@ -47,25 +54,27 @@ const CONTEUDO: Record<
 
 interface Props {
   nome: string;
-  email: string;
 }
 
 /**
  * Captação comercial na tela inicial: dois convites lado a lado para quem pode
  * entrar no evento como Curador ou Patrocinador.
  */
-export function PartnershipBanners({ nome, email }: Props) {
-  const [leads, setLeads] = usePersistentState<LeadParceria[]>(LEADS_PARCERIA_KEY, []);
+export function PartnershipBanners({ nome }: Readonly<Props>) {
+  // "Já enviou" vale só para esta visita: o registro agora é o e-mail que saiu.
+  const [enviados, setEnviados] = useState<TipoParceria[]>([]);
   const [aberto, setAberto] = useState<TipoParceria | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const [form, setForm] = useState({ empresa: "", cargo: "", telefone: "", mensagem: "" });
 
-  const jaEnviou = (tipo: TipoParceria) =>
-    leads.some((l) => l.tipo === tipo && l.email.toLowerCase() === email.toLowerCase());
+  const jaEnviou = (tipo: TipoParceria) => enviados.includes(tipo);
 
   const abrir = (tipo: TipoParceria) => {
     setForm({ empresa: "", cargo: "", telefone: "", mensagem: "" });
     setEnviado(false);
+    setErro(null);
     setAberto(tipo);
   };
 
@@ -74,25 +83,28 @@ export function PartnershipBanners({ nome, email }: Props) {
     window.setTimeout(() => setEnviado(false), 200);
   };
 
-  const podeEnviar = form.empresa.trim() && form.cargo.trim() && form.telefone.trim();
+  const podeEnviar =
+    Boolean(form.empresa.trim() && form.cargo.trim() && form.telefone.trim()) && !enviando;
 
-  const enviar = () => {
-    if (!aberto) return;
-    setLeads((prev) => [
-      ...prev.filter((l) => !(l.tipo === aberto && l.email.toLowerCase() === email.toLowerCase())),
-      {
-        id: `lead_${aberto}_${email}`,
+  const enviar = async () => {
+    if (!aberto || !podeEnviar) return;
+    setEnviando(true);
+    setErro(null);
+    try {
+      await api.post("/api/leads", {
         tipo: aberto,
-        nome,
-        email,
         empresa: form.empresa.trim(),
         cargo: form.cargo.trim(),
         telefone: form.telefone.trim(),
-        mensagem: form.mensagem.trim(),
-        criadoEm: new Date().toLocaleDateString("pt-BR")
-      }
-    ]);
-    setEnviado(true);
+        mensagem: form.mensagem.trim()
+      });
+      setEnviados((prev) => (prev.includes(aberto) ? prev : [...prev, aberto]));
+      setEnviado(true);
+    } catch (e: any) {
+      setErro(e?.message ?? "Não foi possível enviar seus dados.");
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const atual = aberto ? CONTEUDO[aberto] : null;
@@ -152,7 +164,7 @@ export function PartnershipBanners({ nome, email }: Props) {
                 Cancelar
               </Button>
               <Button onClick={enviar} disabled={!podeEnviar}>
-                Enviar
+                {enviando ? "Enviando…" : "Enviar"}
               </Button>
             </>
           )
@@ -167,7 +179,7 @@ export function PartnershipBanners({ nome, email }: Props) {
                   Recebemos seu interesse, {nome.split(" ")[0]}.
                 </p>
                 <p className="text-body-sm text-neutral-600">
-                  O responsável comercial entra em contato em breve por {email}.
+                  O responsável comercial entra em contato em breve pelo e-mail do seu cadastro.
                 </p>
               </div>
             </div>
@@ -175,6 +187,14 @@ export function PartnershipBanners({ nome, email }: Props) {
           </div>
         ) : (
           <div className="space-y-3">
+            {erro && (
+              <div
+                role="alert"
+                className="flex items-center gap-2 rounded-md bg-error-50 px-3 py-2 text-body-sm text-error-500"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" /> {erro}
+              </div>
+            )}
             <p className="text-body-sm text-neutral-700">{atual?.sub}</p>
             {aberto === "patrocinador" && <ContatoComercial />}
             <div className="grid gap-3 sm:grid-cols-2">

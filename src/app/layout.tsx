@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import PwaCleaner from "@/components/PwaCleaner";
 import "./globals.css";
 
@@ -22,9 +24,18 @@ export const viewport: Viewport = {
   themeColor: "#1E8E5A"
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/** `pt` -> `pt-BR` no atributo `lang`, que espera uma tag BCP 47 completa. */
+const LANG_HTML: Record<string, string> = { pt: "pt-BR", en: "en" };
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Idioma e mensagens resolvidos no servidor (cookie `NEXT_LOCALE`), para o
+  // provider entregá-los prontos aos Client Components — inclusive à SPA, que
+  // é montada com `ssr: false`.
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="pt-BR">
+    <html lang={LANG_HTML[locale] ?? locale}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -36,7 +47,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Limpeza de emergência do SW/cache legado (Vite) — roda 1x por navegador. */}
         <PwaCleaner />
-        {children}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

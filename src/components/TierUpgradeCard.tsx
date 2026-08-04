@@ -4,18 +4,23 @@ import { Badge, Button, Card, CardBody, Modal } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useAuth } from "@/context/AuthContext";
+import { useTierMatrix } from "@/context/TierMatrixContext";
+import { TIER_FEATURE_ROWS } from "@/data/tierMatrix";
 import {
   COMMERCIAL_CONTACT,
-  TIER_BENEFITS,
   TIER_PANEL_KEY,
   TIER_UPGRADE_KEY,
-  benefitsGained,
-  tiersAbove,
-  type SponsorTier,
   type UpgradeRequest
 } from "@/data/sponsorTiers";
 
-const TIER_TONE = { Ouro: "warning", Prata: "info", Bronze: "neutral" } as const;
+const TIER_TONE: Record<string, "warning" | "info" | "neutral"> = {
+  Ouro: "warning",
+  Prata: "info",
+  Bronze: "neutral"
+};
+
+/** Cota sem tom próprio (renomeada no Admin) cai no neutro. */
+const tomDaCota = (nome: string) => TIER_TONE[nome] ?? "neutral";
 
 function today() {
   return new Date().toLocaleDateString("pt-BR");
@@ -51,12 +56,158 @@ function CommercialContact() {
  * Sugere ao curador/patrocinador o upgrade da cota contratada. O upgrade é
  * conduzido pelo responsável comercial: o curador registra o interesse e recebe
  * a devolutiva de que será contatado em breve.
+ *
+ * Os pontos exibidos saem da **Matriz de Cotas do Admin**, e não de uma lista
+ * fixa: o que aparece aqui é exatamente o que está marcado em
+ * `/admin/cotas`. Assim o Admin liga um recurso numa cota e o patrocinador
+ * passa a ver aquele ponto na mesma hora, sem ninguém precisar editar código.
  */
+/** Cartões das cotas acima da atual — o caminho de upgrade. */
+function OpcoesDeUpgrade({
+  options,
+  tier,
+  pontosGanhos,
+  onEscolher
+}: Readonly<{
+  options: string[];
+  tier: string;
+  pontosGanhos: (de: string, para: string) => string[];
+  onEscolher: (cota: string) => void;
+}>) {
+  return (
+      <>
+        {/* Uma opção por cota disponível acima da atual */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {options.map((t) => (
+            <div
+              key={t}
+              className="flex flex-col gap-3 rounded-md border border-neutral-200 p-4 transition-shadow hover:shadow-card"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-h4 text-neutral-900">Cota {t}</p>
+                <Badge tone={tomDaCota(t)}>{t}</Badge>
+              </div>
+              <p className="text-body-sm text-neutral-600">
+                O que você ganha saindo do {tier}:
+              </p>
+              <ul className="flex-1 space-y-1.5">
+                {pontosGanhos(tier, t).map((b) => (
+                  <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                fullWidth
+                variant={t === options.at(-1) ? "primary" : "outline"}
+                onClick={() => onEscolher(t)}
+                leftIcon={<ArrowUpRight className="h-4 w-4" />}
+              >
+                Quero a cota {t}
+              </Button>
+            </div>
+          ))}
+        </div>
+        <p className="text-body-sm text-neutral-600">
+          O upgrade é feito com o responsável comercial do evento.
+        </p>
+      </>
+  );
+}
+
+/** Já na cota máxima: mostra os benefícios ativos e o contato comercial. */
+function CotaMaxima({
+  tier,
+  pontos,
+  onFalarComComercial
+}: Readonly<{ tier: string; pontos: string[]; onFalarComComercial: () => void }>) {
+  return (
+      <>
+        <p className="text-body-sm font-medium text-neutral-900">
+          Benefícios ativos da cota {tier}:
+        </p>
+        <ul className="grid gap-1.5 sm:grid-cols-2">
+          {pontos.map((b) => (
+            <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+              {b}
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <Button onClick={onFalarComComercial} leftIcon={<ArrowUpRight className="h-4 w-4" />}>
+            Falar com o comercial
+          </Button>
+          <p className="text-body-sm text-neutral-600">
+            Renovação e condições especiais com o responsável comercial.
+          </p>
+        </div>
+      </>
+  );
+}
+
+/** Título do modal — era uma cadeia de ternários aninhados (SonarQube S3358). */
+function tituloDoModal(enviado: boolean, temOpcoes: boolean, alvo: string): string {
+  if (enviado) return "Solicitação enviada";
+  return temOpcoes ? `Upgrade para a cota ${alvo}` : "Falar com o comercial";
+}
+
+/** Devolutiva persistente depois que a solicitação de upgrade foi registrada. */
+function SolicitacaoRegistrada({
+  request,
+  onCancelar
+}: Readonly<{ request: UpgradeRequest; onCancelar: () => void }>) {
+  return (
+    <Card className="border-primary-500 bg-primary-50">
+      <CardBody className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-3">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+          <div className="min-w-0">
+            <p className="text-h4 text-neutral-900">Solicitação de upgrade enviada</p>
+            <p className="text-body-sm text-neutral-700">
+              O responsável comercial entrará em contato em breve para falar sobre a cota{" "}
+              <strong>{request.to}</strong>. Solicitado em {request.requestedAt}.
+            </p>
+            <p className="mt-1 text-body-sm text-neutral-600">
+              {COMMERCIAL_CONTACT.name} · {COMMERCIAL_CONTACT.email}
+            </p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onCancelar}>
+          Cancelar solicitação
+        </Button>
+      </CardBody>
+    </Card>
+  );
+}
+
 export function TierUpgradeCard() {
   const { user } = useAuth();
-  const tier: SponsorTier = user.tier ?? "Bronze";
+  const { matrix, featuresOf } = useTierMatrix();
+
+  // A ordem das cotas é a da matriz — é ela que o Admin controla (inclusive os
+  // nomes). A cota do usuário vem do selo concedido no cadastro.
+  const ordem = matrix.map((t) => t.name);
+  const tier = user.tier ?? ordem[0] ?? "Bronze";
+
   // Todas as cotas acima da atual — dá para pular níveis (Bronze → Ouro).
-  const options = tiersAbove(tier);
+  // Cota desconhecida (renomeada depois de concedida) cai em `-1`, e o
+  // `slice(0)` acaba oferecendo a lista inteira, que é o comportamento útil.
+  const options = ordem.slice(ordem.indexOf(tier) + 1);
+
+  /** Recursos LIGADOS numa cota, no rótulo da matriz. */
+  const pontosDaCota = (nome: string) => {
+    const recursos = featuresOf(nome);
+    return TIER_FEATURE_ROWS.filter((r) => recursos[r.key]).map((r) => r.label);
+  };
+
+  /** O que a cota destino acrescenta em relação à atual. */
+  const pontosGanhos = (de: string, para: string) => {
+    const atuais = featuresOf(de);
+    const alvo = featuresOf(para);
+    return TIER_FEATURE_ROWS.filter((r) => alvo[r.key] && !atuais[r.key]).map((r) => r.label);
+  };
 
   const [request, setRequest] = usePersistentState<UpgradeRequest | null>(TIER_UPGRADE_KEY, null);
   // Recolhido por padrão: a oferta fica disponível sem competir com métricas e leads.
@@ -75,12 +226,12 @@ export function TierUpgradeCard() {
     return () => window.removeEventListener("resize", measure);
   }, [expanded, options.length]);
   // Cota escolhida no modal. Na cota máxima (Ouro) o contato é sobre renovação.
-  const [target, setTarget] = useState<SponsorTier>(options[0] ?? tier);
+  const [target, setTarget] = useState<string>(options[0] ?? tier);
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false); // etapa de devolutiva dentro do modal
   const [message, setMessage] = useState("");
 
-  const openFor = (t: SponsorTier) => {
+  const openFor = (t: string) => {
     setTarget(t);
     setOpen(true);
   };
@@ -99,27 +250,7 @@ export function TierUpgradeCard() {
   return (
     <>
       {request ? (
-        // ---- Estado 2: solicitação registrada → devolutiva persistente ----
-        <Card className="border-primary-500 bg-primary-50">
-          <CardBody className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 gap-3">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
-              <div className="min-w-0">
-                <p className="text-h4 text-neutral-900">Solicitação de upgrade enviada</p>
-                <p className="text-body-sm text-neutral-700">
-                  O responsável comercial entrará em contato em breve para falar sobre a cota{" "}
-                  <strong>{request.to}</strong>. Solicitado em {request.requestedAt}.
-                </p>
-                <p className="mt-1 text-body-sm text-neutral-600">
-                  {COMMERCIAL_CONTACT.name} · {COMMERCIAL_CONTACT.email}
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setRequest(null)}>
-              Cancelar solicitação
-            </Button>
-          </CardBody>
-        </Card>
+        <SolicitacaoRegistrada request={request} onCancelar={() => setRequest(null)} />
       ) : (
         // ---- Estado 1: sugestão de upgrade ----
         <Card>
@@ -147,7 +278,7 @@ export function TierUpgradeCard() {
               </span>
             </span>
             <span className="inline-flex items-center gap-2 text-body-sm text-neutral-600">
-              Cota atual <Badge tone={TIER_TONE[tier]}>{tier}</Badge>
+              Cota atual <Badge tone={tomDaCota(tier)}>{tier}</Badge>
               <ChevronDown
                 className={cn(
                   "h-5 w-5 shrink-0 text-neutral-500 transition-transform duration-300 ease-out",
@@ -167,66 +298,14 @@ export function TierUpgradeCard() {
             <div ref={contentRef}>
               <CardBody className="space-y-3">
             {options.length ? (
-              <>
-                {/* Uma opção por cota disponível acima da atual */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {options.map((t) => (
-                    <div
-                      key={t}
-                      className="flex flex-col gap-3 rounded-md border border-neutral-200 p-4 transition-shadow hover:shadow-card"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-h4 text-neutral-900">Cota {t}</p>
-                        <Badge tone={TIER_TONE[t]}>{t}</Badge>
-                      </div>
-                      <p className="text-body-sm text-neutral-600">
-                        O que você ganha saindo do {tier}:
-                      </p>
-                      <ul className="flex-1 space-y-1.5">
-                        {benefitsGained(tier, t).map((b) => (
-                          <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
-                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        fullWidth
-                        variant={t === "Ouro" ? "primary" : "outline"}
-                        onClick={() => openFor(t)}
-                        leftIcon={<ArrowUpRight className="h-4 w-4" />}
-                      >
-                        Quero a cota {t}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-body-sm text-neutral-600">
-                  O upgrade é feito com o responsável comercial do evento.
-                </p>
-              </>
+              <OpcoesDeUpgrade
+                options={options}
+                tier={tier}
+                pontosGanhos={pontosGanhos}
+                onEscolher={openFor}
+              />
             ) : (
-              <>
-                <p className="text-body-sm font-medium text-neutral-900">
-                  Benefícios ativos da cota {tier}:
-                </p>
-                <ul className="grid gap-1.5 sm:grid-cols-2">
-                  {TIER_BENEFITS[tier].map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-body-sm text-neutral-700">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <Button onClick={() => openFor(tier)} leftIcon={<ArrowUpRight className="h-4 w-4" />}>
-                    Falar com o comercial
-                  </Button>
-                  <p className="text-body-sm text-neutral-600">
-                    Renovação e condições especiais com o responsável comercial.
-                  </p>
-                </div>
-              </>
+              <CotaMaxima tier={tier} pontos={pontosDaCota(tier)} onFalarComComercial={() => openFor(tier)} />
             )}
               </CardBody>
             </div>
@@ -237,13 +316,7 @@ export function TierUpgradeCard() {
       <Modal
         open={open}
         onClose={closeModal}
-        title={
-          sent
-            ? "Solicitação enviada"
-            : options.length
-            ? `Upgrade para a cota ${target}`
-            : "Falar com o comercial"
-        }
+        title={tituloDoModal(sent, options.length > 0, target)}
         footer={
           sent ? (
             <Button onClick={closeModal}>Concluir</Button>
@@ -290,7 +363,7 @@ export function TierUpgradeCard() {
                 <select
                   id="upgrade-tier"
                   value={target}
-                  onChange={(e) => setTarget(e.target.value as SponsorTier)}
+                  onChange={(e) => setTarget(e.target.value)}
                   className="h-10 w-full rounded-md border border-neutral-200 bg-white px-4 text-body text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                 >
                   {options.map((t) => (

@@ -11,14 +11,14 @@ export function Switch({
   label,
   disabled,
   className
-}: {
+}: Readonly<{
   checked: boolean;
   onChange: (next: boolean) => void;
   /** Rótulo acessível — a matriz é visual, então não há texto ao lado. */
   label: string;
   disabled?: boolean;
   className?: string;
-}) {
+}>) {
   return (
     <button
       type="button"

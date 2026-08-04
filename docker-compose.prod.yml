@@ -1,5 +1,21 @@
+# ==============================================================================
+# docker-compose.prod.yml — stack completa de produção (front + db + redis + migrator)
+#
+# É a MESMA stack em dois modos:
+#
+#   1) Local / SonarQube — constrói as 4 imagens a partir dos Dockerfiles do repo:
+#        yarn sonar                    (faz isso automaticamente)
+#        docker compose -f docker-compose.prod.yml up -d --build
+#
+# O `postgres` sobe vazio; todo o schema (inclusive RLS e o role `sf_app`) vem
+# das migrações aplicadas pelo serviço `migrator`. Nenhum pré-requisito manual.
+# ==============================================================================
+
+name: sustainable-finance-prod
+
 services:
   postgres:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${DB_IMAGE_TAG:-db-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile.db
@@ -13,13 +29,23 @@ services:
       - '5432:5432'
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
+    # O `-h 127.0.0.1` é obrigatório: enquanto o entrypoint roda o
+    # /docker-entrypoint-initdb.d/01-schema.sql, ele sobe um servidor temporário
+    # com `listen_addresses = ''` — só socket Unix. Um `pg_isready` sem host
+    # passa por esse socket e declara o container saudável cedo demais; o
+    # migrator então conecta por TCP na porta ainda fechada e morre com P1001.
+    # Forçando TCP, o healthcheck só passa quando a porta 5432 realmente atende.
+    # O init do schema leva ~50s, daí o start_period generoso.
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
-      interval: 10s
+      test:
+        ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 120s
 
   redis:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${REDIS_IMAGE_TAG:-redis-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile.redis
@@ -28,23 +54,36 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redisdata_prod:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
+  # Job de schema + seed. Roda até o fim e sai; o `app` só sobe depois disso.
   migrator:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${MIGRATION_IMAGE_TAG:-migration-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile.migration
     container_name: migrator_sustainable_finance_prod
+    restart: 'no'
     env_file: .env
     environment:
+      # O migrator faz DDL e cria o role da aplicação: conecta como DONO.
+      # `DATABASE_URL` fica com a conexão da app porque o seed roda por ela —
+      # e assim o seed também prova que o RLS não bloqueou o caminho normal.
       - DATABASE_URL=${DATABASE_URL_DOCKER}
+      - DATABASE_URL_OWNER=${DATABASE_URL_OWNER_DOCKER}
     depends_on:
       postgres:
         condition: service_healthy
 
   app:
+    image: ${DOCKER_HUB_USERNAME:-sustainablefinances}/sustainable-finance:${FRONT_IMAGE_TAG:-front-v1.0.0}
     build:
       context: .
       dockerfile: Dockerfile
@@ -60,6 +99,14 @@ services:
     depends_on:
       migrator:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'node -e "fetch(\"http://127.0.0.1:3000/\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 volumes:
   pgdata_prod:

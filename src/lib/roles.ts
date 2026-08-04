@@ -3,15 +3,16 @@
 //  7 perfis x capacidades (capability-based). As rotas e a UI consultam
 //  `can(role, capability)` em vez de checar o papel diretamente — assim
 //  novas regras de negócio não exigem reescrever guards.
+//
+//  Os TIPOS (`Role`, `Capability`) moram em `types/rbac.ts`; aqui ficam os
+//  dados de runtime: rótulos, matriz padrão e helpers. O re-export abaixo
+//  mantém válidos os `import { type Role } from "@/lib/roles"` já espalhados
+//  pelo código.
 // =====================================================================
 
-export type Role =
-  | "guest"        // Plano Gratuito (cadastro feito, sem ingresso)
-  | "attendee"     // Participante Premium (ingresso ativo via voucher)
-  | "speaker"      // Palestrante
-  | "curator"      // Curador (patrocinador que distribui vouchers)
-  | "operator"     // Operador (credenciamento no dia)
-  | "admin";       // Administrador
+import { type Capability, type MatrizPermissoes, type Role, type TipoConta } from "@/types";
+
+export type { Capability, Role, TipoConta } from "@/types";
 
 export const ROLE_LABEL: Record<Role, string> = {
   guest: "Plano Gratuito",
@@ -21,24 +22,6 @@ export const ROLE_LABEL: Record<Role, string> = {
   operator: "Operador",
   admin: "Administrador"
 };
-
-export type Capability =
-  | "view:public-content"     // landing + conteúdo público básico
-  | "view:streaming"          // streaming do evento (livre, inclusive Não Pago)
-  | "view:premium-content"    // ver conteúdos premium (capa/preview)
-  | "download:content"        // TRAVA: baixar relatórios/vídeos/PDFs (pago)
-  | "redeem:voucher"          // checkout por convite (validar voucher)
-  | "view:ticket-qr"          // QR de credenciamento
-  | "manage:personal-agenda"  // favoritar sessões / agenda pessoal
-  | "view:networking"         // descoberta e perfis para networking
-  | "manage:company-profile"  // editar perfil da empresa/patrocinador
-  | "view:curator-dashboard"  // métricas de voucher + leads (LGPD)
-  | "manage:speaker-content"  // materiais/slides do palestrante
-  | "operate:checkin"         // bipar QR, busca fallback, status
-  | "purchase:ticket"         // adquirir acesso ao evento (compra/voucher)
-  | "view:event-map"          // mapa do evento (palcos, stands, salas)
-  | "view:certificate"        // certificado de participação (pós-evento)
-  | "manage:platform";        // admin total
 
 // Participante Geral (pago): base herdada pelo Palestrante.
 // `view:ticket-qr` (credencial) NÃO entra na base — é concedido só a quem
@@ -76,7 +59,7 @@ export const CAPABILITY_LABEL: Record<Capability, string> = {
 export const ALL_CAPABILITIES = Object.keys(CAPABILITY_LABEL) as Capability[];
 
 // Matriz PADRÃO de capacidades por papel (semente do editor de Permissões).
-export const DEFAULT_MATRIX: Record<Role, Capability[]> = {
+export const DEFAULT_MATRIX: MatrizPermissoes = {
   // Plano Gratuito: streaming livre, sem download e SEM credencial; pode adquirir
   // acesso. Agenda pessoal é recurso de membro — favoritar exige upgrade.
   guest: ["view:public-content", "view:streaming", "view:premium-content", "purchase:ticket"],
@@ -128,3 +111,14 @@ export const HOME_BY_ROLE: Record<Role, string> = {
   operator: "/operacao",
   admin: "/admin"
 };
+
+/**
+ * Destino do login depois de confirmada a senha definitiva.
+ *
+ * O Plano Gratuito sempre cai na home, mesmo que um dia acumule um perfil
+ * operacional: sem assinatura não há painel a abrir. O assinante segue o
+ * painel do seu papel (curador, operador, admin) ou também a home.
+ */
+export function destinoPorTipoConta(role: Role, tipoConta: TipoConta): string {
+  return tipoConta === "gratuito" ? HOME_BY_ROLE.guest : HOME_BY_ROLE[role];
+}

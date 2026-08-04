@@ -19,6 +19,56 @@ import { cn } from "@/lib/utils";
 type TrackFilter = "Todas" | Session["track"];
 const TRACKS: TrackFilter[] = ["Todas", "ESG", "Investimentos", "Inovação"];
 
+/**
+ * Empresas creditadas na pauta: a que apresenta + as de quem sobe ao palco.
+ * Uma empresa que aparece em mais de um papel é creditada uma vez só.
+ */
+function empresasCreditadas(detail: Session | null): { name: string; credit: string }[] {
+  if (!detail) return [];
+  const entries: { name: string; credit: string }[] = [];
+  const add = (name: string | undefined, credit: string) => {
+    if (!name) return;
+    const found = entries.find((e) => e.name === name);
+    if (found) found.credit += ` · ${credit}`;
+    else entries.push({ name, credit });
+  };
+  add(detail.company, "Apresentação");
+  add(personCompany(detail.speaker), `Palestrante · ${detail.speaker}`);
+  add(personCompany(detail.moderator), `Mediação · ${detail.moderator}`);
+  return entries;
+}
+
+/** Pares de sessões favoritadas que se sobrepõem no horário. */
+function idsEmConflito(sessions: Session[], isFavorite: (id: string) => boolean): Set<string> {
+  const favs = sessions.filter((s) => isFavorite(s.id));
+  const ids = new Set<string>();
+  for (let i = 0; i < favs.length; i++)
+    for (let j = i + 1; j < favs.length; j++)
+      if (sessionsOverlap(favs[i], favs[j])) {
+        ids.add(favs[i].id);
+        ids.add(favs[j].id);
+      }
+  return ids;
+}
+
+/** Filtra por trilha (e "minhas pautas") e agrupa por horário de início. */
+function agruparPorHorario(
+  sessions: Session[],
+  track: TrackFilter,
+  incluir: (s: Session) => boolean
+): [string, Session[]][] {
+  const filtered = sessions
+    .filter((s) => track === "Todas" || s.track === track)
+    .filter(incluir)
+    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+  const map = new Map<string, Session[]>();
+  for (const s of filtered) {
+    if (!map.has(s.start)) map.set(s.start, []);
+    map.get(s.start)!.push(s);
+  }
+  return [...map.entries()];
+}
+
 export default function ProgrammingPage() {
   const { can, user } = useAuth();
   const navigate = useNavigate();
@@ -68,49 +118,17 @@ export default function ProgrammingPage() {
   const nowMinutes = useNowMinutes();
   const detailStatus = detail ? statusOf(detail, nowMinutes) : null;
 
-  // Empresas creditadas na pauta: a que apresenta + as de quem sobe ao palco.
-  // Uma empresa que aparece em mais de um papel é creditada uma vez só.
-  const involved = useMemo(() => {
-    if (!detail) return [];
-    const entries: { name: string; credit: string }[] = [];
-    const add = (name: string | undefined, credit: string) => {
-      if (!name) return;
-      const found = entries.find((e) => e.name === name);
-      if (found) found.credit += ` · ${credit}`;
-      else entries.push({ name, credit });
-    };
-    add(detail.company, "Apresentação");
-    add(personCompany(detail.speaker), `Palestrante · ${detail.speaker}`);
-    add(personCompany(detail.moderator), `Mediação · ${detail.moderator}`);
-    return entries;
-  }, [detail]);
+  const involved = useMemo(() => empresasCreditadas(detail), [detail]);
 
   // Conflitos: pares de sessões favoritadas que se sobrepõem no horário.
-  const conflictIds = useMemo(() => {
-    const favs = sessions.filter((s) => isFavorite(s.id));
-    const ids = new Set<string>();
-    for (let i = 0; i < favs.length; i++)
-      for (let j = i + 1; j < favs.length; j++)
-        if (sessionsOverlap(favs[i], favs[j])) {
-          ids.add(favs[i].id);
-          ids.add(favs[j].id);
-        }
-    return ids;
-  }, [isFavorite, sessions]);
+  const conflictIds = useMemo(() => idsEmConflito(sessions, isFavorite), [isFavorite, sessions]);
 
   // Filtra por trilha (e "minhas pautas" do palestrante) e agrupa por horário.
-  const grouped = useMemo(() => {
-    const filtered = sessions
-      .filter((s) => track === "Todas" || s.track === track)
-      .filter((s) => !onlyMine || isMine(s))
-      .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
-    const map = new Map<string, Session[]>();
-    for (const s of filtered) {
-      if (!map.has(s.start)) map.set(s.start, []);
-      map.get(s.start)!.push(s);
-    }
-    return [...map.entries()];
-  }, [track, sessions, onlyMine, isSpeaker, user.name]);
+  const grouped = useMemo(
+    () => agruparPorHorario(sessions, track, (s) => !onlyMine || isMine(s)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `isMine` deriva de isSpeaker/user.name/speakerFallbackId
+    [track, sessions, onlyMine, isSpeaker, user.name, speakerFallbackId]
+  );
 
   return (
     <div className="space-y-6">
@@ -321,43 +339,14 @@ export default function ProgrammingPage() {
 
             {/* Ação principal muda conforme o horário da pauta */}
             <div className="flex flex-wrap items-center gap-2">
-              {detailStatus === "live" ? (
-                // No ar: destaque vermelho levando à transmissão.
-                detail.liveUrl ? (
-                  <a
-                    href={detail.liveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md bg-error-500 px-3 text-button font-semibold text-white transition hover:brightness-95"
-                  >
-                    <Radio className="h-4 w-4" /> Assistir ao vivo
-                  </a>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    leftIcon={<Radio className="h-4 w-4" />}
-                    onClick={() => navigate("/streaming")}
-                  >
-                    Assistir ao vivo
-                  </Button>
-                )
-              ) : detailStatus === "before" && canFavorite ? (
-                // Ainda vai acontecer: ação neutra, ligada à Minha Agenda.
-                <Button
-                  size="sm"
-                  variant={isFavorite(detail.id) ? "secondary" : "outline"}
-                  leftIcon={isFavorite(detail.id) ? <Check className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
-                  onClick={() => toggle(detail.id)}
-                >
-                  {isFavorite(detail.id) ? "Na sua agenda" : "Adicionar à agenda"}
-                </Button>
-              ) : detailStatus === "after" ? (
-                // Já encerrada: sem ação — os materiais ficam logo abaixo.
-                <span className="inline-flex h-8 items-center gap-1.5 rounded-md bg-neutral-100 px-3 text-button font-semibold text-neutral-600">
-                  <CalendarCheck className="h-4 w-4" /> Sessão encerrada
-                </span>
-              ) : null}
+              <AcaoDaPauta
+                detail={detail}
+                status={detailStatus}
+                canFavorite={canFavorite}
+                isFavorite={isFavorite(detail.id)}
+                onToggleFavorite={() => toggle(detail.id)}
+                onIrParaStreaming={() => navigate("/streaming")}
+              />
               <ShareButton sessionId={detail.id} />
             </div>
 
@@ -382,8 +371,8 @@ export default function ProgrammingPage() {
               <p className="text-h5 text-neutral-900">Materiais disponíveis</p>
               {detail.materials && detail.materials.length > 0 ? (
                 <ul className="mt-2 space-y-2">
-                  {detail.materials.map((m, i) => (
-                    <li key={i} className="flex items-center justify-between gap-3 rounded-md border border-neutral-100 p-2.5">
+                  {detail.materials.map((m) => (
+                    <li key={`${detail.id}:${m.title}`} className="flex items-center justify-between gap-3 rounded-md border border-neutral-100 p-2.5">
                       <span className="inline-flex items-center gap-2 text-body text-neutral-800">
                         <FileText className="h-4 w-4 text-neutral-400" /> {m.title}
                         <Badge tone="neutral">{m.format}</Badge>
@@ -428,7 +417,72 @@ export default function ProgrammingPage() {
   );
 }
 
-function PersonRow({ role, name, icon }: { role: string; name: string; icon: React.ReactNode }) {
+/**
+ * Ação principal do popup conforme o horário da pauta. Era uma cadeia de
+ * ternários aninhados dentro do JSX (SonarQube S3358) e boa parte da
+ * complexidade cognitiva da página (S3776); em early-returns cada caso fica
+ * legível por si.
+ */
+function AcaoDaPauta({
+  detail,
+  status,
+  canFavorite,
+  isFavorite,
+  onToggleFavorite,
+  onIrParaStreaming
+}: Readonly<{
+  detail: Session;
+  status: ReturnType<typeof statusOf> | null;
+  canFavorite: boolean;
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
+  onIrParaStreaming: () => void;
+}>) {
+  // No ar: destaque vermelho levando à transmissão.
+  if (status === "live") {
+    if (detail.liveUrl)
+      return (
+        <a
+          href={detail.liveUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-error-500 px-3 text-button font-semibold text-white transition hover:brightness-95"
+        >
+          <Radio className="h-4 w-4" /> Assistir ao vivo
+        </a>
+      );
+    return (
+      <Button size="sm" variant="danger" leftIcon={<Radio className="h-4 w-4" />} onClick={onIrParaStreaming}>
+        Assistir ao vivo
+      </Button>
+    );
+  }
+
+  // Ainda vai acontecer: ação neutra, ligada à Minha Agenda.
+  if (status === "before" && canFavorite)
+    return (
+      <Button
+        size="sm"
+        variant={isFavorite ? "secondary" : "outline"}
+        leftIcon={isFavorite ? <Check className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
+        onClick={onToggleFavorite}
+      >
+        {isFavorite ? "Na sua agenda" : "Adicionar à agenda"}
+      </Button>
+    );
+
+  // Já encerrada: sem ação — os materiais ficam logo abaixo.
+  if (status === "after")
+    return (
+      <span className="inline-flex h-8 items-center gap-1.5 rounded-md bg-neutral-100 px-3 text-button font-semibold text-neutral-600">
+        <CalendarCheck className="h-4 w-4" /> Sessão encerrada
+      </span>
+    );
+
+  return null;
+}
+
+function PersonRow({ role, name, icon }: Readonly<{ role: string; name: string; icon: React.ReactNode }>) {
   // Quem sobe ao palco leva o selo de Palestrante; mediador segue sem selo.
   const seal = role === "Palestrante" ? ("Palestrante" as const) : undefined;
   return (

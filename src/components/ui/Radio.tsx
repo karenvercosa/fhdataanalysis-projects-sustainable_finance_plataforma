@@ -16,7 +16,7 @@ export function Radio({
   disabled,
   id,
   className
-}: {
+}: Readonly<{
   checked: boolean;
   onChange: (value: string) => void;
   label: React.ReactNode;
@@ -27,7 +27,7 @@ export function Radio({
   disabled?: boolean;
   id?: string;
   className?: string;
-}) {
+}>) {
   const autoId = useId();
   const inputId = id ?? autoId;
 

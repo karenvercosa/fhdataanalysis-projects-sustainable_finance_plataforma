@@ -1,8 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import {
-  ChevronLeft, Building2, Globe, Briefcase, Star, Linkedin, Phone, Mail, ImageIcon,
+  ChevronLeft, Building2, Globe, Briefcase, Star, Phone, Mail, ImageIcon,
   Download, BookOpen, Headphones, Video, FileText, Link2
 } from "lucide-react";
+import { LinkedinIcon } from "@/components/icons/LinkedinIcon";
 import { useAuth } from "@/context/AuthContext";
 import { useConnectionFavorites } from "@/context/ConnectionFavoritesContext";
 import { usePersistentState } from "@/hooks/usePersistentState";
@@ -123,7 +124,7 @@ export default function NetworkingProfile() {
         </CardHeader>
         <CardBody>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Detail icon={<Linkedin className="h-4 w-4" />} label="LinkedIn" value={c.linkedin ?? "—"} href={c.linkedin ? `https://${c.linkedin}` : undefined} />
+            <Detail icon={<LinkedinIcon className="h-4 w-4" />} label="LinkedIn" value={c.linkedin ?? "—"} href={c.linkedin ? `https://${c.linkedin}` : undefined} />
             <Detail icon={<Phone className="h-4 w-4" />} label="Contato (celular)" value={c.phone ?? "—"} href={c.phone ? `tel:${c.phone.replace(/[^\d+]/g, "")}` : undefined} />
             <Detail icon={<Mail className="h-4 w-4" />} label="E-mail" value={c.email ?? "—"} href={c.email ? `mailto:${c.email}` : undefined} />
           </div>
@@ -154,7 +155,7 @@ export default function NetworkingProfile() {
 }
 
 /** Conteúdos publicados por uma empresa (fora da trava: qualquer visitante baixa). */
-function CompanyContent({ companyName }: { companyName: string }) {
+function CompanyContent({ companyName }: Readonly<{ companyName: string }>) {
   const [brand] = usePersistentState<BrandContent[]>(BRAND_KEY, BRAND_SEED);
   const items = brand.filter((b) => b.company === companyName);
 
@@ -196,7 +197,7 @@ function CompanyContent({ companyName }: { companyName: string }) {
   );
 }
 
-function Detail({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: string; href?: string }) {
+function Detail({ icon, label, value, href }: Readonly<{ icon: React.ReactNode; label: string; value: string; href?: string }>) {
   const inner = (
     <>
       <span className={cn(href ? "text-primary-600" : "text-neutral-400")}>{icon}</span>
@@ -221,7 +222,7 @@ function Detail({ icon, label, value, href }: { icon: React.ReactNode; label: st
 }
 
 /** Banner horizontal do perfil: usa a imagem quando houver, senão um placeholder. */
-function ProfileBanner({ c, isCompany }: { c: Connection; isCompany: boolean }) {
+function ProfileBanner({ c, isCompany }: Readonly<{ c: Connection; isCompany: boolean }>) {
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200">
       {c.banner ? (

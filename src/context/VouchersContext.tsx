@@ -23,7 +23,23 @@ const block = () => crypto.randomUUID().slice(0, 4).toUpperCase();
 
 const VouchersContext = createContext<VouchersState | null>(null);
 
-export function VouchersProvider({ children }: { children: ReactNode }) {
+// Atualizadores puros no topo do módulo: dentro do `useMemo` cada um empilhava
+// cinco níveis de closure (SonarQube S2004).
+function resgatarUso(prev: Voucher[], id: string): Voucher[] {
+  return prev.map((v) =>
+    v.id === id && v.usedCount < v.maxUses ? { ...v, usedCount: v.usedCount + 1 } : v
+  );
+}
+
+function substituirVoucher(prev: Voucher[], atualizado: Voucher): Voucher[] {
+  return prev.map((v) => (v.id === atualizado.id ? atualizado : v));
+}
+
+function alternarAtivo(prev: Voucher[], id: string): Voucher[] {
+  return prev.map((v) => (v.id === id ? { ...v, active: !v.active } : v));
+}
+
+export function VouchersProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [vouchers, setVouchers] = usePersistentState<Voucher[]>("sf_vouchers_live", VOUCHERS);
 
   const value = useMemo<VouchersState>(
@@ -32,10 +48,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
       getByCode: (code) =>
         vouchers.find((v) => v.active && v.code.toLowerCase() === code.trim().toLowerCase()),
       remaining: (v) => v.maxUses - v.usedCount,
-      redeem: (id) =>
-        setVouchers((prev) =>
-          prev.map((v) => (v.id === id && v.usedCount < v.maxUses ? { ...v, usedCount: v.usedCount + 1 } : v))
-        ),
+      redeem: (id) => setVouchers((prev) => resgatarUso(prev, id)),
       createBatch: (ownerId, quantity, code) => {
         const trimmed = (code ?? "").trim();
         // Reaproveita um voucher do curador com o mesmo código (soma convites).
@@ -46,7 +59,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
           : undefined;
         if (existing) {
           const updated: Voucher = { ...existing, maxUses: existing.maxUses + quantity, active: true };
-          setVouchers((prev) => prev.map((v) => (v.id === existing.id ? updated : v)));
+          setVouchers((prev) => substituirVoucher(prev, updated));
           return updated;
         }
         const voucher: Voucher = {
@@ -63,8 +76,7 @@ export function VouchersProvider({ children }: { children: ReactNode }) {
         setVouchers((prev) => [...prev, voucher]);
         return voucher;
       },
-      toggleActive: (id) =>
-        setVouchers((prev) => prev.map((v) => (v.id === id ? { ...v, active: !v.active } : v)))
+      toggleActive: (id) => setVouchers((prev) => alternarAtivo(prev, id))
     }),
     [vouchers, setVouchers]
   );

@@ -17,12 +17,12 @@ export function PaywallModal({
   open,
   onClose,
   recurso
-}: {
+}: Readonly<{
   open: boolean;
   onClose: () => void;
   /** O que a pessoa tentou acessar, para a mensagem não ficar genérica. */
   recurso?: string;
-}) {
+}>) {
   const navigate = useNavigate();
 
   return (

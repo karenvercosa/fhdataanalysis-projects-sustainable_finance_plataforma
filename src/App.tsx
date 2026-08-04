@@ -1,36 +1,51 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleGuard } from "@/components/RoleGuard";
+import { AbaEmConstrucao } from "@/components/AbaEmConstrucao";
 import { useAuth } from "@/context/AuthContext";
 
 import LoginPage from "@/views/LoginPage";
 import RegisterPage from "@/views/RegisterPage";
+import EsqueciSenhaPage from "@/views/EsqueciSenhaPage";
+import TrocarSenhaPage from "@/views/TrocarSenhaPage";
+import PrimeiroAcessoPage from "@/views/PrimeiroAcessoPage";
 import ParticipantDashboard from "@/views/ParticipantDashboard";
 import CredentialPage from "@/views/CredentialPage";
 import CertificatePage from "@/views/CertificatePage";
 import VoucherCheckout from "@/views/VoucherCheckout";
+import AssinaturaPage from "@/views/AssinaturaPage";
 import CuratorDashboard from "@/views/CuratorDashboard";
 import HomePage from "@/views/HomePage";
-import ContentHub from "@/views/ContentHub";
-import StreamingPage from "@/views/StreamingPage";
-import MapPage from "@/views/MapPage";
-import Networking from "@/views/Networking";
-import NetworkingProfile from "@/views/NetworkingProfile";
 import OperatorPanel from "@/views/OperatorPanel";
 import AdminDashboard from "@/views/AdminDashboard";
-import ProgrammingPage from "@/views/ProgrammingPage";
 import UsersAdmin from "@/views/admin/UsersAdmin";
+import VouchersAdmin from "@/views/admin/VouchersAdmin";
 import ModuleCrud from "@/views/admin/ModuleCrud";
 import InterestsAdmin from "@/views/admin/InterestsAdmin";
 import ReportsAdmin from "@/views/admin/ReportsAdmin";
 import TierMatrixAdmin from "@/views/admin/TierMatrixAdmin";
-import SessionsAdmin from "@/views/admin/SessionsAdmin";
 import ProfilePage from "@/views/ProfilePage";
+
+/**
+ * Abas em construção.
+ *
+ * As telas correspondentes continuam no repositório e prontas para voltar —
+ * `ContentHub`, `StreamingPage`, `MapPage`, `Networking`, `NetworkingProfile`,
+ * `ProgrammingPage`, `SessionsAdmin` e o CRUD de Divulgações não foram removidos, apenas
+ * deixaram de ser renderizados. Para reativar uma delas, basta importar a view
+ * de novo e trocar o `element` da rota.
+ *
+ * Os guards de capacidade seguem no lugar: quem não podia entrar continua sem
+ * entrar, para a regra de acesso não mudar junto com o placeholder.
+ */
 
 /** Layout autenticado: protege as rotas e envolve no AppShell. */
 function ShellLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, senhaProvisoria } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // Enquanto a senha for a provisória do e-mail, nenhuma tela do app abre —
+  // mesma regra que o Server Component aplica antes de servir a página.
+  if (senhaProvisoria) return <Navigate to="/primeiro-acesso" replace />;
   return (
     <AppShell>
       <Outlet />
@@ -39,22 +54,61 @@ function ShellLayout() {
 }
 
 /**
+ * Telas de autenticação que não fazem sentido para quem já entrou. Espelha o
+ * corte do middleware, para a navegação client-side não driblar a regra.
+ */
+function SomenteDeslogado({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) return <Navigate to="/inicio" replace />;
+  return <>{children}</>;
+}
+
+/**
  * Guard de aquisição: acesso total se tiver a capacidade; o Não Pago entra em
  * modo PREVIEW (a própria página renderiza a amostra). Demais perfis sem a
  * capacidade são redirecionados.
  */
-function AcquireGuard({ capability, children }: { capability: Parameters<ReturnType<typeof useAuth>["can"]>[0]; children: React.ReactNode }) {
+function AcquireGuard({ capability, children }: Readonly<{ capability: Parameters<ReturnType<typeof useAuth>["can"]>[0]; children: React.ReactNode }>) {
   const { can, user } = useAuth();
   if (can(capability) || user.role === "guest") return <>{children}</>;
   return <Navigate to="/conteudos" replace />;
+}
+
+/**
+ * A aba "Ingressos" tem dois donos.
+ *
+ * Curador/patrocinador não compra acesso: ele PEDE mais convites ao comercial,
+ * e é o `VoucherCheckout` que cuida disso. Todos os outros caem no checkout do
+ * Asaas — assinatura anual ou ingresso presencial.
+ */
+function IngressosPorPapel() {
+  const { user } = useAuth();
+  return user.role === "curator" ? <VoucherCheckout /> : <AssinaturaPage />;
 }
 
 export default function App() {
   return (
     <Routes>
       {/* Login & Cadastro — standalone, sem o shell do app */}
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <SomenteDeslogado>
+            <LoginPage />
+          </SomenteDeslogado>
+        }
+      />
       <Route path="/cadastro" element={<RegisterPage />} />
+
+      {/* Recuperação e troca de senha — também fora do shell.
+          `/trocar-senha` depende do token que o e-mail de confirmação
+          carrega; sem ele o servidor nem entrega esta rota. */}
+      <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+      <Route path="/trocar-senha" element={<TrocarSenhaPage />} />
+
+      {/* Primeiro acesso: única tela liberada enquanto a senha for a
+          provisória enviada por e-mail. */}
+      <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage />} />
 
       {/* Rotas internas dentro do AppShell */}
       <Route element={<ShellLayout />}>
@@ -86,7 +140,7 @@ export default function App() {
           path="/streaming"
           element={
             <RoleGuard capability="view:streaming">
-              <StreamingPage />
+              <AbaEmConstrucao titulo="Ao Vivo" />
             </RoleGuard>
           }
         />
@@ -96,17 +150,18 @@ export default function App() {
           path="/mapa"
           element={
             <AcquireGuard capability="view:event-map">
-              <MapPage />
+              <AbaEmConstrucao titulo="Mapa" />
             </AcquireGuard>
           }
         />
 
-        {/* Ingressos — aba independente do fluxo de compra/voucher */}
+        {/* Ingressos. Curador/patrocinador pede mais convites (VoucherCheckout);
+            os demais compram acesso pelo Asaas. */}
         <Route
           path="/ingressos"
           element={
             <RoleGuard capability="view:public-content">
-              <VoucherCheckout />
+              <IngressosPorPapel />
             </RoleGuard>
           }
         />
@@ -134,7 +189,7 @@ export default function App() {
         />
 
         {/* Conteúdos (público; trava premium é interna) */}
-        <Route path="/conteudos" element={<ContentHub />} />
+        <Route path="/conteudos" element={<AbaEmConstrucao titulo="Conteúdos" />} />
 
         {/* Perfil — disponível a todos os autenticados */}
         <Route path="/perfil" element={<ProfilePage />} />
@@ -144,7 +199,7 @@ export default function App() {
           path="/networking"
           element={
             <AcquireGuard capability="view:networking">
-              <Networking />
+              <AbaEmConstrucao titulo="Networking" />
             </AcquireGuard>
           }
         />
@@ -152,7 +207,7 @@ export default function App() {
           path="/networking/:id"
           element={
             <AcquireGuard capability="view:networking">
-              <NetworkingProfile />
+              <AbaEmConstrucao titulo="Networking" />
             </AcquireGuard>
           }
         />
@@ -184,6 +239,28 @@ export default function App() {
             </RoleGuard>
           }
         />
+        {/* Vouchers têm tela própria (gravam no banco), então precisam vir
+            ANTES do `/admin/:module`, que cai no CRUD genérico. */}
+        <Route
+          path="/admin/vouchers"
+          element={
+            <RoleGuard capability="manage:platform">
+              <VouchersAdmin />
+            </RoleGuard>
+          }
+        />
+
+        {/* Divulgações em construção. A rota também precisa vir antes do
+            `/admin/:module` para não cair no CRUD genérico — cuja configuração
+            (`CRUD_VOUCHERS_LEGADO` e `divulgacoes`) continua no arquivo. */}
+        <Route
+          path="/admin/divulgacoes"
+          element={
+            <RoleGuard capability="manage:platform">
+              <AbaEmConstrucao titulo="Divulgações" />
+            </RoleGuard>
+          }
+        />
         <Route
           path="/admin/interesses"
           element={
@@ -212,7 +289,7 @@ export default function App() {
           path="/admin/programacao-admin"
           element={
             <RoleGuard capability="manage:platform">
-              <SessionsAdmin />
+              <AbaEmConstrucao titulo="Programação" />
             </RoleGuard>
           }
         />
@@ -230,7 +307,7 @@ export default function App() {
           path="/programacao"
           element={
             <RoleGuard capability="view:public-content">
-              <ProgrammingPage />
+              <AbaEmConstrucao titulo="Programação" />
             </RoleGuard>
           }
         />
