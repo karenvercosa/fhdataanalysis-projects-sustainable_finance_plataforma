@@ -3,6 +3,13 @@ export const TipoVoucher = {
   gratuito: "gratuito",
   descontoPercentual: "desconto_percentual",
   descontoValor: "desconto_valor",
+  // Não abate preço nenhum: só LIGA a pessoa à empresa do curador. Quem usa
+  // paga o valor cheio — o que o convite concede é o vínculo, não o desconto.
+  //
+  // Já existia no banco (migração da plataforma, que compartilha este Postgres)
+  // e faltava aqui. Enquanto faltou, `TipoVoucher.vinculo` era `undefined` e
+  // qualquer comparação com ele saía silenciosamente errada.
+  vinculo: "vinculo",
 } as const;
 
 export type TipoVoucher = (typeof TipoVoucher)[keyof typeof TipoVoucher];
@@ -12,6 +19,7 @@ export const TIPO_VOUCHER_LABEL: Record<TipoVoucher, string> = {
   gratuito: "Gratuito (100%)",
   desconto_percentual: "Desconto %",
   desconto_valor: "Desconto R$",
+  vinculo: "Somente vínculo",
 };
 
 /** Voucher como trafega entre a API e as telas (`Decimal` já virou número). */

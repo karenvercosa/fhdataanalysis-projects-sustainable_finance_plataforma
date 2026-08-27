@@ -245,6 +245,33 @@ describe("resgatarVoucher", () => {
     expect(prisma.voucherResgate.upsert.mock.calls[0][0].create.decididoEm).toBeInstanceOf(Date);
   });
 
+  it("voucher de VÍNCULO entra na hora, mesmo tendo curador", async () => {
+    // O curador autoriza DESCONTO — é dinheiro dele. O vínculo não abate nada:
+    // quem usa paga o valor cheio. Não há o que autorizar, então mandar essa
+    // pessoa para uma fila de aprovação é prendê-la à toa.
+    prisma.voucher.findUnique.mockResolvedValue({
+      id: "v1",
+      empresaNome: "ACME",
+      ativo: true,
+      usosMaximos: 10,
+      curadorId: "c1",
+      tipo: TipoVoucher.vinculo,
+    });
+    prisma.voucher.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(resgatarVoucher("u1", "verde")).resolves.toEqual({
+      empresaNome: "ACME",
+      status: "aprovado",
+    });
+
+    // E o vínculo com a empresa é gravado na hora — é a única coisa que este
+    // convite concede.
+    expect(prisma.usuario.update.mock.calls[0][0].data).toMatchObject({
+      voucherId: "v1",
+      empresaNome: "ACME",
+    });
+  });
+
   it("voucher de curador nasce pendente e ainda não vale o vínculo", async () => {
     prisma.voucher.findUnique.mockResolvedValue({
       id: "v1",

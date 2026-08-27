@@ -45,6 +45,15 @@ enum TipoVoucher {
   gratuito
   desconto_percentual
   desconto_valor
+  // Não mexe em preço nenhum: só LIGA a pessoa à empresa do curador. Quem usa
+  // paga o valor cheio; o que o convite concede é o vínculo, não o desconto.
+  //
+  // Este valor JÁ EXISTE no enum do Postgres — foi criado pela migração
+  // `20260818120000_vinculo_sem_aprovacao` da PLATAFORMA, que compartilha este
+  // banco. Aqui ele só estava faltando no schema, e por isso esta aplicação não
+  // sabia distinguir o tipo. Não criar migração para isto: recriar o valor
+  // falharia, e o histórico de migrações deste schema é o do outro app.
+  vinculo
 
   @@map("tipo_voucher")
 }

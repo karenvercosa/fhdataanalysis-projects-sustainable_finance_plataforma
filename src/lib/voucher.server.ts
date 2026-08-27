@@ -183,6 +183,9 @@ export async function resgatarVoucher(
         ativo: true,
         usosMaximos: true,
         curadorId: true,
+        // Sem o tipo aqui, a exceção do `vinculo` logo abaixo não teria o que
+        // checar — e a regra voltaria a ser "tem curador, então espera".
+        tipo: true,
       },
     });
 
@@ -195,7 +198,19 @@ export async function resgatarVoucher(
 
     if (consumido.count === 0) return null;
 
-    const status: StatusResgateVoucher = voucher.curadorId ? "pendente" : "aprovado";
+    // Ter curador NÃO basta para exigir aprovação.
+    //
+    // O que o curador autoriza é o DESCONTO — é dinheiro dele. O voucher de
+    // `vinculo` não abate nada: quem o usa paga o valor cheio, e o convite só
+    // liga a pessoa à empresa. Não há o que autorizar, então ele entra na hora.
+    //
+    // Sem esta exceção, quem se cadastrava por aqui com um convite de vínculo
+    // via "seu voucher foi enviado para aprovação" e ficava numa fila que não
+    // deveria existir — enquanto a plataforma, que compartilha este banco, já
+    // aplicava a regra certa desde 18/08. Eram duas cópias da mesma decisão, e
+    // só uma tinha sido corrigida.
+    const status: StatusResgateVoucher =
+      voucher.curadorId && voucher.tipo !== TipoVoucher.vinculo ? "pendente" : "aprovado";
 
     await tx.voucherResgate.upsert({
       where: { voucherId_usuarioId: { voucherId: voucher.id, usuarioId } },
